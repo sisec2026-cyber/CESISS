@@ -1,0 +1,81 @@
+/* =======================
+   Sidebar fijo - escritorio
+======================= */
+.sidebar {
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  background-color: #ffffff;
+  height: 100vh;
+  border-right: 1px solid #dee2e6;
+  position: fixed;
+  top: 0;
+  z-index: 1030;
+  padding: 1rem 0;
+}
+
+.sidebar a {
+  display: block;
+  color: #333;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  background-color: #e9ecef;
+  color: #007bff;
+}
+
+/* =======================
+   Contenido principal
+======================= */
+.main {
+  margin-left: 250px; /* mismo ancho que el sidebar */
+  padding: 1rem;
+  padding-top: 80px; /* espacio por el topbar */
+}
+
+.table-responsive {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch; /* scroll suave en iOS */
+}
+
+/* =======================
+   Ajustes en móvil
+======================= */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    position: static !important;
+    height: auto !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .main {
+    margin-left: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .btn, .form-control {
+    font-size: 0.9rem;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+}
+
+.dropzone {
+  border: 2px dashed #ccc;
+  cursor: pointer;
+  background-color: #f9f9f9;
+}
+.dropzone:hover {
+  background-color: #f1f1f1;
+}
