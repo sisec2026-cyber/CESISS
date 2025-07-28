@@ -1,5 +1,4 @@
 <?php 
-
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion(); // 1️⃣ Verifica si hay sesión iniciada
 verificarRol(['Administrador', 'Mantenimientos', 'Invitado']);
@@ -39,7 +38,7 @@ ob_start();
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
   <form method="GET" style="display: flex; gap: 10px;">
     <input type="text" name="search" class="form-control" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
+   <!--<button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>-->
   </form>
 
   <a href="exportar_lista_pdf.php?search=<?= urlencode($search) ?>" class="btn btn-danger" target="_blank">
@@ -89,7 +88,7 @@ ob_start();
         <th>Fecha de instalación</th>
         <th>Modelo</th>
         <th class="d-none d-md-table-cell">Estado</th>
-        <th>Ubicación</th>
+        <th>Sucursal</th>
         <th class="d-none d-md-table-cell">Observaciones</th>
         <th>Serie</th>
         <th class="d-none d-md-table-cell">MAC</th>
@@ -103,7 +102,8 @@ ob_start();
         <th>Acciones</th>
       </tr>
     </thead>
-    <tbody>
+
+    <tbody id="resultado-dispositivos">
       <?php while ($device = $result->fetch_assoc()): ?>
       <tr>
         <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
@@ -183,6 +183,24 @@ ob_start();
       deleteLink.href = 'eliminar.php?id=' + deviceId;
     });
   </script>
+  <script>
+document.addEventListener("DOMContentLoaded", function () {
+  const searchInput = document.querySelector("input[name='search']");
+  const resultadoContenedor = document.getElementById("resultado-dispositivos");
+
+  searchInput.addEventListener("keyup", function () {
+    const query = searchInput.value;
+
+    fetch(`buscar_dispositivos.php?search=${encodeURIComponent(query)}`)
+      .then(response => response.text())
+      .then(html => {
+        resultadoContenedor.innerHTML = html;
+      })
+      .catch(error => console.error("Error en la búsqueda:", error));
+  });
+});
+</script>
+
 <?php endif; ?>
 
 <?php

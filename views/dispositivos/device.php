@@ -63,7 +63,7 @@ ob_start();
         <tr><th>Fecha de instalación</th><td><?= htmlspecialchars($device['fecha']) ?></td></tr>
         <tr><th>Modelo</th><td><?= htmlspecialchars($device['modelo']) ?></td></tr>
         <tr><th>Estado del equipo</th><td><?= htmlspecialchars($device['estado']) ?></td></tr>
-        <tr><th>Ubicación del equipo</th><td><?= htmlspecialchars($device['sucursal']) ?></td></tr>
+        <tr><th>Sucursal</th><td><?= htmlspecialchars($device['sucursal']) ?></td></tr>
         <tr><th>Área de la tienda</th><td><?= htmlspecialchars($device['area']) ?></td></tr>
         <tr><th>Serie</th><td><?= htmlspecialchars($device['serie']) ?></td></tr>
         <tr><th>Dirección MAC</th><td><?= htmlspecialchars($device['mac']) ?></td></tr>
@@ -124,7 +124,7 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-$pageTitle = "Ficha dispositivo #$id";
-$pageHeader = "Dispositivo #$id";
+$pageTitle = "Ficha dispositivo $device[sucursal]";
+$pageHeader = "Dispositivo $device[sucursal] | $device[equipo]";
 $activePage = "";
 include __DIR__ . '/../../layout.php';
