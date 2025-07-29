@@ -11,7 +11,24 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-$stmt = $conn->prepare("SELECT * FROM dispositivos WHERE id = ?");
+$stmt = $conn->prepare("
+    SELECT d.*, 
+           s.nom_sucursal, 
+           m.nom_municipio, 
+           c.nom_ciudad,
+           eq.nom_equipo,
+           mo.num_modelos,
+           es.status_equipo
+    FROM dispositivos d
+    LEFT JOIN sucursales s ON d.sucursal = s.ID
+    LEFT JOIN municipios m ON s.municipio_id = m.ID
+    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+    LEFT JOIN equipos eq ON d.equipo = eq.ID
+    LEFT JOIN modelos mo ON d.modelo = mo.ID
+    LEFT JOIN status es ON d.estado = es.ID
+    WHERE d.id = ?
+");
+
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -21,12 +38,11 @@ if (!$device) {
     die('Dispositivo no encontrado.');
 }
 
-// Preparar ruta del logo de sucursal
-$sucursal = strtolower(str_replace(' ', '', $device['sucursal']));
-$logoPath = "/sisec-ui/public/img/sucursales/$sucursal.png";
+// Ruta del logo de sucursal
+$sucursalNombre = strtolower(str_replace(' ', '', $device['nom_sucursal']));
+$logoPath = "/sisec-ui/public/img/sucursales/$sucursalNombre.png";
 $logoAbsolutePath = $_SERVER['DOCUMENT_ROOT'] . $logoPath;
 
-// Si no existe el logo, usar default
 if (!file_exists($logoAbsolutePath)) {
     $logoPath = "/sisec-ui/public/img/sucursales/default.png";
 }
@@ -36,14 +52,11 @@ ob_start();
 
 <h2>Ficha técnica</h2>
 
-<!-- Mostrar logo de la sucursal -->
 <div class="text-center mb-3">
-  <img src="<?= $logoPath ?>" alt="Logo Sucursal <?= htmlspecialchars($device['sucursal']) ?>" 
-    style="max-height: 100px;">
+  <img src="<?= $logoPath ?>" alt="Logo <?= htmlspecialchars($device['nom_sucursal']) ?>" style="max-height: 100px;">
 </div>
 
 <div class="row">
-  <!-- Columna izquierda: imagen principal -->
   <div class="col-md-4 text-center">
     <?php if (!empty($device['imagen'])): ?>
       <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen']) ?>" 
@@ -55,15 +68,16 @@ ob_start();
     <?php endif; ?>
   </div>
 
-  <!-- Columna derecha: datos -->
   <div class="col-md-8">
     <table class="table table-striped table-bordered">
       <tbody>
-        <tr><th>Equipo</th><td><?= htmlspecialchars($device['equipo']) ?></td></tr>
+        <tr><th>Equipo</th><td><?= htmlspecialchars($device['nom_equipo']) ?></td></tr>
         <tr><th>Fecha de instalación</th><td><?= htmlspecialchars($device['fecha']) ?></td></tr>
-        <tr><th>Modelo</th><td><?= htmlspecialchars($device['modelo']) ?></td></tr>
-        <tr><th>Estado del equipo</th><td><?= htmlspecialchars($device['estado']) ?></td></tr>
-        <tr><th>Sucursal</th><td><?= htmlspecialchars($device['sucursal']) ?></td></tr>
+        <tr><th>Modelo</th><td><?= htmlspecialchars($device['num_modelos']) ?></td></tr>
+        <tr><th>Estado del equipo</th><td><?= htmlspecialchars($device['status_equipo']) ?></td></tr>
+        <tr><th>Sucursal</th><td><?= htmlspecialchars($device['nom_sucursal']) ?></td></tr>
+        <tr><th>Municipio</th><td><?= htmlspecialchars($device['nom_municipio']) ?></td></tr>
+        <tr><th>Ciudad</th><td><?= htmlspecialchars($device['nom_ciudad']) ?></td></tr>
         <tr><th>Área de la tienda</th><td><?= htmlspecialchars($device['area']) ?></td></tr>
         <tr><th>Serie</th><td><?= htmlspecialchars($device['serie']) ?></td></tr>
         <tr><th>Dirección MAC</th><td><?= htmlspecialchars($device['mac']) ?></td></tr>
@@ -110,7 +124,6 @@ ob_start();
       </tbody>
     </table>
 
-    <!-- Botones -->
     <div class="mt-3 d-flex gap-2">
       <a href="listar.php" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Volver al listado
@@ -124,7 +137,7 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-$pageTitle = "Ficha dispositivo $device[sucursal]";
-$pageHeader = "Dispositivo $device[sucursal] | $device[equipo]";
+$pageTitle = "Ficha dispositivo {$device['nom_sucursal']}";
+$pageHeader = "Dispositivo {$device['nom_sucursal']} | {$device['nom_equipo']}";
 $activePage = "";
 include __DIR__ . '/../../layout.php';

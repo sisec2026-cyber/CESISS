@@ -14,7 +14,23 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-$stmt = $conn->prepare("SELECT * FROM dispositivos WHERE id = ?");
+$stmt = $conn->prepare("
+    SELECT d.*, 
+           s.nom_sucursal, 
+           m.nom_municipio, 
+           c.nom_ciudad,
+           eq.nom_equipo,
+           mo.num_modelos,
+           es.status_equipo
+    FROM dispositivos d
+    LEFT JOIN sucursales s ON d.sucursal = s.ID
+    LEFT JOIN municipios m ON s.municipio_id = m.ID
+    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+    LEFT JOIN equipos eq ON d.equipo = eq.ID
+    LEFT JOIN modelos mo ON d.modelo = mo.ID
+    LEFT JOIN status es ON d.estado = es.ID
+    WHERE d.id = ?
+");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -37,7 +53,7 @@ function imagenBase64($rutaRelativa) {
 
 // Rutas de imágenes
 $logoSisec = imagenBase64("img/logo.png");
-$nombreSucursal = strtolower(str_replace(' ', '', $device['sucursal']));
+$nombreSucursal = strtolower(str_replace(' ', '', $device['nom_sucursal']));
 $logoSucursal = imagenBase64("img/sucursales/{$nombreSucursal}.png");
 
 $img1 = !empty($device['imagen']) ? imagenBase64("uploads/" . $device['imagen']) : '';
@@ -73,10 +89,9 @@ ob_start();
     <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="width: 150px;">
   <?php endif; ?>
   <?php if ($logoSucursal): ?>
-    <img src="<?= $logoSucursal ?>" alt="Logo <?= htmlspecialchars($device['sucursal']) ?>" style="width: 150px;">
+    <img src="<?= $logoSucursal ?>" alt="Logo <?= htmlspecialchars($device['nom_sucursal']) ?>" style="width: 150px;">
   <?php endif; ?>
 </div>
-
 
 <h1>Ficha técnica del dispositivo</h1>
 
@@ -89,11 +104,13 @@ ob_start();
 
 <table>
   <tr><th>ID</th><td><?= $device['id'] ?></td></tr>
-  <tr><th>Equipo</th><td><?= htmlspecialchars($device['equipo']) ?></td></tr>
+  <tr><th>Equipo</th><td><?= htmlspecialchars($device['nom_equipo']) ?></td></tr>
   <tr><th>Fecha de instalación</th><td><?= htmlspecialchars($device['fecha']) ?></td></tr>
-  <tr><th>Modelo</th><td><?= htmlspecialchars($device['modelo']) ?></td></tr>
-  <tr><th>Estado</th><td><?= htmlspecialchars($device['estado']) ?></td></tr>
-  <tr><th>Sucursal</th><td><?= htmlspecialchars($device['sucursal']) ?></td></tr>
+  <tr><th>Modelo</th><td><?= htmlspecialchars($device['num_modelos']) ?></td></tr>
+  <tr><th>Estado</th><td><?= htmlspecialchars($device['status_equipo']) ?></td></tr>
+  <tr><th>Sucursal</th><td><?= htmlspecialchars($device['nom_sucursal']) ?></td></tr>
+  <tr><th>Municipio</th><td><?= htmlspecialchars($device['nom_municipio']) ?></td></tr>
+  <tr><th>Ciudad</th><td><?= htmlspecialchars($device['nom_ciudad']) ?></td></tr>
   <tr><th>Área</th><td><?= htmlspecialchars($device['area']) ?></td></tr>
   <tr><th>Serie</th><td><?= htmlspecialchars($device['serie']) ?></td></tr>
   <tr><th>MAC</th><td><?= htmlspecialchars($device['mac']) ?></td></tr>
@@ -103,30 +120,20 @@ ob_start();
   <tr><th>Puerto</th><td><?= htmlspecialchars($device['puerto']) ?></td></tr>
   <tr><th>Observaciones</th><td><?= nl2br(htmlspecialchars($device['observaciones'])) ?></td></tr>
 </table>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
+
 <?php if ($img2 || $img3 || $qr): ?>
   <div class="img-block">
     <?php if ($img2 || $img3): ?>
       <div style="display: flex; justify-content: center; gap: 40px;">
         <?php if ($img2): ?>
           <div style="text-align: center;">
-            <strong>Imagen antes</strong><br>
-            <br>
+            <strong>Imagen antes</strong><br><br>
             <img src="<?= $img2 ?>" style="max-width: 250px; max-height: 200px;">
           </div>
         <?php endif; ?>
         <?php if ($img3): ?>
           <div style="text-align: center;">
-            <strong>Imagen después</strong><br>
-            <br>
+            <strong>Imagen después</strong><br><br>
             <img src="<?= $img3 ?>" style="max-width: 250px; max-height: 200px;">
           </div>
         <?php endif; ?>
@@ -142,7 +149,6 @@ ob_start();
     <?php endif; ?>
   </div>
 <?php endif; ?>
-
 
 <?php
 $html = ob_get_clean();

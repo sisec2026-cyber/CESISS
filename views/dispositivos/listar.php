@@ -9,25 +9,56 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 // Buscar con filtro
 if ($search !== '') {
-    $stmt = $conn->prepare("
-        SELECT * FROM dispositivos 
-        WHERE 
-            equipo LIKE ? OR 
-            modelo LIKE ? OR 
-            sucursal LIKE ? OR 
-            estado LIKE ? OR 
-            fecha = ? OR 
-            id = ?
-        ORDER BY id ASC
-    ");
-
+    // Preparamos la consulta para buscar dispositivos por varios campos
+$stmt = $conn->prepare("
+    SELECT d.*, 
+           s.nom_sucursal, 
+           m.nom_municipio, 
+           c.nom_ciudad,
+           eq.nom_equipo,
+           mo.num_modelos,
+           es.status_equipo
+    FROM dispositivos d
+    LEFT JOIN sucursales s ON d.sucursal = s.ID
+    LEFT JOIN municipios m ON s.municipio_id = m.ID
+    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+    LEFT JOIN equipos eq ON d.equipo = eq.ID
+    LEFT JOIN modelos mo ON d.modelo = mo.ID
+    LEFT JOIN status es ON d.status = es.ID
+    WHERE 
+        eq.nom_equipo LIKE ? OR 
+        mo.num_modelos LIKE ? OR 
+        s.nom_sucursal LIKE ? OR 
+        es.status_equipo LIKE ? OR 
+        d.fecha = ? OR 
+        d.id = ?
+    ORDER BY d.id ASC
+");
     $likeSearch = "%$search%";
     $stmt->bind_param("sssssi", $likeSearch, $likeSearch, $likeSearch, $likeSearch, $search, $search);
     $stmt->execute();
     $result = $stmt->get_result();
 } else {
-    $result = $conn->query("SELECT * FROM dispositivos ORDER BY id ASC");
+$result = $conn->query("
+    SELECT d.*, 
+           s.nom_sucursal, 
+           m.nom_municipio, 
+           c.nom_ciudad,
+           eq.nom_equipo,
+           mo.num_modelos,
+           es.status_equipo
+    FROM dispositivos d
+    LEFT JOIN sucursales s ON d.sucursal = s.ID
+    LEFT JOIN municipios m ON s.municipio_id = m.ID
+    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+    LEFT JOIN equipos eq ON d.equipo = eq.ID
+    LEFT JOIN modelos mo ON d.modelo = mo.ID
+    LEFT JOIN status es ON d.estado = es.ID
+    ORDER BY d.id ASC
+");
+
 }
+// Verificamos si la consulta devolvió resultados
 
 ob_start();
 ?>
@@ -49,8 +80,35 @@ ob_start();
     <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i> Registrar nuevo dispositivo</a>
   <?php endif; ?>
 </div>
+                                            <!-- Filtros Busqueda -->
+<div class="row mb-3">
+  <div class="col-md-4">
+    <label for="ciudad" class="form-label">Ciudad</label>
+    <select id="ciudad" class="form-select">
+      <option value="">-- Selecciona una ciudad --</option>
+      <?php
+        $ciudades = $conn->query("SELECT ID, nom_ciudad FROM ciudades ORDER BY nom_ciudad");
+        while ($row = $ciudades->fetch_assoc()):
+      ?>
+        <option value="<?= $row['ID'] ?>"><?= htmlspecialchars($row['nom_ciudad']) ?></option>
+      <?php endwhile; ?>
+    </select>
+  </div>
 
+  <div class="col-md-4">
+    <label for="municipio" class="form-label">Municipio</label>
+    <select id="municipio" class="form-select" disabled>
+      <option value="">-- Selecciona un municipio --</option>
+    </select>
+  </div>
 
+  <div class="col-md-4">
+    <label for="sucursal" class="form-label">Sucursal</label>
+    <select id="sucursal" class="form-select" disabled>
+      <option value="">-- Selecciona una sucursal --</option>
+    </select>
+  </div>
+</div>
 
 <style>
   .table td, .table th {
@@ -83,22 +141,13 @@ ob_start();
   <table class="table table-hover table-bordered text-center align-middle">
     <thead class="table-primary">
       <tr>
-        <th class="d-none d-md-table-cell">Folio</th>
+        <th>Folio</th>
         <th>Equipo</th>
         <th>Fecha de instalación</th>
         <th>Modelo</th>
-        <th class="d-none d-md-table-cell">Estado</th>
+        <th>Estado</th>
         <th>Sucursal</th>
-        <th class="d-none d-md-table-cell">Observaciones</th>
-        <th>Serie</th>
-        <th class="d-none d-md-table-cell">MAC</th>
-        <th class="d-none d-md-table-cell">VMS</th>
-        <th class="d-none d-md-table-cell">Servidor</th>
-        <th class="d-none d-md-table-cell">Switch</th>
-        <th class="d-none d-md-table-cell">Puerto</th>
-        <th class="d-none d-md-table-cell">Área</th>
         <th>Imagen</th>
-
         <th>Acciones</th>
       </tr>
     </thead>
@@ -106,20 +155,18 @@ ob_start();
     <tbody id="resultado-dispositivos">
       <?php while ($device = $result->fetch_assoc()): ?>
       <tr>
+        <!-- folio -->
         <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
-        <td><?= htmlspecialchars($device['equipo']) ?></td>
+        <td><?= htmlspecialchars($device['nom_equipo']) ?></td>
         <td><?= htmlspecialchars($device['fecha']) ?></td>
-        <td><?= htmlspecialchars($device['modelo']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['estado']) ?></td>
-        <td><?= htmlspecialchars($device['sucursal']) ?></td>
-        <td class="d-none d-md-table-cell" style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= htmlspecialchars($device['observaciones']) ?></td>
-        <td><?= htmlspecialchars($device['serie']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['mac']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['vms']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['servidor']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['switch']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['puerto']) ?></td>
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['area']) ?></td>
+        <td><?= htmlspecialchars($device['num_modelos']) ?></td>
+        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['status_equipo']) ?></td>
+<td>
+  <?= htmlspecialchars($device['nom_sucursal']) ?>
+  <span data-bs-toggle="tooltip" title="<?= htmlspecialchars($device['nom_municipio']) ?>, <?= htmlspecialchars($device['nom_ciudad']) ?>">
+    <i class="fas fa-info-circle text-muted"></i>
+  </span>
+</td>
         <td>
           <?php if (!empty($device['imagen'])): ?>
             <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen']) ?>" alt="Imagen" style="max-height:50px; object-fit: contain;">
@@ -147,8 +194,6 @@ ob_start();
     </tbody>
   </table>
 </div>
-
-
 <?php if ($_SESSION['usuario_rol'] === 'Administrador'): ?>
   <!-- Modal de Confirmación -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
@@ -183,6 +228,77 @@ ob_start();
       deleteLink.href = 'eliminar.php?id=' + deviceId;
     });
   </script>
+                                                  <!-- Filtros -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const ciudadSelect = document.getElementById('ciudad');
+  const municipioSelect = document.getElementById('municipio');
+  const sucursalSelect = document.getElementById('sucursal');
+  const resultadoContenedor = document.getElementById('resultado-dispositivos');
+
+  ciudadSelect.addEventListener('change', function () {
+    const ciudadId = this.value;
+
+    municipioSelect.innerHTML = '<option value="">-- Selecciona un municipio --</option>';
+    sucursalSelect.innerHTML = '<option value="">-- Selecciona una sucursal --</option>';
+    municipioSelect.disabled = true;
+    sucursalSelect.disabled = true;
+
+    if (ciudadId) {
+      fetch(`obtener_municipios.php?ciudad_id=${ciudadId}`)
+        .then(response => response.json())
+        .then(data => {
+          municipioSelect.disabled = false;
+          data.forEach(municipio => {
+            municipioSelect.innerHTML += `<option value="${municipio.ID}">${municipio.nom_municipio}</option>`;
+          });
+        });
+    }
+  });
+
+  municipioSelect.addEventListener('change', function () {
+    const municipioId = this.value;
+
+    sucursalSelect.innerHTML = '<option value="">-- Selecciona una sucursal --</option>';
+    sucursalSelect.disabled = true;
+
+    if (municipioId) {
+      fetch(`obtener_sucursales.php?municipio_id=${municipioId}`)
+        .then(response => response.json())
+        .then(data => {
+          sucursalSelect.disabled = false;
+          data.forEach(sucursal => {
+            sucursalSelect.innerHTML += `<option value="${sucursal.ID}">${sucursal.nom_sucursal}</option>`;
+          });
+        });
+    }
+  });
+
+  // Filtrar al cambiar ciudad, municipio o sucursal
+function actualizarTabla() {
+  const ciudadId = document.getElementById('ciudad').value;
+  const municipioId = document.getElementById('municipio').value;
+  const sucursalId = document.getElementById('sucursal').value;
+
+  const params = new URLSearchParams();
+  if (ciudadId) params.append('ciudad_id', ciudadId);
+  if (municipioId) params.append('municipio_id', municipioId);
+  if (sucursalId) params.append('sucursal_id', sucursalId);
+
+  fetch(`buscar_dispositivos.php?${params.toString()}`)
+    .then(response => response.text())
+    .then(html => {
+      document.getElementById('resultado-dispositivos').innerHTML = html;
+    });
+}
+
+document.getElementById('ciudad').addEventListener('change', actualizarTabla);
+document.getElementById('municipio').addEventListener('change', actualizarTabla);
+document.getElementById('sucursal').addEventListener('change', actualizarTabla);
+
+});
+</script>
+
   <script>
 document.addEventListener("DOMContentLoaded", function () {
   const searchInput = document.querySelector("input[name='search']");
@@ -200,6 +316,16 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+  });
+});
+</script>
+
 
 <?php endif; ?>
 
