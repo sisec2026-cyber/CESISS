@@ -10,17 +10,39 @@ include __DIR__ . '/../../includes/db.php';
 ob_start();
 
 // Consultas reales a la base de datos
-$camaras = $conn->query("SELECT COUNT(*) AS total FROM dispositivos WHERE equipo = 'Cámara'")->fetch_assoc()['total'];
+$camaras = $conn->query("
+    SELECT COUNT(*) AS total 
+    FROM dispositivos d
+    INNER JOIN equipos e ON d.equipo = e.id
+    WHERE e.nom_equipo = 'Camara'
+")->fetch_assoc()['total'];
+
 $sensores = $conn->query("SELECT COUNT(*) AS total FROM dispositivos WHERE equipo = 'Sensor'")->fetch_assoc()['total'];
 $usuarios = $conn->query("SELECT COUNT(*) AS total FROM usuarios")->fetch_assoc()['total'] ?? 0;
-$mantenimiento = $conn->query("SELECT COUNT(*) AS total FROM dispositivos WHERE estado = 'En mantenimiento'")->fetch_assoc()['total'];
 
-// Dispositivos por equipo
-$equipos_result = $conn->query("SELECT equipo, COUNT(*) as cantidad FROM dispositivos GROUP BY equipo");
+$mantenimiento = $conn->query("
+    SELECT COUNT(*) AS total FROM dispositivos d INNER JOIN status s ON d.estado = s.id WHERE s.status_equipo = 'En mantenimiento'
+")->fetch_assoc()['total'];
+
+
+$equipos_result = $conn->query("
+    SELECT s.nom_sucursal AS nombre_sucursal, COUNT(*) as cantidad 
+    FROM dispositivos d
+    INNER JOIN sucursales s ON d.sucursal = s.id
+    GROUP BY s.nom_sucursal 
+    ORDER BY s.nom_sucursal ASC
+");
+// Agrupar los resultados por sucursal
+// y crear un array asociativo
+
 $equipos_dispositivos = [];
 while ($row = $equipos_result->fetch_assoc()) {
-    $equipos_dispositivos[$row['equipo']] = (int)$row['cantidad'];
+    $equipos_dispositivos[$row['nombre_sucursal']] = (int)$row['cantidad'];
 }
+
+
+// Datos de ejemplo para las gráficas
+// Dispositivos por equipo (simulado por ahora)
 
 // Actividad de los últimos 7 días (simulado por ahora)
 $actividad = [27, 17, 16, 28, 13, 4, 0];
@@ -73,7 +95,7 @@ $actividad = [27, 17, 16, 28, 13, 4, 0];
   <div class="col-md-6">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h6 class="card-title mb-3">Dispositivos por equipo</h6>
+        <h6 class="card-title mb-3">Dispositivos por sucursal</h6>
         <canvas id="chartDispositivos" height="200"></canvas>
       </div>
     </div>

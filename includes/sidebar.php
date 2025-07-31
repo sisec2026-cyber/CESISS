@@ -1,5 +1,5 @@
 <!-- Sidebar fijo desktop -->
-<nav class="sidebar d-none d-md-block bg-light" style="width: 250px;">
+<nav class="sidebar d-none d-md-block bg-light" style="width: 250px; margin-top: 25px;">
   <div class="d-flex flex-column justify-content-between h-100">
     <div>
       <div class="text-center py-3">

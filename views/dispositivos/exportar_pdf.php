@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Administrador', 'Técnico', 'Invitado']);
+verificarRol(['Administrador', 'Técnico', 'Invitado', 'Mantenimientos']);
 
 require __DIR__ . '/../../vendor/autoload.php';
 include __DIR__ . '/../../includes/db.php';
@@ -54,7 +54,7 @@ function imagenBase64($rutaRelativa) {
 // Rutas de imágenes
 $logoSisec = imagenBase64("img/logo.png");
 $nombreSucursal = strtolower(str_replace(' ', '', $device['nom_sucursal']));
-$logoSucursal = imagenBase64("img/sucursales/{$nombreSucursal}.png");
+$logoSucursal = imagenBase64("img/sucursales/default.png");
 
 $img1 = !empty($device['imagen']) ? imagenBase64("uploads/" . $device['imagen']) : '';
 $img2 = !empty($device['imagen2']) ? imagenBase64("uploads/" . $device['imagen2']) : '';
@@ -89,7 +89,7 @@ ob_start();
     <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="width: 150px;">
   <?php endif; ?>
   <?php if ($logoSucursal): ?>
-    <img src="<?= $logoSucursal ?>" alt="Logo <?= htmlspecialchars($device['nom_sucursal']) ?>" style="width: 150px;">
+    <img src="<?= $logoSucursal ?>" alt="Logo Sucursal" style="width: 150px;">
   <?php endif; ?>
 </div>
 

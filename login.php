@@ -107,6 +107,7 @@ $redirect = $_GET['redirect'] ?? null;
     }
   </style>
 </head>
+
 <body>
   <div class="login-box">
     <img src="/sisec-ui/public/img/logo.png" alt="Logo SISEC" style="max-height: 100px; margin-bottom: 10px;">
@@ -133,7 +134,7 @@ $redirect = $_GET['redirect'] ?? null;
       <button type="submit">INICIA SESIÓN</button>
     </form>
 
-    <p class="mt-3"><a href="#">¿Olvidaste tu contraseña?</a></p>
+    <p class="mt-3"><a href="views/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a></p>
   </div>
 </body>
 </html>

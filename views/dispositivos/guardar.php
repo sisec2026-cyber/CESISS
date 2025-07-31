@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
 verificarRol(['Administrador', 'Mantenimientos']);
@@ -21,19 +20,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $switch         = $_POST['switch'];
     $puerto         = $_POST['puerto'];
     $area           = $_POST['area'];
+    $user           = $_POST['user'];
+    $pass           = $_POST['pass'];
 
+    // EQUIPO
+    $equipo = $_POST['equipo'];
+    // Busca si el equipo ya existe
+    $stmt = $conn->prepare("SELECT id FROM equipos WHERE nom_equipo = ?");
+    $stmt->bind_param("s", $equipo);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $equipo = $row['id']; // ahora $equipo es el ID
+    } else {
+        // Inserta nuevo equipo si no existe
+        $stmt = $conn->prepare("INSERT INTO equipos (nom_equipo) VALUES (?)");
+        $stmt->bind_param("s", $equipo);
+        $stmt->execute();
+        $equipo = $stmt->insert_id; // ahora $equipo es el ID insertado
+    }
+    
+    // SUCURSAL
+    // Guarda el nombre
+    $sucursal = $_POST['sucursal'];
+    $municipio = $_POST['municipio'];
+    // Esto busca o inserta en la TABLA SUCURSALES
+    $stmt = $conn->prepare("SELECT id FROM sucursales WHERE nom_sucursal = ?");
+    $stmt->bind_param("s", $sucursal);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $sucursal = $row['id']; // REUTILIZA la variable $sucursal, pero ahora como ID
+    } else {
+    $stmt = $conn->prepare("INSERT INTO sucursales (nom_sucursal, municipio_id) VALUES (?, ?)");
+    $stmt->bind_param("si", $sucursal, $municipio);
+    $stmt->execute();
+    $sucursal = $stmt->insert_id; // ahora es el ID generado
+    }
 
+    //STATUS
+    // Recibe el status
+    $estado = $_POST['estado'];
+    // Busca si el estado ya existe en la tabla `status`
+    $stmt = $conn->prepare("SELECT id FROM status WHERE status_equipo = ?");
+    $stmt->bind_param("s", $estado);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        // Si ya existe, obtenemos el ID
+        $row = $result->fetch_assoc();
+        $estado = $row['id']; // Reutilizam $estado ahora como ID
+    } else {
+        // Si no existe, lo inserta
+        $stmt = $conn->prepare("INSERT INTO status (status_equipo) VALUES (?)");
+        $stmt->bind_param("s", $estado);
+        $stmt->execute();
+        $estado = $stmt->insert_id; // ahora $estado es el ID insertado
+    }
+
+    //MODELO
+    $modelo = $_POST['modelo'];
+    // Busca si el modelo ya existe
+    $stmt = $conn->prepare("SELECT id FROM modelos WHERE num_modelos = ?");
+    $stmt->bind_param("s", $modelo);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $modelo = $row['id']; // ahora $modelo es el ID
+    } else {
+        // Inserta el nuevo modelo si no existe
+        $stmt = $conn->prepare("INSERT INTO modelos (num_modelos) VALUES (?)");
+        $stmt->bind_param("s", $modelo);
+        $stmt->execute();
+        $modelo = $stmt->insert_id; // ahora $modelo es el ID insertado
+    }
+
+    //IMÁGENES
     // Subir imágenes (imagen, imagen2, imagen3)
     $imagenes = [];
     $nombresEsperados = ['imagen', 'imagen2', 'imagen3'];
-
     foreach ($nombresEsperados as $index => $campo) {
         if (isset($_FILES[$campo]) && $_FILES[$campo]['error'] === UPLOAD_ERR_OK) {
             $tmpName = $_FILES[$campo]['tmp_name'];
             $extension = pathinfo($_FILES[$campo]['name'], PATHINFO_EXTENSION);
             $nombreFinal = uniqid("img" . ($index + 1) . "_") . "." . $extension;
             $rutaDestino = __DIR__ . "/../../public/uploads/" . $nombreFinal;
-
             if (move_uploaded_file($tmpName, $rutaDestino)) {
                 $imagenes[$campo] = $nombreFinal;
             } else {
@@ -45,27 +119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Insertar en la base de datos
-$stmt = $conn->prepare("
-    INSERT INTO dispositivos 
-    (equipo, fecha, modelo, estado, sucursal, observaciones, serie, mac, vms, servidor, switch, puerto, area, imagen, imagen2, imagen3)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-");
-
-
-$stmt->bind_param(
-    "ssssssssssssssss",
-    $equipo, $fecha, $modelo, $estado, $sucursal, $observaciones,
-    $serie, $mac, $vms, $servidor, $switch, $puerto, $area,
-    $imagenes['imagen'], $imagenes['imagen2'], $imagenes['imagen3']
-);
-
-
+    $stmt = $conn->prepare("INSERT INTO dispositivos (equipo, fecha, modelo, estado, sucursal, observaciones, serie, mac, vms, servidor, switch, puerto, area, imagen, imagen2, imagen3, user, pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssiisssssssssssss",$equipo, $fecha, $modelo, $estado, $sucursal, $observaciones, $serie, $mac, $vms, $servidor, $switch, $puerto, $area, $imagenes['imagen'], $imagenes['imagen2'], $imagenes['imagen3'], $user, $pass);
     if (!$stmt->execute()) {
-        die("Error al insertar dispositivo: " . $stmt->error);
+        die("Error al insertar en dispositivo: " . $stmt->error);
     }
-
     $id = $stmt->insert_id;
-
+    
     // Registrar notificación si no es admin
     if ($_SESSION['usuario_rol'] !== 'Administrador') {
         $mensaje = "El Mantenimientos " . $_SESSION['nombre'] . " registró un nuevo dispositivo.";
@@ -93,4 +153,3 @@ $stmt->bind_param(
     header("Location: device.php?id=" . $id);
     exit;
 }
-

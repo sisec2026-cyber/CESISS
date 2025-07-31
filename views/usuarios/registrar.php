@@ -18,9 +18,7 @@ ob_start();
     <input type="hidden" name="accion" value="crear">
 
     <h4 class="mb-4 text-center">Registrar usuario</h4>
-
     
-
     <!-- Nombre completo -->
     <div class="mb-3">
       <label for="nombre" class="form-label">Nombre completo</label>
@@ -52,6 +50,27 @@ ob_start();
     </div>
 
     <br>
+    <!-- Pregunta de seguridad -->
+     
+<div class="mb-3">
+  <label for="pregunta_seguridad" class="form-label">Pregunta de seguridad</label>
+  <select class="form-select" id="pregunta_seguridad" name="pregunta_seguridad" required>
+    <option value="">Seleccione una pregunta</option>
+    <option value="¿Cuál es el nombre de tu primera mascota?">¿Cuál es el nombre de tu primera mascota?</option>
+    <option value="¿Cuál es el segundo nombre de tu madre?">¿Cuál es el segundo nombre de tu madre?</option>
+    <option value="¿En qué ciudad naciste?">¿En qué ciudad naciste?</option>
+    <option value="¿Cuál fue tu primer colegio?">¿Cuál fue tu primer colegio?</option>
+    <option value="¿Cómo se llama tu mejor amigo de la infancia?">¿Cómo se llama tu mejor amigo de la infancia?</option>
+  </select>
+</div>
+
+
+<!-- Respuesta de seguridad -->
+<div class="mb-3">
+  <label for="respuesta_seguridad" class="form-label">Respuesta de seguridad</label>
+  <input type="text" class="form-control" id="respuesta_seguridad" name="respuesta_seguridad" required>
+</div>
+
 
     <!-- Botones -->
     <div class="d-flex justify-content-between">

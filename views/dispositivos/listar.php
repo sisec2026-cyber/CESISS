@@ -56,7 +56,6 @@ $result = $conn->query("
     LEFT JOIN status es ON d.estado = es.ID
     ORDER BY d.id ASC
 ");
-
 }
 // Verificamos si la consulta devolvió resultados
 
@@ -194,7 +193,7 @@ ob_start();
     </tbody>
   </table>
 </div>
-<?php if ($_SESSION['usuario_rol'] === 'Administrador'): ?>
+<?php if ($_SESSION['usuario_rol'] === 'Administrador' || $_SESSION['usuario_rol'] === 'Invitado'): ?>
   <!-- Modal de Confirmación -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
