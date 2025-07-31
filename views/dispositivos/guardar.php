@@ -22,9 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $puerto         = $_POST['puerto'];
     $area           = $_POST['area'];
 
+
     // Subir imágenes (imagen, imagen2, imagen3)
     $imagenes = [];
-
     $nombresEsperados = ['imagen', 'imagen2', 'imagen3'];
 
     foreach ($nombresEsperados as $index => $campo) {
@@ -45,18 +45,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Insertar en la base de datos
-    $stmt = $conn->prepare("
-        INSERT INTO dispositivos 
-        (equipo, fecha, modelo, estado, sucursal, observaciones, serie, mac, vms, servidor, switch, puerto, area, imagen, imagen2, imagen3)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+$stmt = $conn->prepare("
+    INSERT INTO dispositivos 
+    (equipo, fecha, modelo, estado, sucursal, observaciones, serie, mac, vms, servidor, switch, puerto, area, imagen, imagen2, imagen3)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+");
 
-    $stmt->bind_param(
-        "ssssssssssssssss",
-        $equipo, $fecha, $modelo, $estado, $sucursal, $observaciones,
-        $serie, $mac, $vms, $servidor, $switch, $puerto, $area,
-        $imagenes['imagen'], $imagenes['imagen2'], $imagenes['imagen3']
-    );
+
+$stmt->bind_param(
+    "ssssssssssssssss",
+    $equipo, $fecha, $modelo, $estado, $sucursal, $observaciones,
+    $serie, $mac, $vms, $servidor, $switch, $puerto, $area,
+    $imagenes['imagen'], $imagenes['imagen2'], $imagenes['imagen3']
+);
+
 
     if (!$stmt->execute()) {
         die("Error al insertar dispositivo: " . $stmt->error);

@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
+include __DIR__ . '/../../includes/db.php';
+$ciudades = $conn->query("SELECT ID, nom_ciudad FROM ciudades ORDER BY nom_ciudad ASC");
 verificarAutenticacion();
 verificarRol(['Administrador', 'Mantenimientos']);
 ob_start();
@@ -55,11 +57,13 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
       <label class="form-label">Fecha instalación/mantenimiento</label>
       <input type="date" name="fecha" class="form-control" required>
     </div>
+
     <!-- Modelo -->
     <div class="col-md-3">
       <label class="form-label">Modelo</label>
       <input type="text" name="modelo" placeholder="Escribe el modelo" class="form-control" required>
     </div>
+
     <!-- Estado -->
     <div class="col-md-3">
       <label class="form-label">Estado del equipo</label>
@@ -70,11 +74,47 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
         <option value="Desactivado">Desactivado</option>
       </select>
     </div>
-    <!-- Sucursal -->
-    <div class="col-md-3">
-      <label class="form-label">Ubicación (Sucursal)</label>
-      <input type="text" name="sucursal" placeholder="Escribe la sucursal" class="form-control" required>
-    </div>
+
+<!-- CAMPOS ADICIONALES DE USUARIO Y UBICACIÓN -->
+<div class="row g-4 mt-4">
+  <!-- Usuario -->
+  <div class="col-md-4">
+    <label class="form-label">Usuario</label>
+    <input type="text" name="usuario" placeholder="Nombre de usuario" class="form-control" required>
+  </div>
+
+  <!-- Contraseña -->
+  <div class="col-md-4">
+    <label class="form-label">Contraseña</label>
+    <input type="password" name="contrasena" placeholder="Contraseña" class="form-control" required>
+  </div>
+
+<!-- Ciudad -->
+<div class="col-md-4">
+  <label class="form-label">Ciudad</label>
+  <select name="ciudad" id="ciudad" class="form-select" required>
+    <option value="">-- Selecciona una ciudad --</option>
+    <?php while ($row = $ciudades->fetch_assoc()): ?>
+      <option value="<?= $row['ID'] ?>"><?= htmlspecialchars($row['nom_ciudad']) ?></option>
+    <?php endwhile; ?>
+  </select>
+</div>
+
+<!-- Municipio -->
+<div class="col-md-6">
+  <label class="form-label">Municipio</label>
+  <select name="municipio" id="municipio" class="form-select" required>
+    <option value="">-- Selecciona un municipio --</option>
+  </select>
+</div>
+
+  <!-- Sucursal -->
+  <div class="col-md-6">
+    <label class="form-label">Sucursal</label>
+    <input type="text" name="sucursal" placeholder="Sucursal" class="form-control">
+  </div>
+</div>
+
     <!-- Observaciones -->
     <div class="col-md-6">
       <label class="form-label">Observaciones</label>
@@ -90,18 +130,6 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
     <div class="col-md-3">
       <label class="form-label">Ubicacion en tienda</label>
       <input type="text" name="area" placeholder= "Area de tienda" class="form-control" value="<?= htmlspecialchars($device['area'] ?? '') ?>">
-    </div>
-
-    <!-- Usuario -->
-    <div class="col-md-3">
-      <label class="form-label">Usuario</label>
-      <input type="text" name="usuario" placeholder="User dispositivo" class="form-control">
-    </div>
-
-    <!-- Contraseña -->
-    <div class="col-md-3">
-      <label class="form-label">Contraseña</label>
-      <input type="password" name="contrasena" placeholder="Escribe la contraseña" class="form-control">
     </div>
 
                                                      <!-- CAMPOS ESPECIFICOS PARA CCTV -->
@@ -353,6 +381,32 @@ function validarIP(input) {
       sugerencia.style.opacity = '0';
       setTimeout(() => sugerencia.remove(), 1000); // lo remueve del DOM tras el desvanecimiento
     }, 3000); // 1 segundo
+</script>
+
+<script>
+document.getElementById('ciudad').addEventListener('change', function () {
+  const ciudadID = this.value;
+  const municipioSelect = document.getElementById('municipio');
+
+  // Mensaje de carga temporal
+  municipioSelect.innerHTML = '<option value="">Cargando municipios...</option>';
+
+  fetch(`obtener_municipios.php?ciudad_id=${ciudadID}`)
+    .then(response => response.json())
+    .then(data => {
+      municipioSelect.innerHTML = '<option value="">-- Selecciona un municipio --</option>';
+      data.forEach(municipio => {
+        const option = document.createElement('option');
+        option.value = municipio.ID;
+        option.textContent = municipio.nom_municipio;
+        municipioSelect.appendChild(option);
+      });
+    })
+    .catch(error => {
+      municipioSelect.innerHTML = '<option value="">Error al cargar</option>';
+      console.error('Error cargando municipios:', error);
+    });
+});
 </script>
 
 
