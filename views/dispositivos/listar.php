@@ -38,25 +38,34 @@ $stmt = $conn->prepare("
     $stmt->bind_param("sssssi", $likeSearch, $likeSearch, $likeSearch, $likeSearch, $search, $search);
     $stmt->execute();
     $result = $stmt->get_result();
+    
+} elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
+    $sucursalId = intval($_GET['sucursal_id']);
+    $stmt = $conn->prepare("
+        SELECT d.*, 
+               s.nom_sucursal, 
+               m.nom_municipio, 
+               c.nom_ciudad,
+               eq.nom_equipo,
+               mo.num_modelos,
+               es.status_equipo
+        FROM dispositivos d
+        LEFT JOIN sucursales s ON d.sucursal = s.ID
+        LEFT JOIN municipios m ON s.municipio_id = m.ID
+        LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+        LEFT JOIN equipos eq ON d.equipo = eq.ID
+        LEFT JOIN modelos mo ON d.modelo = mo.ID
+        LEFT JOIN status es ON d.estado = es.ID
+        WHERE d.sucursal = ?
+        ORDER BY d.id ASC
+    ");
+    $stmt->bind_param("i", $sucursalId);
+    $stmt->execute();
+    $result = $stmt->get_result();
 } else {
-$result = $conn->query("
-    SELECT d.*, 
-           s.nom_sucursal, 
-           m.nom_municipio, 
-           c.nom_ciudad,
-           eq.nom_equipo,
-           mo.num_modelos,
-           es.status_equipo
-    FROM dispositivos d
-    LEFT JOIN sucursales s ON d.sucursal = s.ID
-    LEFT JOIN municipios m ON s.municipio_id = m.ID
-    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
-    LEFT JOIN equipos eq ON d.equipo = eq.ID
-    LEFT JOIN modelos mo ON d.modelo = mo.ID
-    LEFT JOIN status es ON d.estado = es.ID
-    ORDER BY d.id ASC
-");
+    $result = false; // no mostrar nada si no hay sucursal
 }
+
 // Verificamos si la consulta devolvió resultados
 
 ob_start();
@@ -152,6 +161,7 @@ ob_start();
     </thead>
 
     <tbody id="resultado-dispositivos">
+      <?php if ($result && $result->num_rows > 0): ?>
       <?php while ($device = $result->fetch_assoc()): ?>
       <tr>
         <!-- folio -->
@@ -190,7 +200,14 @@ ob_start();
         </td>
       </tr>
       <?php endwhile; ?>
+      <?php else: ?>
+          <tr>
+    <td colspan="8" class="text-center text-muted">Selecciona una sucursal para ver los dispositivos</td>
+  </tr>
+      <?php endif; ?>
     </tbody>
+                                                              <!-- Fin de la tabla -->
+
   </table>
 </div>
 <?php if ($_SESSION['usuario_rol'] === 'Administrador' || $_SESSION['usuario_rol'] === 'Invitado'): ?>
@@ -273,30 +290,45 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Filtrar al cambiar ciudad, municipio o sucursal
-function actualizarTabla() {
-  const ciudadId = document.getElementById('ciudad').value;
-  const municipioId = document.getElementById('municipio').value;
-  const sucursalId = document.getElementById('sucursal').value;
+  // ✅ Mueve esto fuera de la función
+  sucursalSelect.addEventListener('change', actualizarTabla);
 
-  const params = new URLSearchParams();
-  if (ciudadId) params.append('ciudad_id', ciudadId);
-  if (municipioId) params.append('municipio_id', municipioId);
-  if (sucursalId) params.append('sucursal_id', sucursalId);
+  function actualizarTabla() {
+    const ciudadId = ciudadSelect.value;
+    const municipioId = municipioSelect.value;
+    const sucursalId = sucursalSelect.value;
 
-  fetch(`buscar_dispositivos.php?${params.toString()}`)
-    .then(response => response.text())
-    .then(html => {
-      document.getElementById('resultado-dispositivos').innerHTML = html;
-    });
-}
+    if (!sucursalId) {
+      resultadoContenedor.innerHTML = `
+        <tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
+      return;
+    }
 
-document.getElementById('ciudad').addEventListener('change', actualizarTabla);
-document.getElementById('municipio').addEventListener('change', actualizarTabla);
-document.getElementById('sucursal').addEventListener('change', actualizarTabla);
+    const params = new URLSearchParams();
+    if (ciudadId) params.append('ciudad_id', ciudadId);
+    if (municipioId) params.append('municipio_id', municipioId);
+    if (sucursalId) params.append('sucursal_id', sucursalId);
 
+    fetch(`buscar_dispositivos.php?${params.toString()}`)
+      .then(response => response.text())
+      .then(html => {
+        resultadoContenedor.innerHTML = html;
+      });
+  }
+
+  // Opcional: limpiar tabla si cambian ciudad o municipio
+  ciudadSelect.addEventListener('change', () => {
+    resultadoContenedor.innerHTML = `
+      <tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
+  });
+
+  municipioSelect.addEventListener('change', () => {
+    resultadoContenedor.innerHTML = `
+      <tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
+  });
 });
 </script>
+
 
   <script>
 document.addEventListener("DOMContentLoaded", function () {

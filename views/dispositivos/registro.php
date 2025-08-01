@@ -68,19 +68,19 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
     <!-- CAMPOS ADICIONALES DE USUARIO Y UBICACIÓN -->
     <div class="row g-4 mt-4">
     <!-- Usuario -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="form-label">Usuario</label>
       <input type="text" name="user" placeholder="Nombre de usuario" class="form-control" required>
     </div>
 
     <!-- Contraseña -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="form-label">Contraseña</label>
       <input type="password" name="pass" placeholder="Contraseña de usuario" class="form-control" required>
     </div>
 
     <!-- Ciudad -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="form-label">Ciudad</label>
       <select name="ciudad" id="ciudad" class="form-select" required>
         <option value="">-- Selecciona una ciudad --</option>
@@ -91,7 +91,7 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
     </div>
     
     <!-- Municipio -->
-    <div class="col-md-6">
+    <div class="col-md-3">
       <label class="form-label">Municipio</label>
       <select name="municipio" id="municipio" class="form-select" required>
         <option value="">-- Selecciona un municipio --</option>
@@ -99,14 +99,14 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
     </div>
     
     <!-- Sucursal -->
-    <div class="col-md-6">
+    <div class="col-md-3">
       <label class="form-label">Sucursal</label>
       <input type="text" name="sucursal" placeholder="Ej. SB Plaza las antenas" class="form-control">
     </div>
   </div>
   
   <!-- Observaciones -->
-   <div class="col-md-6">
+   <div class="col-md-3">
     <label class="form-label">Observaciones</label>
     <input type="text" name="observaciones" placeholder="Escribe alguna observación" class="form-control">
   </div>
@@ -170,7 +170,7 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
     <!-- CAMPOS ESPECÍFICOS PARA ALARMA -->
     <div class="grupo-alarma d-none">
       <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label">Zona del sistema de alarma</label>
           <input type="text" name="zona_alarma" placeholder="Ej: Zona 1" class="form-control">
         </div>

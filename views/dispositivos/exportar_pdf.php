@@ -64,32 +64,91 @@ $qr   = !empty($device['qr'])      ? imagenBase64("qrcodes/" . $device['qr'])   
 // HTML del PDF
 ob_start();
 ?>
-
 <style>
-  body { font-family: DejaVu Sans, sans-serif; font-size: 12px; }
-  h1 { text-align: center; margin-bottom: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th, td { border: 1px solid #999; padding: 6px; vertical-align: top; }
-  .img-block { text-align: center; margin: 20px 0; }
-  .img-block img { max-width: 100%; max-height: 300px; margin-bottom: 5px; }
+  body {
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 11px;
+    color: #333;
+  }
+
+  h1 {
+    text-align: center;
+    color: #2c3e50;
+    font-size: 30px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
   .logo-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
   }
+
   .logo-row img {
     height: 60px;
     max-width: 45%;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+
+  th {
+    background-color: #f5f5f5;
+    text-align: left;
+    padding: 8px;
+    font-weight: bold;
+    border: 1px solid #ccc;
+  }
+
+  td {
+    padding: 8px;
+    border: 1px solid #ccc;
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .img-block {
+    text-align: center;
+    margin: 25px 0;
+  }
+
+  .img-block img,
+  .image-pair img {
+    display: block;
+    max-width: 90%;
+    max-height: 250px;
+    margin: 10px auto;
+    border: 1px solid #ccc;
+    padding: 5px;
+  }
+
+
+  .section-title {
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 20px;
+    text-align: center;
+    color: #34495e;
   }
 </style>
 
 <div class="logo-row">
   <?php if ($logoSisec): ?>
-    <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="width: 150px;">
+    <img src="<?= $logoSisec ?>" alt="Logo SISEC">
   <?php endif; ?>
   <?php if ($logoSucursal): ?>
-    <img src="<?= $logoSucursal ?>" alt="Logo Sucursal" style="width: 150px;">
+    <img src="<?= $logoSucursal ?>" alt="Logo Sucursal">
   <?php endif; ?>
 </div>
 
@@ -97,13 +156,13 @@ ob_start();
 
 <?php if ($img1): ?>
   <div class="img-block">
-    <strong>Imagen principal</strong><br>
-    <img src="<?= $img1 ?>" style="width: 150px;">
+    <div class="section-title">Imagen principal</div>
+    <img src="<?= $img1 ?>">
   </div>
 <?php endif; ?>
 
 <table>
-  <tr><th>ID</th><td><?= $device['id'] ?></td></tr>
+  <!-- <tr><th>ID</th><td><?= $device['id'] ?></td></tr> -->
   <tr><th>Equipo</th><td><?= htmlspecialchars($device['nom_equipo']) ?></td></tr>
   <tr><th>Fecha de instalación</th><td><?= htmlspecialchars($device['fecha']) ?></td></tr>
   <tr><th>Modelo</th><td><?= htmlspecialchars($device['num_modelos']) ?></td></tr>
@@ -124,31 +183,31 @@ ob_start();
 <?php if ($img2 || $img3 || $qr): ?>
   <div class="img-block">
     <?php if ($img2 || $img3): ?>
-      <div style="display: flex; justify-content: center; gap: 40px;">
+      <div class="section-title">Visualización de imágenes</div>
+      <div class="image-pair">
         <?php if ($img2): ?>
-          <div style="text-align: center;">
-            <strong>Imagen antes</strong><br><br>
-            <img src="<?= $img2 ?>" style="max-width: 250px; max-height: 200px;">
+          <div>
+            <div><strong>Antes</strong></div>
+            <img src="<?= $img2 ?>">
           </div>
         <?php endif; ?>
         <?php if ($img3): ?>
-          <div style="text-align: center;">
-            <strong>Imagen después</strong><br><br>
-            <img src="<?= $img3 ?>" style="max-width: 250px; max-height: 200px;">
+          <div>
+            <div><strong>Después</strong></div>
+            <img src="<?= $img3 ?>">
           </div>
         <?php endif; ?>
       </div>
     <?php endif; ?>
 
     <?php if ($qr): ?>
-      <br><br>
-      <div style="text-align: center;">
-        <strong>Código QR</strong><br>
-        <img src="<?= $qr ?>" style="width: 150px;">
-      </div>
+      <div class="section-title">Código QR del dispositivo</div>
+      <img src="<?= $qr ?>" style="width: 130px;">
     <?php endif; ?>
   </div>
 <?php endif; ?>
+
+</div>
 
 <?php
 $html = ob_get_clean();
