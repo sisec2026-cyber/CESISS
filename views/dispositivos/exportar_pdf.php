@@ -67,7 +67,7 @@ ob_start();
 <style>
   body {
     font-family: DejaVu Sans, sans-serif;
-    font-size: 11px;
+    font-size: 15px;
     color: #333;
   }
 
@@ -89,14 +89,14 @@ ob_start();
   }
 
   .logo-row img {
-    height: 60px;
-    max-width: 45%;
+    height: 50px;
+    max-width: 40%;
   }
 
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
+    margin-top: 1px;
   }
 
   th {
@@ -135,24 +135,32 @@ ob_start();
 
   .section-title {
     font-weight: bold;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    margin-top: 1px;
+    margin-bottom: 1px;
     font-size: 20px;
     text-align: center;
     color: #34495e;
   }
 </style>
 
-<div class="logo-row">
-  <?php if ($logoSisec): ?>
-    <img src="<?= $logoSisec ?>" alt="Logo SISEC">
-  <?php endif; ?>
-  <?php if ($logoSucursal): ?>
-    <img src="<?= $logoSucursal ?>" alt="Logo Sucursal">
-  <?php endif; ?>
-</div>
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 1px;">
+  <tr>
+    <td style="text-align: left; width: 50%; border: none;">
+      <?php if ($logoSisec): ?>
+        <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="height: 50px;">
+      <?php endif; ?>
+    </td>
+    <td style="text-align: right; width: 50%; border: none;">
+      <?php if ($logoSucursal): ?>
+        <img src="<?= $logoSucursal ?>" alt="Logo Sucursal" style="height: 50px;">
+      <?php endif; ?>
+    </td>
+  </tr>
+</table>
 
-<h1>Ficha técnica del dispositivo</h1>
+
+<h1 style="font-size:20px;">Ficha técnica de dispositivo <?= htmlspecialchars($device['nom_equipo']) ?></h1>
+<h1 style="font-size:10px;">Ubicación: <?= htmlspecialchars($device['nom_ciudad'])?>, <?= htmlspecialchars($device['nom_municipio']) ?>, <?= htmlspecialchars($device['nom_sucursal']) ?></h1>
 
 <?php if ($img1): ?>
   <div class="img-block">
@@ -163,13 +171,10 @@ ob_start();
 
 <table>
   <!-- <tr><th>ID</th><td><?= $device['id'] ?></td></tr> -->
-  <tr><th>Equipo</th><td><?= htmlspecialchars($device['nom_equipo']) ?></td></tr>
+  <!--tr><th>Equipo</th><td><?= htmlspecialchars($device['nom_equipo']) ?></td></tr-->
   <tr><th>Fecha de instalación</th><td><?= htmlspecialchars($device['fecha']) ?></td></tr>
   <tr><th>Modelo</th><td><?= htmlspecialchars($device['num_modelos']) ?></td></tr>
   <tr><th>Estado</th><td><?= htmlspecialchars($device['status_equipo']) ?></td></tr>
-  <tr><th>Sucursal</th><td><?= htmlspecialchars($device['nom_sucursal']) ?></td></tr>
-  <tr><th>Municipio</th><td><?= htmlspecialchars($device['nom_municipio']) ?></td></tr>
-  <tr><th>Ciudad</th><td><?= htmlspecialchars($device['nom_ciudad']) ?></td></tr>
   <tr><th>Área</th><td><?= htmlspecialchars($device['area']) ?></td></tr>
   <tr><th>Serie</th><td><?= htmlspecialchars($device['serie']) ?></td></tr>
   <tr><th>MAC</th><td><?= htmlspecialchars($device['mac']) ?></td></tr>
@@ -177,6 +182,8 @@ ob_start();
   <tr><th>VMS</th><td><?= htmlspecialchars($device['vms']) ?></td></tr>
   <tr><th>Switch</th><td><?= htmlspecialchars($device['switch']) ?></td></tr>
   <tr><th>Puerto</th><td><?= htmlspecialchars($device['puerto']) ?></td></tr>
+  <tr><th>Usuario</th><td><?= htmlspecialchars($device['user']) ?></td></tr>
+  <tr><th>Contraseña</th><td><?= htmlspecialchars($device['pass']) ?></td></tr>
   <tr><th>Observaciones</th><td><?= nl2br(htmlspecialchars($device['observaciones'])) ?></td></tr>
 </table>
 
@@ -217,5 +224,5 @@ $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
-$dompdf->stream("dispositivo_{$device['id']}.pdf", ["Attachment" => false]);
+$dompdf->stream("dispositivo_{$device['nom_equipo']}.pdf", ["Attachment" => false]);
 exit;

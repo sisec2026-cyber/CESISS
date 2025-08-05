@@ -69,7 +69,7 @@ ob_start();
   </div>
 
   <div class="col-md-8">
-    <table class="table table-striped table-bordered">
+    <table class="table table-striped table-bordered" style="max-width:800px;">
       <tbody>
         <tr><th>Equipo</th><td><?= htmlspecialchars($device['nom_equipo']) ?></td></tr>
         <tr><th>Fecha de instalación</th><td><?= htmlspecialchars($device['fecha']) ?></td></tr>
@@ -84,8 +84,10 @@ ob_start();
         <tr><th>VMS</th><td><?= htmlspecialchars($device['vms']) ?></td></tr>
         <tr><th>Servidor</th><td><?= htmlspecialchars($device['servidor']) ?></td></tr>
         <tr><th>Switch</th><td><?= htmlspecialchars($device['switch']) ?></td></tr>
-        <tr><th>Puerto</th><td><?= htmlspecialchars($device['puerto']) ?></td></tr>
+        <tr><th>Puerto</th><td><?= htmlspecialchars($device['pass']) ?></td></tr>
         <tr><th>Observaciones</th><td><?= nl2br(htmlspecialchars($device['observaciones'])) ?></td></tr>
+        <tr><th>Usuario</th><td><?= htmlspecialchars($device['user']) ?></td></tr>
+        <tr><th>Contraseña</th><td><?= htmlspecialchars($device['puerto']) ?></td></tr>
         <tr>
           <th>Imagen antes</th>
           <td>

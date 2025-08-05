@@ -76,18 +76,35 @@ ob_start();
 <!-- Buscador y botón alineados -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
   <form method="GET" style="display: flex; gap: 10px;">
-    <input type="text" name="search" class="form-control" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>">
+    <!--input type="text" name="search" class="form-control" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>"-->
    <!--<button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>-->
   </form>
 
-  <a href="exportar_lista_pdf.php?search=<?= urlencode($search) ?>" class="btn btn-danger" target="_blank">
+  <button id="btnExportar" class="btn btn-danger">
   <i class="fas fa-file-pdf"></i> Exportar PDF
-</a>
+</button>
 
   <?php if (in_array($_SESSION['usuario_rol'], ['Administrador', 'Mantenimientos'])): ?>
     <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i> Registrar nuevo dispositivo</a>
   <?php endif; ?>
 </div>
+
+<script>
+  document.getElementById("btnExportar").addEventListener("click", function () {
+    const ciudad = document.getElementById("ciudad").value;
+    const municipio = document.getElementById("municipio").value;
+    const sucursal = document.getElementById("sucursal").value;
+
+    let url = `exportar_lista_pdf.php?`;
+
+    if (ciudad) url += `ciudad=${ciudad}&`;
+    if (municipio) url += `municipio=${municipio}&`;
+    if (sucursal) url += `sucursal=${sucursal}`;
+
+    window.open(url, '_blank');
+  });
+</script>
+
                                             <!-- Filtros Busqueda -->
 <div class="row mb-3">
   <div class="col-md-4">
@@ -149,7 +166,7 @@ ob_start();
   <table class="table table-hover table-bordered text-center align-middle">
     <thead class="table-primary">
       <tr>
-        <th>Folio</th>
+        <th>Determinante</th>
         <th>Equipo</th>
         <th>Fecha de instalación</th>
         <th>Modelo</th>
