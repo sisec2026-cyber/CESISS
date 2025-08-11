@@ -1,6 +1,6 @@
 <?php 
 require_once __DIR__ . '/../../includes/auth.php';
-verificarAutenticacion(); // 1️⃣ Verifica si hay sesión iniciada
+verificarAutenticacion(); // Verifica si hay sesión iniciada
 verificarRol(['Administrador', 'Mantenimientos', 'Invitado']);
 
 include __DIR__ . '/../../includes/db.php';
@@ -24,7 +24,7 @@ $stmt = $conn->prepare("
     LEFT JOIN ciudades c ON m.ciudad_id = c.ID
     LEFT JOIN equipos eq ON d.equipo = eq.ID
     LEFT JOIN modelos mo ON d.modelo = mo.ID
-    LEFT JOIN status es ON d.status = es.ID
+    LEFT JOIN status es ON d.estado = es.ID
     WHERE 
         eq.nom_equipo LIKE ? OR 
         mo.num_modelos LIKE ? OR 
@@ -42,20 +42,23 @@ $stmt = $conn->prepare("
 } elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
     $sucursalId = intval($_GET['sucursal_id']);
     $stmt = $conn->prepare("
-        SELECT d.*, 
-               s.nom_sucursal, 
-               m.nom_municipio, 
-               c.nom_ciudad,
-               eq.nom_equipo,
-               mo.num_modelos,
-               es.status_equipo
-        FROM dispositivos d
-        LEFT JOIN sucursales s ON d.sucursal = s.ID
-        LEFT JOIN municipios m ON s.municipio_id = m.ID
-        LEFT JOIN ciudades c ON m.ciudad_id = c.ID
-        LEFT JOIN equipos eq ON d.equipo = eq.ID
-        LEFT JOIN modelos mo ON d.modelo = mo.ID
-        LEFT JOIN status es ON d.estado = es.ID
+SELECT d.*, 
+       s.nom_sucursal,
+       det.numero_tienda AS determinante,
+       m.nom_municipio, 
+       c.nom_ciudad,
+       eq.nom_equipo,
+       mo.num_modelos,
+       es.status_equipo
+FROM dispositivos d
+LEFT JOIN sucursales s ON d.sucursal_id = s.id
+LEFT JOIN determinante det ON s.id = det.sucursal_id
+LEFT JOIN municipios m ON s.municipio_id = m.id
+LEFT JOIN ciudades c ON m.ciudad_id = c.id
+LEFT JOIN equipos eq ON d.equipo_id = eq.id
+LEFT JOIN modelos mo ON d.modelo = mo.id
+LEFT JOIN estatus es ON d.estatus_id = es.id
+
         WHERE d.sucursal = ?
         ORDER BY d.id ASC
     ");
@@ -76,11 +79,11 @@ ob_start();
 <!-- Buscador y botón alineados -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
   <form method="GET" style="display: flex; gap: 10px;">
-    <!--input type="text" name="search" class="form-control" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>"-->
-   <!--<button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>-->
+    <!--input type="text" name="search" class="form-control" style="width:300px" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>"-->
+   <!--button-- type="submit" class="btn btn-primary"><i class="fas fa-search"></i></!--button-->
   </form>
 
-  <button id="btnExportar" class="btn btn-danger">
+  <button id="btnExportar" class="btn btn-danger" style="display: none;">
   <i class="fas fa-file-pdf"></i> Exportar PDF
 </button>
 
@@ -182,7 +185,7 @@ ob_start();
       <?php while ($device = $result->fetch_assoc()): ?>
       <tr>
         <!-- folio -->
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
+        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['determinante']) ?></td>
         <td><?= htmlspecialchars($device['nom_equipo']) ?></td>
         <td><?= htmlspecialchars($device['fecha']) ?></td>
         <td><?= htmlspecialchars($device['num_modelos']) ?></td>
@@ -314,10 +317,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const ciudadId = ciudadSelect.value;
     const municipioId = municipioSelect.value;
     const sucursalId = sucursalSelect.value;
-
+    const botonPDF = document.getElementById('btnExportar');
+    
+    if (ciudadId && municipioId && sucursalId) {
+      botonPDF.style.display = 'inline-block';
+    } else {
+      botonPDF.style.display = 'none';
+    }
+    // Si no hay sucursal, muestra el mensaje y termina
     if (!sucursalId) {
-      resultadoContenedor.innerHTML = `
-        <tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
+      resultadoContenedor.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
       return;
     }
 

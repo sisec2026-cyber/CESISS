@@ -37,7 +37,10 @@ ob_start();
       <label for="rol" class="form-label">Rol</label>
       <select class="form-select" id="rol" name="rol" required>
         <option value="">Seleccione un rol</option>
+        <option value="SuperAdministrador">SuperAdministrador</option>
         <option value="Administrador">Administrador</option>
+        <option value="Distrital">Distrital</option>
+        <option value="JefePrevencion">Jefe de Prevencion</option>
         <option value="Mantenimientos">Mantenimientos</option>
         <option value="Invitado">Invitado</option>
       </select>

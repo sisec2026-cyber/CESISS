@@ -11,6 +11,7 @@ $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
 ob_start();
 ?>
 
+
 <!-- ESTILOS -->
 <style>
   .dropzone {
@@ -67,23 +68,30 @@ ob_start();
         <label class="form-label">Equipo</label>
         <input type="text" name="equipo" id="equipo" class="form-control" placeholder="Ej. CCTV, DVR, NVR..." oninput="actualizarMarcaYBotones()">
       </div>
+                                                                     <!-- INICIO BOTONES -->
 <!-- Botones para tipo de alarma -->
 <div id="tipoAlarmaContainer" class="mt-2 d-none">
-  <button type="button" class="btn btn-outline-primary me-2 tipo-alarma" id="alarmaAlambrica">Alámbrico</button>
-  <button type="button" class="btn btn-outline-primary tipo-alarma" id="alarmaInalambrica">Inalámbrico</button>
+  <button type="button" class="btn btn-outline-primary me-2 tipo-alarma" onclick="document.getElementById('tipo_alarma').value = 'Alámbrico'">Alámbrico</button>
+  <button type="button" class="btn btn-outline-primary tipo-alarma" onclick="document.getElementById('tipo_alarma').value = 'Inalámbrico'">Inalámbrico</button>
 </div>
 
 <!-- Botones para tipo de switch -->
 <div id="tipoSwitchContainer" class="mt-2 d-none">
-  <button type="button" class="btn btn-outline-primary me-2 tipo-switch" id="switchPlano">Plano</button>
-  <button type="button" class="btn btn-outline-primary tipo-switch" id="switchPoe">PoE</button>
+  <button type="button" class="btn btn-outline-primary me-2 tipo-switch" onclick="document.getElementById('tipo_switch').value = 'Plano'">Plano</button>
+  <button type="button" class="btn btn-outline-primary tipo-switch" onclick="document.getElementById('tipo_switch').value = 'PoE'">PoE</button>
 </div>
 
-      <div id="tipoCamaraContainer" style="display: none; margin-top: 10px;">
-        <button type="button" id="camaraIP" class="btn btn-outline-primary">IP</button>
-        <button type="button" id="camaraAnalogica" class="btn btn-outline-primary">Analógica</button>
-      </div>
-
+<!-- Botones para tipo de cámara -->
+<div id="tipoCamaraContainer" style="display: none; margin-top: 10px;">
+  <button type="button" id="camaraIP" class="btn btn-outline-primary" onclick="document.getElementById('tipo_cctv').value = 'IP'">IP</button>
+  <button type="button" id="camaraAnalogica" class="btn btn-outline-primary" onclick="document.getElementById('tipo_cctv').value = 'Analógico'">Analógica</button>
+</div>
+                                                                      <!-- FIN BOTONES -->
+  <!-- Campos ocultos que guardan el tipo seleccionado -->
+<input type="hidden" name="tipo_alarma" id="tipo_alarma">
+<input type="hidden" name="tipo_switch" id="tipo_switch">
+<input type="hidden" name="tipo_cctv" id="tipo_cctv">
+                                                                
       <div class="col-md-3 mt-2">
         <label class="form-label">Marca</label>
         <select name="marca" id="marca" class="form-control">
@@ -103,10 +111,12 @@ ob_start();
         <input type="date" name="fecha" class="form-control" required>
       </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Modelo del equipo</label>
-        <input type="text" name="modelo" class="form-control" placeholder="Escribe el modelo" required>
-      </div>
+<div class="col-md-3">
+  <label class="form-label">Modelo del equipo</label>
+  <input type="text" name="modelo" id="modelo" class="form-control" list="sugerencias-modelo" placeholder="Escribe el modelo" required>
+  <datalist id="sugerencias-modelo"></datalist>
+</div>
+
 
       <div class="col-md-3">
         <label class="form-label">Estado</label>
@@ -267,6 +277,8 @@ ob_start();
 
 <!-- SCRIPTS -->
 <script src="validacionesregistro.js"></script>
+
+
 
 <?php
 $content = ob_get_clean();
