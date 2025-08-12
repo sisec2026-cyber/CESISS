@@ -84,10 +84,10 @@ ob_start();
         <tr><th>VMS</th><td><?= htmlspecialchars($device['vms']) ?></td></tr>
         <tr><th>Servidor</th><td><?= htmlspecialchars($device['servidor']) ?></td></tr>
         <tr><th>Switch</th><td><?= htmlspecialchars($device['switch']) ?></td></tr>
-        <tr><th>Puerto</th><td><?= htmlspecialchars($device['pass']) ?></td></tr>
+        <tr><th>Puerto</th><td><?= htmlspecialchars($device['puerto']) ?></td></tr>
         <tr><th>Observaciones</th><td><?= nl2br(htmlspecialchars($device['observaciones'])) ?></td></tr>
         <tr><th>Usuario</th><td><?= htmlspecialchars($device['user']) ?></td></tr>
-        <tr><th>Contraseña</th><td><?= htmlspecialchars($device['puerto']) ?></td></tr>
+        <tr><th>Contraseña</th><td><?= htmlspecialchars($device['pass']) ?></td></tr>
         <tr>
           <th>Imagen antes</th>
           <td>
