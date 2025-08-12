@@ -230,6 +230,9 @@ ob_start();
 
   </table>
 </div>
+
+
+
 <?php if ($_SESSION['usuario_rol'] === 'Administrador' || $_SESSION['usuario_rol'] === 'Invitado'): ?>
   <!-- Modal de Confirmación -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
@@ -361,16 +364,18 @@ document.addEventListener("DOMContentLoaded", function () {
   const searchInput = document.querySelector("input[name='search']");
   const resultadoContenedor = document.getElementById("resultado-dispositivos");
 
-  searchInput.addEventListener("keyup", function () {
-    const query = searchInput.value;
+  if (searchInput) { // 👈 evita error si el input está comentado/no existe
+    searchInput.addEventListener("keyup", function () {
+      const query = searchInput.value;
 
-    fetch(`buscar_dispositivos.php?search=${encodeURIComponent(query)}`)
-      .then(response => response.text())
-      .then(html => {
-        resultadoContenedor.innerHTML = html;
-      })
-      .catch(error => console.error("Error en la búsqueda:", error));
-  });
+      fetch(`buscar_dispositivos.php?search=${encodeURIComponent(query)}`)
+        .then(response => response.text())
+        .then(html => {
+          resultadoContenedor.innerHTML = html;
+        })
+        .catch(error => console.error("Error en la búsqueda:", error));
+    });
+  }
 });
 </script>
 

@@ -6,38 +6,39 @@ verificarRol(['Administrador', 'Mantenimientos', 'Invitado']);
 include __DIR__ . '/../../includes/db.php';
 
 // Filtros desde el formulario o AJAX
-$ciudad = $_GET['ciudad_id'] ?? '';
-$municipio = $_GET['municipio_id'] ?? '';
-$sucursal = $_GET['sucursal_id'] ?? '';
-$search = $_GET['search'] ?? '';
+$ciudad      = $_GET['ciudad_id']    ?? '';
+$municipio   = $_GET['municipio_id'] ?? '';
+$sucursal    = $_GET['sucursal_id']  ?? '';
+$search      = $_GET['search']       ?? '';
 $fechaInicio = $_GET['fecha_inicio'] ?? '';
-$fechaFin = $_GET['fecha_fin'] ?? '';
+$fechaFin    = $_GET['fecha_fin']    ?? '';
 
 // Construcción dinámica del WHERE
 $condiciones = [];
 $params = [];
 $tipos = '';
 
-// Búsqueda general
+// Búsqueda general (incluye determinante)
 if (!empty($search)) {
     $condiciones[] = "(
         eq.nom_equipo LIKE ? OR 
         mo.num_modelos LIKE ? OR 
-        s.nom_sucursal LIKE ? OR 
+        s.nom_sucursal LIKE ? OR
+        det.nom_determinante LIKE ? OR
         es.status_equipo LIKE ? OR 
         d.fecha = ? OR 
         d.id = ?
     )";
     $likeSearch = "%$search%";
-    $params[] = &$likeSearch;
-    $params[] = &$likeSearch;
-    $params[] = &$likeSearch;
-    $params[] = &$likeSearch;
-    $params[] = &$search;
-    $params[] = &$search;
-    $tipos .= 'sssssi';
+    $params[] = &$likeSearch; // equipo
+    $params[] = &$likeSearch; // modelo
+    $params[] = &$likeSearch; // sucursal
+    $params[] = &$likeSearch; // determinante (NOMBRE)
+    $params[] = &$likeSearch; // estatus
+    $params[] = &$search;     // fecha exacta
+    $params[] = &$search;     // id exacto
+    $tipos .= 'ssssssi';
 }
-
 
 // Filtro por ciudad
 if (!empty($ciudad)) {
@@ -71,20 +72,22 @@ if (!empty($fechaInicio) && !empty($fechaFin)) {
 // Construir consulta
 $where = $condiciones ? 'WHERE ' . implode(' AND ', $condiciones) : '';
 $sql = "
-    SELECT d.*, 
-           s.nom_sucursal, 
-           m.nom_municipio, 
+    SELECT d.*,
+           s.nom_sucursal,
+           m.nom_municipio,
            c.nom_ciudad,
            eq.nom_equipo,
            mo.num_modelos,
-           es.status_equipo
+           es.status_equipo,
+           det.nom_determinante AS determinante
     FROM dispositivos d
-    LEFT JOIN sucursales s ON d.sucursal = s.ID
-    LEFT JOIN municipios m ON s.municipio_id = m.ID
-    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
-    LEFT JOIN equipos eq ON d.equipo = eq.ID
-    LEFT JOIN modelos mo ON d.modelo = mo.ID
-    LEFT JOIN status es ON d.estado = es.ID
+    LEFT JOIN sucursales    s   ON d.sucursal     = s.ID
+    LEFT JOIN determinantes det ON d.determinante = det.ID
+    LEFT JOIN municipios    m   ON s.municipio_id = m.ID
+    LEFT JOIN ciudades      c   ON m.ciudad_id    = c.ID
+    LEFT JOIN equipos       eq  ON d.equipo       = eq.ID
+    LEFT JOIN modelos       mo  ON d.modelo       = mo.ID
+    LEFT JOIN status        es  ON d.estado       = es.ID
     $where
     ORDER BY d.id ASC
 ";
@@ -97,11 +100,20 @@ if ($params) {
 $stmt->execute();
 $result = $stmt->get_result();
 
+// Si no hay resultados, mostramos fila vacía
+if ($result->num_rows === 0): ?>
+<tr>
+  <td colspan="8" class="text-center text-muted">No se encontraron dispositivos con los filtros aplicados.</td>
+</tr>
+<?php
+endif;
+
 // Mostrar resultados
 while ($device = $result->fetch_assoc()):
 ?>
 <tr>
-  <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
+  <!-- Determinante visible -->
+  <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['determinante'] ?? '-') ?></td>
   <td><?= htmlspecialchars($device['nom_equipo']) ?></td>
   <td><?= htmlspecialchars($device['fecha']) ?></td>
   <td><?= htmlspecialchars($device['num_modelos']) ?></td>
@@ -110,7 +122,6 @@ while ($device = $result->fetch_assoc()):
     <?= htmlspecialchars($device['nom_sucursal'] ?? '-') ?><br>
     <small><?= htmlspecialchars($device['nom_municipio'] ?? '-') ?>, <?= htmlspecialchars($device['nom_ciudad'] ?? '-') ?></small>
   </td>
-  
   <td>
     <?php if (!empty($device['imagen'])): ?>
       <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen']) ?>" alt="Imagen" style="max-height:50px; object-fit: contain;">
@@ -128,6 +139,8 @@ while ($device = $result->fetch_assoc()):
 </tr>
 <?php endwhile; ?>
 
+<!-- (tu JS de filtros al final puede quedarse igual) -->
+ 
                                                   <!-- Filtros -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
