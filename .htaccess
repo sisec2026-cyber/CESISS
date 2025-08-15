@@ -1,0 +1,7 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Ruta corta /d/{id} -> views/dispositivos/device.php?id={id}
+RewriteRule ^d/([0-9]+)$ views/dispositivos/device.php?id=$1 [QSA,L]
+</IfModule>

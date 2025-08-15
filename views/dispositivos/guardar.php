@@ -223,22 +223,38 @@ try {
     $stmtNotif->execute();
   }
 
-  /* ========== 7) QR ========== */
-  $qr_filename = 'qr_' . $id . '.png';
-  $qr_dir = __DIR__ . '/../../public/qrcodes/';
-  if (!is_dir($qr_dir)) { @mkdir($qr_dir, 0775, true); }
+/* ========== 7) QR ========== */
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../vendor/phpqrcode/qrlib.php';
 
-  $qr_url = 'http://localhost/sisec-ui/views/dispositivos/device.php?id=' . $id; // ajusta dominio real
-  QRcode::png($qr_url, $qr_dir . $qr_filename, QR_ECLEVEL_H, 10);
+// Asegura carpeta
+if (!is_dir(QR_DIR)) {
+    @mkdir(QR_DIR, 0775, true);
+}
 
-  $stmtQr = $conn->prepare("UPDATE dispositivos SET qr = ? WHERE id = ?");
-  $stmtQr->bind_param("si", $qr_filename, $id);
-  $stmtQr->execute();
+// Nombre de archivo (solo imagen, no guardes dominio en DB)
+$qr_filename = 'qr_' . $id . '.png';
+$qr_fullpath = rtrim(QR_DIR, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $qr_filename;
 
-  $conn->commit();
+// URL pública corta y estable
+$qr_target_url = rtrim(BASE_URL, '/') . '/d/' . $id;
 
-  header("Location: device.php?id=" . $id);
-  exit;
+// Generar PNG (ECC alta y tamaño cómodo)
+QRcode::png($qr_target_url, $qr_fullpath, QR_ECLEVEL_H, 10);
+
+// (Opcional) guarda el nombre del archivo y/o la fecha de generación
+$stmtQr = $conn->prepare("UPDATE dispositivos SET qr = ? WHERE id = ?");
+$stmtQr->bind_param("si", $qr_filename, $id);
+$stmtQr->execute();
+
+// Confirma transacción previa si la manejas manualmente
+$conn->commit();
+
+// Redirige a la vista del dispositivo
+header("Location: device.php?id=" . $id);
+exit;
+
+
 
 } catch (Throwable $e) {
   if ($conn && $conn->errno === 0) { /* nada */ }

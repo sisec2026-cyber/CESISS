@@ -40,16 +40,16 @@ switch ($accion) {
 
       if ($conexion->query($sql)) {
         $nuevoId = $conexion->insert_id;
+        
+        // === QR ===
+        @mkdir(QR_DIR, 0775, true);
+        $qrFile   = 'qr_' . $nuevoId . '.png';
+        $qrPath   = rtrim(QR_DIR, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $qrFile;
+        $qrTarget = rtrim(BASE_URL, '/') . '/d/' . $nuevoId;  // URL corta y pública
 
-        // Generar código QR
-        $qrFile = uniqid('qr_') . '.png';
-        $rutaQR = __DIR__ . '/../public/qrcodes/' . $qrFile;
-        $urlQR = "http://localhost/sisec-ui/public/qr.php?id=$nuevoId"; // O el URL que quieras codificar
+        QRcode::png($qrTarget, $qrPath, QR_ECLEVEL_H, 10);
 
-        QRcode::png($urlQR, $rutaQR, QR_ECLEVEL_L, 6);
-
-
-        // Actualizar registro con nombre del QR
+        // Guardar nombre de archivo (solo filename, NO dominio)
         $conexion->query("UPDATE dispositivos SET qr = '$qrFile' WHERE id = $nuevoId");
 
         header("Location: ../views/dispositivos/index.php?msg=Dispositivo registrado");
