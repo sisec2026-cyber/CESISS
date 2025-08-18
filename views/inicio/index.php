@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../../includes/auth.php';
-verificarAutenticacion(); // 1️⃣ Verifica si hay sesión iniciada
-verificarRol(['Administrador', 'Mantenimientos']);
+verificarAutenticacion(); // Verifica si hay sesión iniciada
+verificarRol(['Superadmin', 'Administrador','Técnico', 'Mantenimientos','Distrital']);
 
 include __DIR__ . '/../../includes/db.php';
 

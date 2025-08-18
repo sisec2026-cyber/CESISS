@@ -24,7 +24,7 @@ const modelosPorMarca = {
   ARUBA: { poe: ["R8Q67A ARUBA"] }
 };
 
-// CÁMARAS
+// CÁMARAS (sin duplicados; AmericanDynamics vacío por ahora)
 const modelosPorMarcaCamara = {
   HANWHA: {
     ip: [
@@ -67,19 +67,29 @@ const modelosPorMarcaCamara = {
     ],
     analogica: []
   },
-  DAHUA: { ip: [], analogica: [] },
-  MERIVA: { ip: [], analogica: ["MSC-203","MSC-3214"] },
+  DAHUA:   { ip: [], analogica: [] },
+  MERIVA:  { ip: [], analogica: ["MSC-203","MSC-3214"] },
   WISENET: { ip: [], analogica: [] },
-  SAMSUNG: { ip: ["SCO-2080R"], analogica: [] }
+  SAMSUNG: { ip: ["SCO-2080R"], analogica: [] },
+  AmericanDynamics: { ip: [], analogica: [] }
 };
 
 // NVR
 const modelosPorMarcaNVR = {
-  HIKVISION: { nvr: ["DS-7732NI","DS-7608NI"] },
-  HANWHA:    { nvr: ["SRN-873S"] },
-  DAHUA:     { nvr: ["NVR608"] },
-  UNIVIEW:   { nvr: [] },
-  MERIVA:    { nvr: [] }
+  HIKVISION: { nvr: ["DS-7732NI","DS-7608NI","DS7732NIM4/16P"] },
+  HANWHA:    { nvr: ["XRN-820S","XRN-1620SB1"] },
+  DAHUA:     { nvr: ["NVR4216-4KS3","DHI-NVR5416-16P-EI"] },
+  UNIVIEW:   { nvr: [
+    "NVR302-16S2-P16","NVR304-16X","NVR301-16LS3-P8","NVR304-32S-P16",
+    "NVR301-04S3-P4","NVR301-04X-P4","NVR301-08LX-P8","NVR301-08S3-P8",
+    "NVR301-04LS3-P4","NVR516-128","NVR302-08S2-P8","NVR302-32E2-IQ",
+    "NVR302-16E2-P16-IQ","NVR302-16B-P16-IQ","NVR302-08E2-P8-IQ",
+    "NVR304-16B-P16-IQ","NV041UNV15"
+  ] },
+  MERIVA:    { nvr: [] },
+  WISENET:   { nvr: [] },
+  AVIGILON:  { nvr: ["AINVRPRM128TBNA"] },
+  EPCOM:     { nvr: ["GABVID1R3"] }
 };
 
 // DVR
@@ -88,7 +98,8 @@ const modelosPorMarcaDVR = {
   DAHUA:     { dvr: ["XVR5104"] },
   HANWHA:    { dvr: ["HRX-435"] },
   ZKTECO:    { dvr: ["Z8404XE"] },
-  SAMSUNG:   { dvr: [] }
+  SAMSUNG:   { dvr: [] },
+  MERIVA:    { dvr: [] }
 };
 
 // SERVIDORES
@@ -97,7 +108,7 @@ const modelosPorMarcaServidor = {
   SUPERMICRO: { servidores: ["SYS-520P-WTR","PWS-741P-1R","SYS-520P-WTR 2UR"] },
   AXIS: { servidores: ["S1296 96TB","S1264 64TB","S1264 24TB"] },
   AVIGILON_ALTA: { servidores: ["APP-500-8-DG A500 8TB","APP-750-32-DG A750 32TB"] },
-  LIAS: { servidores: ["AWA-CLD-3Y ALTA AWARE LICENSE 3 YEARS"] }
+  LIAS: { servidores: ["AWA-CLD-3Y"] }
 };
 
 // ------------------------------------------------------------
@@ -113,7 +124,8 @@ const modelosPorMarcaDH = {
 const modelosPorMarcaPIR = {
   HONEYWELL: { alambrico: ["IS335","DT7450"], inalambrico: ["5800PIR","5800PIR-RES"] },
   DSC:       { alambrico: ["LC-100-PI","LC-104-PIMW"], inalambrico: ["WS4904P"] },
-  BOSCH:     { alambrico: ["ISC-BPR2-W12","ISC-BDL2-WP12"], inalambrico: [] }
+  BOSCH:     { alambrico: ["ISC-BPR2-W12","ISC-BDL2-WP12"], inalambrico: [] }, 
+  DMP: { alambrico: ["1046747","1164NS-W"], inalambrico: [] }  
 };
 
 // Contactos magnéticos (CM)
@@ -121,7 +133,7 @@ const modelosPorMarcaCM = {
   HONEYWELL: { alambrico: ["7939WG","943WG"], inalambrico: ["5816","5800MINI"] },
   DSC:       { alambrico: ["DC-1025","DC-1025T"], inalambrico: ["WS4945","PG9309"] },
   SFIRE:     { alambrico: [], inalambrico: ["2023"] },
-  SECOLARM:  { alambrico: [], inalambrico: ["216Q/GY","226LQ","4601LQ"] }, // (sin duplicados)
+  SECOLARM:  { alambrico: [], inalambrico: ["216Q/GY","226LQ","4601LQ"] },
   TANEALARM: { alambrico: [], inalambrico: ["GP23"] }
 };
 
@@ -176,12 +188,12 @@ const modelosPorMarcaMonitor = {
   STARTECH:{ monitores: ["FPWARTB1M"] }
 };
 
-// Estación manual (pull station) — ya distinguible por conexión
+// Estación manual (pull station)
 const modelosPorMarcaEstacionManual = {
   DMP: { alambrico: ["850S"], inalambrico: [] }
 };
 
-// Estación de trabajo (workstation / PC) — opcional
+// Estación de trabajo (PC)
 const modelosPorMarcaEstacionTrabajo = {
   DELL:   { estacion: ["OptiPlex 3080","OptiPlex 7080","Precision 3460"] },
   HP:     { estacion: ["ProDesk 600 G6","EliteDesk 800 G6","Z2 G9"] },
@@ -212,6 +224,36 @@ const modelosPorTipo = {
   switch_poe:   flattenBySubkey(modelosPorMarca, 'poe'),
   switch_plano: flattenBySubkey(modelosPorMarca, 'plano')
 };
+
+// --- Combinar todos los diccionarios de alarma en uno "ALARMA" ---
+function mergeAlarmDicts() {
+  const alarmDicts = [
+    modelosPorMarcaDH, modelosPorMarcaPIR, modelosPorMarcaCM,
+    modelosPorMarcaBTN, modelosPorMarcaOH, modelosPorMarcaEstrobo,
+    modelosPorMarcaREP, modelosPorMarcaDRC, modelosPorMarcaEstacionManual
+  ];
+  const merged = {}; // { MARCA: { alambrico:[], inalambrico:[] } }
+
+  const pushArr = (to, arr) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(m => { if (!to.includes(m)) to.push(m); });
+  };
+
+  alarmDicts.forEach(dict => {
+    Object.entries(dict).forEach(([marca, grupos]) => {
+      if (!merged[marca]) merged[marca] = { alambrico: [], inalambrico: [] };
+      const keys = Object.keys(grupos || {});
+      if (keys.includes('alambrico') || keys.includes('inalambrico')) {
+        pushArr(merged[marca].alambrico, grupos.alambrico || []);
+        pushArr(merged[marca].inalambrico, grupos.inalambrico || []);
+      } else {
+        Object.values(grupos || {}).forEach(v => pushArr(merged[marca].alambrico, v));
+      }
+    });
+  });
+
+  return merged;
+}
 
 // ------------------------------------------------------------
 // Cache de elementos
@@ -285,53 +327,51 @@ document.querySelectorAll('.dropzone').forEach(dropzone => {
 // ------------------------------------------------------------
 // 2) Detección de categoría y visibilidad de bloques
 // ------------------------------------------------------------
-const palabrasClaveAlarmaGenerales = [
-  "alarma","transmisor","sensor","detector","humo","over head","overhead","zona",
-  "boton","botón","estacion","estación","panel","cableado","sirena","receptor","emisor",
-  "pir","llavin","llavín","contacto","repetidor","repetidora","teclado","estrobo","cristal","ruptura"
-];
-
 function detectarCategoria(texto) {
-  const v = quitarAcentos(normU(texto));
+  // normalización fuerte: quita acentos, recorta, pasa a mayúsculas y convierte _ y - en espacios
+  const v = quitarAcentos(normU(String(texto))).replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-  // nuevas primero para evitar falsos positivos con "estacion ..."
-  if (v.includes('ESTACION DE TRABAJO') || v.includes('ESTACION TRABAJO') ||
-      v.includes('WORKSTATION') || v.includes('PC') || v.includes('COMPUTADORA')) {
-    return 'estacion_trabajo';
-  }
-  if (v.includes('MONITOR') || v.includes('DISPLAY')) return 'monitor';
-  if (v.includes('ESTACION MANUAL') || v.includes('PULL STATION') ||
-      (v.includes('PULL') && v.includes('MANUAL'))) {
-    return 'estacionmanual';
-  }
+  // atajos por coincidencia exacta de claves internas (por si el valor ya viene "limpio")
+  if (['SWITCH'].includes(v)) return 'switch';
+  if (['CAMARA','CCTV'].includes(v)) return 'camara';
+  if (['NVR'].includes(v)) return 'nvr';
+  if (['DVR'].includes(v)) return 'dvr';
+  if (['SERVIDOR','SERVER'].includes(v)) return 'servidor';
+  if (['MONITOR','DISPLAY'].includes(v)) return 'monitor';
+  if (['ESTACION TRABAJO','ESTACION DE TRABAJO','WORKSTATION','PC','COMPUTADORA'].includes(v)) return 'estacion_trabajo';
+  if (['ALARMA'].includes(v)) return 'alarma';
 
+  // coincidencias parciales (por si el usuario escribe frases como "cámara ip", "switch poe", etc.)
   if (v.includes('SWITCH')) return 'switch';
-  if (v.includes('SERVIDOR') || v.includes('SERVER')) return 'servidor';
+  if (v.includes('CAMARA') || v.includes('CCTV')) return 'camara';
   if (v.includes('NVR')) return 'nvr';
   if (v.includes('DVR')) return 'dvr';
-  if (v.includes('CAMARA') || v.includes('CCTV')) return 'camara';
+  if (v.includes('SERVIDOR') || v.includes('SERVER')) return 'servidor';
+  if (v.includes('MONITOR') || v.includes('DISPLAY')) return 'monitor';
+  if (v.includes('ESTACION TRABAJO') || v.includes('ESTACION DE TRABAJO') || v.includes('WORKSTATION') || v.includes('COMPUTADORA') || v.includes('PC')) return 'estacion_trabajo';
 
-  if (v.includes('HUMO') || v.includes('DH')) return 'dh';
-  if (v.includes('PIR')) return 'pir';
-  if (v.includes('CONTACTO') || v.includes('MAGNETI') || v.includes('CM')) return 'cm';
-  if (v.includes('PANICO') || v.includes('PÁNICO') || v.includes('BTN')) return 'btn';
-  if (v.includes('OVER') || v.includes('OH')) return 'oh';
-  if (v.includes('ESTROBO') || v.includes('ESTROBOS')) return 'estrobo';
-  if (v.includes('REPETIDOR') || v.includes('REP')) return 'rep';
-  if (v.includes('CRISTAL') || v.includes('DRC') || v.includes('RUPTURA')) return 'drc';
+  // palabras clave de alarma
+  const palabrasClaveAlarmaGenerales = [
+    "ALARMA","TRANSMISOR","SENSOR","DETECTOR","HUMO","OVER HEAD","OVERHEAD","ZONA",
+    "BOTON","BOTON PANICO","PANICO","ESTACION","PULL STATION","PULL",
+    "PANEL","CABLEADO","SIRENA","RECEPTOR","EMISOR","LLAVIN","TECLADO",
+    "ESTROBO","CRISTAL","RUPTURA","REPETIDOR","REPETIDORA","DH","PIR","CM","BTN","OH","DRC","REP"
+  ];
+  if (palabrasClaveAlarmaGenerales.some(p => v.includes(quitarAcentos(normU(p))))) {
+    return 'alarma';
+  }
 
-  if (palabrasClaveAlarmaGenerales.some(p => quitarAcentos(v).includes(quitarAcentos(normU(p))))) return 'dh';
   return 'otro';
 }
 
+
 function toggleGruposPorCategoria(cat) {
   const esCamaraLike = ['camara','servidor','nvr','dvr'].includes(cat);
-  const esAlarmaLike = ['dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat);
+  const esAlarmaLike = ['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat);
 
   grupoCCTV?.classList.toggle('d-none', !esCamaraLike);
   grupoAlarma?.classList.toggle('d-none', !esAlarmaLike);
 
-  // Campos RC/Ubicación RC/VMS/Windows:
   const mostrarRC = ['camara','switch','servidor','nvr','dvr'].includes(cat);
   campoRC?.classList.toggle('d-none', !mostrarRC);
   ubicacionRC?.classList.toggle('d-none', cat !== 'servidor');
@@ -347,10 +387,10 @@ function toggleGruposPorCategoria(cat) {
   document.querySelector('.campo-user')?.classList.toggle('d-none', esAlarmaLike || cat === 'switch');
   document.querySelector('.campo-pass')?.classList.toggle('d-none', esAlarmaLike || cat === 'switch');
 
-  // Ocultar campos innecesarios cuando es switch o alarma
+  // Ocultar campos innecesarios cuando es alarma
   ['vms','switch','puerto'].forEach(name => {
     const campo = document.querySelector(`[name="${name}"]`)?.closest('.col-md-3');
-    campo?.classList.toggle('d-none', cat === 'switch' || esAlarmaLike);
+    campo?.classList.toggle('d-none', esAlarmaLike);
   });
 }
 
@@ -373,7 +413,9 @@ const diccionarioPorCategoria = {
   drc:              modelosPorMarcaDRC,
   monitor:          modelosPorMarcaMonitor,
   estacionmanual:   modelosPorMarcaEstacionManual,
-  estacion_trabajo: modelosPorMarcaEstacionTrabajo
+  estacion_trabajo: modelosPorMarcaEstacionTrabajo,
+  // NUEVA categoría umbrella:
+  alarma:           mergeAlarmDicts()
 };
 
 function llenarMarcasPorCategoria(cat) {
@@ -411,7 +453,6 @@ function llenarModelos(cat, mk) {
 // 4) Filtrado por conexión + resaltado y clasificación
 // ------------------------------------------------------------
 
-// ---- Helpers de filtrado por conexión (Alámbrico / Inalámbrico) ----
 function normalizaConexionLabel(label) {
   const v = quitarAcentos(String(label || '')).toLowerCase();
   if (v.includes('inalambr')) return 'inalambrico';
@@ -435,13 +476,11 @@ function obtenerModelosPorConexion(cat, mk, conexion /* 'alambrico'|'inalambrico
     if (Array.isArray(grupo[conexion])) {
       return grupo[conexion].map(m => String(m));
     }
-    // fallback: no tiene alambrico/inalambrico -> aplanar todo lo que haya
     const out = [];
     Object.values(grupo).forEach(v => pushAll(out, v));
     return [...new Set(out)];
   }
 
-  // Sin marca: combinar todas las marcas
   const out = [];
   Object.values(dict).forEach(grupo => {
     if (Array.isArray(grupo?.[conexion])) {
@@ -460,7 +499,6 @@ function setDatalistModelos(modelos, {autocompletarUnico = true} = {}) {
     option.value = modelo;
     datalist.appendChild(option);
   });
-  // Autocompletar si solo hay una opción
   if (autocompletarUnico && modelos.length === 1) {
     modeloInput.value = modelos[0];
   } else if (modeloInput.value && !modelos.map(normU).includes(normU(modeloInput.value))) {
@@ -468,13 +506,13 @@ function setDatalistModelos(modelos, {autocompletarUnico = true} = {}) {
   }
 }
 
-// Actualiza el datalist según la conexión seleccionada
+// Actualiza el datalist según la conexión seleccionada (solo alarmas)
 function actualizarModelosSegunConexion() {
   const cat = detectarCategoria(equipoInput.value);
-  if (!['dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) return;
+  if (!['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) return;
 
   const conexion = normalizaConexionLabel(inputTipoAlarma.value);
-  if (!conexion) return; // si aún no eligieron
+  if (!conexion) return;
 
   const mk = marcaSelect.value;
   const modelos = obtenerModelosPorConexion(cat, mk, conexion);
@@ -552,8 +590,8 @@ function clasificarPorModelo(cat) {
     return;
   }
 
-  // Categorías de alarma
-  if (['dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) {
+  // Categorías de alarma (incluye umbrella)
+  if (['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) {
     clasificarAlarmaPorModelo(cat);
   }
 }
@@ -623,7 +661,7 @@ function onEquipoChange() {
 
   if (cat !== 'switch')  { inputTipoSwitch.value = ''; activarBotones('.tipo-switch',''); }
   if (cat !== 'camara')  { inputTipoCCTV.value   = ''; activarBotones('#tipoCamaraContainer .btn',''); }
-  if (!['dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) {
+  if (!['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) {
     inputTipoAlarma.value = ''; activarBotones('#tipoAlarmaContainer .btn','');
   } else {
     // si ya había elegido Alámbrico/Inalámbrico, aplica el filtro
@@ -637,9 +675,9 @@ function onMarcaChange() {
   // Limpia el modelo al cambiar de marca
   modeloInput.value = '';
 
-  // Si es categoría de alarma y ya hay conexión elegida, filtra por conexión.
+  // Si es categoría de alarma (incl. umbrella) y ya hay conexión elegida, filtra por conexión.
   if (
-    ['dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat) &&
+    ['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat) &&
     normalizaConexionLabel(inputTipoAlarma.value)
   ) {
     actualizarModelosSegunConexion();

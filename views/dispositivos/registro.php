@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 include __DIR__ . '/../../includes/db.php';
 
 verificarAutenticacion();
-verificarRol(['Administrador', 'Mantenimientos']);
+verificarRol(['Superadmin','Administrador', 'Mantenimientos']);
 
 $ciudades = $conn->query("SELECT ID, nom_ciudad FROM ciudades ORDER BY nom_ciudad ASC");
 $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
@@ -65,8 +65,29 @@ ob_start();
     <!-- BLOQUE 1: Datos básicos -->
     <div class="row g-4 mt-3">
       <div class="col-md-3">
-        <label class="form-label">Equipo</label>
-        <input type="text" name="equipo" id="equipo" class="form-control" placeholder="Ej. CCTV, DVR, NVR..." oninput="actualizarMarcaYBotones()">
+<label class="form-label">Equipo</label>
+<input
+  type="text"
+  name="equipo"
+  id="equipo"
+  class="form-control"
+  placeholder="Ej. Cámara, DVR, NVR, Switch, Servidor, Monitor, Alarma…"
+  list="equipos-sugeridos"
+  oninput="actualizarMarcaYBotones()"
+/>
+<datalist id="equipos-sugeridos">
+  <option value="Cámara"></option>
+  <option value="CCTV"></option>
+  <option value="Switch"></option>
+  <option value="NVR"></option>
+  <option value="DVR"></option>
+  <option value="Servidor"></option>
+  <option value="Monitor"></option>
+  <option value="Estación de trabajo"></option>
+  <option value="Alarma"></option>
+  <option value="Pir"></option>
+</datalist>
+
       </div>
                                                                      <!-- INICIO BOTONES -->
 <!-- Botones para tipo de alarma -->

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Administrador', 'Mantenimientos', 'Invitado']);
+verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado']);
 
 include __DIR__ . '/../../includes/db.php';
 

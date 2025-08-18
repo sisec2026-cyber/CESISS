@@ -6,7 +6,7 @@
         <img src="/sisec-ui/public/img/logo.png" alt="Logo SISEC" style="max-height: 100px;">
       </div>
 
-      <?php if (in_array($_SESSION['usuario_rol'], ['Administrador', 'Mantenimientos'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico'])): ?>
         <a href="/sisec-ui/views/inicio/index.php" class="<?= ($activePage ?? '') === 'inicio' ? 'active' : '' ?>">
           <i class="fas fa-home"></i> Inicio
         </a>
@@ -16,13 +16,13 @@
         <i class="fas fa-camera"></i> Dispositivos
       </a>
 
-      <?php if (in_array($_SESSION['usuario_rol'], ['Administrador', 'Mantenimientos'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Capturista','Técnico','Monitorista'])): ?>
         <a href="/sisec-ui/views/dispositivos/registro.php" class="<?= ($activePage ?? '') === 'registro' ? 'active' : '' ?>">
           <i class="fas fa-plus-circle"></i> Registrar dispositivo
         </a>
       <?php endif; ?>
 
-      <?php if ($_SESSION['usuario_rol'] === 'Administrador'): ?>
+      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador'])): ?>
         <a href="/sisec-ui/views/usuarios/index.php" class="<?= ($activePage ?? '') === 'usuarios' ? 'active' : '' ?>">
           <i class="fa-solid fa-users"></i> Usuarios
         </a>

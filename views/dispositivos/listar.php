@@ -1,23 +1,128 @@
 <?php 
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion(); // Verifica si hay sesión iniciada
-verificarRol(['Administrador', 'Mantenimientos', 'Invitado']);
-
+verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado','Técnico','Capturista','Distrital','Prevencion','Monitorista']);
 include __DIR__ . '/../../includes/db.php';
 
-$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+// === BLOQUE 1: Filtros del usuario logueado ===
+$userId = $_SESSION['usuario_id'] ?? null;
+$filtroRegion = $filtroCiudad = $filtroMunicipio = $filtroSucursal = null;
 
+if ($userId) {
+  $qUser = $conn->prepare("SELECT region, ciudad, municipio, sucursal FROM usuarios WHERE id = ?");
+  $qUser->bind_param("i", $userId);
+  $qUser->execute();
+  $userFilter = $qUser->get_result()->fetch_assoc() ?: [];
+  $filtroRegion    = !empty($userFilter['region'])    ? (int)$userFilter['region']    : null;
+  $filtroCiudad    = !empty($userFilter['ciudad'])    ? (int)$userFilter['ciudad']    : null;
+  $filtroMunicipio = !empty($userFilter['municipio']) ? (int)$userFilter['municipio'] : null;
+  $filtroSucursal  = !empty($userFilter['sucursal'])  ? (int)$userFilter['sucursal']  : null;
+}
+
+// Helper para armar WHERE por alcance de usuario
+function buildUserScopeWhere(&$types, &$params, $fRegion, $fCiudad, $fMunicipio, $fSucursal) {
+  $extra = [];
+  if ($fSucursal) {
+    $extra[] = "d.sucursal = ?";
+    $types  .= "i";
+    $params[] = $fSucursal;
+  } elseif ($fMunicipio) {
+    $extra[] = "m.ID = ?";
+    $types  .= "i";
+    $params[] = $fMunicipio;
+  } elseif ($fCiudad) {
+    $extra[] = "c.ID = ?";
+    $types  .= "i";
+    $params[] = $fCiudad;
+  } elseif ($fRegion) {
+    $extra[] = "c.region_id = ?"; // (ajusta si tu campo es otro)
+    $types  .= "i";
+    $params[] = $fRegion;
+  }
+  return $extra;
+}
+
+
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 // Buscar con filtro
 if ($search !== '') {
-    // Preparamos la consulta para buscar dispositivos por varios campos
-$stmt = $conn->prepare("
-    SELECT d.*, 
-           s.nom_sucursal, 
-           m.nom_municipio, 
-           c.nom_ciudad,
-           eq.nom_equipo,
-           mo.num_modelos,
-           es.status_equipo
+  $types = "sssssi";
+  $params = [];
+
+  // Consulta base
+  $sql = "SELECT d.*, 
+    s.nom_sucursal, 
+    m.nom_municipio, 
+    c.nom_ciudad,
+    eq.nom_equipo,
+    mo.num_modelos,
+    es.status_equipo
+  FROM dispositivos d
+  LEFT JOIN sucursales s ON d.sucursal = s.ID
+  LEFT JOIN municipios m ON s.municipio_id = m.ID
+  LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+  LEFT JOIN equipos eq ON d.equipo = eq.ID
+  LEFT JOIN modelos mo ON d.modelo = mo.ID
+  LEFT JOIN status es ON d.estado = es.ID
+  WHERE (
+    eq.nom_equipo LIKE ? OR 
+    mo.num_modelos LIKE ? OR 
+    s.nom_sucursal LIKE ? OR 
+    es.status_equipo LIKE ? OR 
+    d.fecha = ? OR 
+    d.id = ?
+  )";
+
+  // Filtro por alcance de usuario
+  $extra = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
+  if ($extra) $sql .= " AND " . implode(" AND ", $extra);
+  $sql .= " ORDER BY d.id ASC";
+
+  $stmt = $conn->prepare($sql);
+
+  $likeSearch = "%$search%";
+  $bindValues = [$likeSearch, $likeSearch, $likeSearch, $likeSearch, $search, $search];
+  $paramsFull = array_merge($bindValues, $params);
+
+  $stmt->bind_param($types, ...$paramsFull);
+  $stmt->execute();
+  $result = $stmt->get_result();
+
+} elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
+  $sucursalId = intval($_GET['sucursal_id']);
+  $stmt = $conn->prepare("SELECT d.*, 
+  s.nom_sucursal, 
+  m.nom_municipio, 
+  c.nom_ciudad,
+  eq.nom_equipo,
+  mo.num_modelos,
+  es.status_equipo
+  FROM dispositivos d
+  LEFT JOIN sucursales s ON d.sucursal = s.ID
+  LEFT JOIN municipios m ON s.municipio_id = m.ID
+  LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+  LEFT JOIN equipos eq ON d.equipo = eq.ID
+  LEFT JOIN modelos mo ON d.modelo = mo.ID
+  LEFT JOIN status es ON d.estado = es.ID
+  WHERE d.sucursal = ?
+  ORDER BY d.id ASC");
+  $stmt->bind_param("i", $sucursalId);
+  $stmt->execute();
+  $result = $stmt->get_result();
+} else {
+  // Si el usuario tiene sucursal/municipio/ciudad/región fija, carga automáticamente
+  $types = "";
+  $params = [];
+  $extra = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
+
+  if ($extra) {
+    $sql = "SELECT d.*, 
+      s.nom_sucursal, 
+      m.nom_municipio, 
+      c.nom_ciudad,
+      eq.nom_equipo,
+      mo.num_modelos,
+      es.status_equipo
     FROM dispositivos d
     LEFT JOIN sucursales s ON d.sucursal = s.ID
     LEFT JOIN municipios m ON s.municipio_id = m.ID
@@ -25,71 +130,36 @@ $stmt = $conn->prepare("
     LEFT JOIN equipos eq ON d.equipo = eq.ID
     LEFT JOIN modelos mo ON d.modelo = mo.ID
     LEFT JOIN status es ON d.estado = es.ID
-    WHERE 
-        eq.nom_equipo LIKE ? OR 
-        mo.num_modelos LIKE ? OR 
-        s.nom_sucursal LIKE ? OR 
-        es.status_equipo LIKE ? OR 
-        d.fecha = ? OR 
-        d.id = ?
-    ORDER BY d.id ASC
-");
-    $likeSearch = "%$search%";
-    $stmt->bind_param("sssssi", $likeSearch, $likeSearch, $likeSearch, $likeSearch, $search, $search);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-} elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
-    $sucursalId = intval($_GET['sucursal_id']);
-    $stmt = $conn->prepare("
-SELECT d.*, 
-       s.nom_sucursal,
-       det.numero_tienda AS determinante,
-       m.nom_municipio, 
-       c.nom_ciudad,
-       eq.nom_equipo,
-       mo.num_modelos,
-       es.status_equipo
-FROM dispositivos d
-LEFT JOIN sucursales s ON d.sucursal_id = s.id
-LEFT JOIN determinante det ON s.id = det.sucursal_id
-LEFT JOIN municipios m ON s.municipio_id = m.id
-LEFT JOIN ciudades c ON m.ciudad_id = c.id
-LEFT JOIN equipos eq ON d.equipo_id = eq.id
-LEFT JOIN modelos mo ON d.modelo = mo.id
-LEFT JOIN estatus es ON d.estatus_id = es.id
+    WHERE " . implode(" AND ", $extra) . "
+    ORDER BY d.id ASC";
 
-        WHERE d.sucursal = ?
-        ORDER BY d.id ASC
-    ");
-    $stmt->bind_param("i", $sucursalId);
+    $stmt = $conn->prepare($sql);
+    if ($types) {
+      $stmt->bind_param($types, ...$params);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
-} else {
-    $result = false; // no mostrar nada si no hay sucursal
+  } else {
+    // Usuario puede ver todo, pero mantenemos tu UX: no mostrar nada hasta elegir sucursal
+    $result = false;
+  }
 }
 
 // Verificamos si la consulta devolvió resultados
-
 ob_start();
 ?>
 
 <h2>Listado de dispositivos</h2>
-
 <!-- Buscador y botón alineados -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
   <form method="GET" style="display: flex; gap: 10px;">
     <!--input type="text" name="search" class="form-control" style="width:300px" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>"-->
    <!--button-- type="submit" class="btn btn-primary"><i class="fas fa-search"></i></!--button-->
   </form>
-
-  <button id="btnExportar" class="btn btn-danger" style="display: none;">
-  <i class="fas fa-file-pdf"></i> Exportar PDF
-</button>
-
-  <?php if (in_array($_SESSION['usuario_rol'], ['Administrador', 'Mantenimientos'])): ?>
+  <button id="btnExportar" class="btn btn-danger" style="display: none;"><i class="fas fa-file-pdf"></i> Exportar Listado</button>
+  <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
     <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i> Registrar nuevo dispositivo</a>
-  <?php endif; ?>
+    <?php endif; ?>
 </div>
 
 <script>
@@ -112,29 +182,39 @@ ob_start();
 <div class="row mb-3">
   <div class="col-md-4">
     <label for="ciudad" class="form-label">Ciudad</label>
-    <select id="ciudad" class="form-select">
-      <option value="">-- Selecciona una ciudad --</option>
-      <?php
-        $ciudades = $conn->query("SELECT ID, nom_ciudad FROM ciudades ORDER BY nom_ciudad");
-        while ($row = $ciudades->fetch_assoc()):
-      ?>
-        <option value="<?= $row['ID'] ?>"><?= htmlspecialchars($row['nom_ciudad']) ?></option>
-      <?php endwhile; ?>
-    </select>
+<select id="ciudad" class="form-select" <?= $filtroCiudad ? 'disabled' : '' ?>>
+  <option value="">-- Selecciona una ciudad --</option>
+  <?php
+    // Cargar ciudades según alcance
+    $qCiudades = "SELECT ID, nom_ciudad FROM ciudades";
+    $w = [];
+    if ($filtroRegion) { $w[] = "region_id = " . (int)$filtroRegion; } // (ajusta campo si difiere)
+    if ($filtroCiudad) { $w[] = "ID = " . (int)$filtroCiudad; }
+    if ($w) $qCiudades .= " WHERE " . implode(" AND ", $w);
+    $qCiudades .= " ORDER BY nom_ciudad";
+    $ciudades = $conn->query($qCiudades);
+    while ($row = $ciudades->fetch_assoc()):
+  ?>
+    <option value="<?= $row['ID'] ?>" <?= ($filtroCiudad == $row['ID']) ? 'selected' : '' ?>>
+      <?= htmlspecialchars($row['nom_ciudad']) ?>
+    </option>
+  <?php endwhile; ?>
+</select>
   </div>
 
   <div class="col-md-4">
     <label for="municipio" class="form-label">Municipio</label>
-    <select id="municipio" class="form-select" disabled>
-      <option value="">-- Selecciona un municipio --</option>
-    </select>
+<select id="municipio" class="form-select" <?= $filtroMunicipio ? 'disabled' : '' ?>>
+  <option value=""><?= $filtroCiudad ? '-- Selecciona un municipio --' : '-- Selecciona un municipio --' ?></option>
+</select>
   </div>
 
   <div class="col-md-4">
     <label for="sucursal" class="form-label">Sucursal</label>
-    <select id="sucursal" class="form-select" disabled>
-      <option value="">-- Selecciona una sucursal --</option>
-    </select>
+<select id="sucursal" class="form-select" <?= $filtroSucursal ? 'disabled' : '' ?>>
+  <option value="">-- Selecciona una sucursal --</option>
+</select>
+
   </div>
 </div>
 
@@ -185,7 +265,7 @@ ob_start();
       <?php while ($device = $result->fetch_assoc()): ?>
       <tr>
         <!-- folio -->
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['determinante']) ?></td>
+        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
         <td><?= htmlspecialchars($device['nom_equipo']) ?></td>
         <td><?= htmlspecialchars($device['fecha']) ?></td>
         <td><?= htmlspecialchars($device['num_modelos']) ?></td>
@@ -204,18 +284,11 @@ ob_start();
        
         <td>
           <a href="device.php?id=<?= $device['id'] ?>" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i></a>
-          <?php if (in_array($_SESSION['usuario_rol'], ['Administrador', 'Mantenimientos'])): ?>
+          <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
             <a href="editar.php?id=<?= $device['id'] ?>" class="btn btn-sm btn-secondary"><i class="fa-regular fa-pen-to-square"></i></a>
           <?php endif; ?>
-          <?php if ($_SESSION['usuario_rol'] === 'Administrador'): ?>
-            <button 
-              class="btn btn-sm btn-danger" 
-              data-bs-toggle="modal" 
-              data-bs-target="#confirmDeleteModal"
-              data-id="<?= $device['id'] ?>"
-            >
-              <i class="fas fa-trash-alt"></i>
-            </button>
+          <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
+            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal"data-id="<?= $device['id'] ?>"><i class="fas fa-trash-alt"></i></button>
           <?php endif; ?>
         </td>
       </tr>
@@ -231,9 +304,7 @@ ob_start();
   </table>
 </div>
 
-
-
-<?php if ($_SESSION['usuario_rol'] === 'Administrador' || $_SESSION['usuario_rol'] === 'Invitado'): ?>
+<?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos', 'Invitado','Técnico','Capturista','Distrital','Prevencion','Monitorista'])): ?>
   <!-- Modal de Confirmación -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -268,66 +339,90 @@ ob_start();
     });
   </script>
                                                   <!-- Filtros -->
+<!-- Filtros con restricciones de usuario -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const ciudadSelect = document.getElementById('ciudad');
   const municipioSelect = document.getElementById('municipio');
   const sucursalSelect = document.getElementById('sucursal');
   const resultadoContenedor = document.getElementById('resultado-dispositivos');
+  const botonPDF = document.getElementById('btnExportar');
 
+  // === Valores fijos del usuario (inyectados desde PHP) ===
+  const FIXED_REGION    = <?= $filtroRegion    ? (int)$filtroRegion    : 'null' ?>;
+  const FIXED_CIUDAD    = <?= $filtroCiudad    ? (int)$filtroCiudad    : 'null' ?>;
+  const FIXED_MUNICIPIO = <?= $filtroMunicipio ? (int)$filtroMunicipio : 'null' ?>;
+  const FIXED_SUCURSAL  = <?= $filtroSucursal  ? (int)$filtroSucursal  : 'null' ?>;
+
+  // Carga municipios al cambiar ciudad
   ciudadSelect.addEventListener('change', function () {
     const ciudadId = this.value;
 
     municipioSelect.innerHTML = '<option value="">-- Selecciona un municipio --</option>';
     sucursalSelect.innerHTML = '<option value="">-- Selecciona una sucursal --</option>';
-    municipioSelect.disabled = true;
-    sucursalSelect.disabled = true;
+    municipioSelect.disabled = !ciudadId || !!FIXED_MUNICIPIO;
+    sucursalSelect.disabled = true && !FIXED_SUCURSAL;
 
     if (ciudadId) {
       fetch(`obtener_municipios.php?ciudad_id=${ciudadId}`)
         .then(response => response.json())
         .then(data => {
-          municipioSelect.disabled = false;
-          data.forEach(municipio => {
-            municipioSelect.innerHTML += `<option value="${municipio.ID}">${municipio.nom_municipio}</option>`;
+          municipioSelect.disabled = false || !!FIXED_MUNICIPIO;
+          data.forEach(m => {
+            municipioSelect.innerHTML += `<option value="${m.ID}">${m.nom_municipio}</option>`;
           });
+
+          // Si el usuario tiene municipio fijo, selecciónalo
+          if (FIXED_MUNICIPIO) {
+            municipioSelect.value = String(FIXED_MUNICIPIO);
+            municipioSelect.dispatchEvent(new Event('change'));
+            municipioSelect.disabled = true;
+          }
         });
     }
   });
 
+  // Carga sucursales al cambiar municipio
   municipioSelect.addEventListener('change', function () {
     const municipioId = this.value;
 
     sucursalSelect.innerHTML = '<option value="">-- Selecciona una sucursal --</option>';
-    sucursalSelect.disabled = true;
+    sucursalSelect.disabled = !municipioId || !!FIXED_SUCURSAL;
 
     if (municipioId) {
       fetch(`obtener_sucursales.php?municipio_id=${municipioId}`)
         .then(response => response.json())
         .then(data => {
-          sucursalSelect.disabled = false;
-          data.forEach(sucursal => {
-            sucursalSelect.innerHTML += `<option value="${sucursal.ID}">${sucursal.nom_sucursal}</option>`;
+          sucursalSelect.disabled = false || !!FIXED_SUCURSAL;
+          data.forEach(s => {
+            sucursalSelect.innerHTML += `<option value="${s.ID}">${s.nom_sucursal}</option>`;
           });
+
+          // Si el usuario tiene sucursal fija, selecciónala
+          if (FIXED_SUCURSAL) {
+            sucursalSelect.value = String(FIXED_SUCURSAL);
+            sucursalSelect.disabled = true;
+            actualizarTabla();
+          }
         });
     }
   });
 
-  // ✅ Mueve esto fuera de la función
+  // Cambio de sucursal → actualizar tabla
   sucursalSelect.addEventListener('change', actualizarTabla);
 
   function actualizarTabla() {
     const ciudadId = ciudadSelect.value;
     const municipioId = municipioSelect.value;
     const sucursalId = sucursalSelect.value;
-    const botonPDF = document.getElementById('btnExportar');
-    
+
+    // Mostrar botón PDF solo con los 3 niveles
     if (ciudadId && municipioId && sucursalId) {
       botonPDF.style.display = 'inline-block';
     } else {
       botonPDF.style.display = 'none';
     }
-    // Si no hay sucursal, muestra el mensaje y termina
+
     if (!sucursalId) {
       resultadoContenedor.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
       return;
@@ -340,55 +435,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
     fetch(`buscar_dispositivos.php?${params.toString()}`)
       .then(response => response.text())
-      .then(html => {
-        resultadoContenedor.innerHTML = html;
-      });
+      .then(html => { resultadoContenedor.innerHTML = html; });
   }
 
-  // Opcional: limpiar tabla si cambian ciudad o municipio
+  // === Precarga automática según filtros fijos del usuario ===
+  (function initByUserScope() {
+    if (FIXED_CIUDAD) {
+      ciudadSelect.value = String(FIXED_CIUDAD);
+      ciudadSelect.disabled = true;
+      ciudadSelect.dispatchEvent(new Event('change'));
+    }
+
+    if (FIXED_SUCURSAL && FIXED_MUNICIPIO && FIXED_CIUDAD) {
+      setTimeout(() => {
+        if (!municipioSelect.value && FIXED_MUNICIPIO) municipioSelect.value = String(FIXED_MUNICIPIO);
+        if (!sucursalSelect.value && FIXED_SUCURSAL)   sucursalSelect.value   = String(FIXED_SUCURSAL);
+        actualizarTabla();
+      }, 300);
+    }
+  })();
+
+  // Limpia tabla al cambiar ciudad/municipio
   ciudadSelect.addEventListener('change', () => {
-    resultadoContenedor.innerHTML = `
-      <tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
+    resultadoContenedor.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
   });
-
   municipioSelect.addEventListener('change', () => {
-    resultadoContenedor.innerHTML = `
-      <tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
+    resultadoContenedor.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
   });
 });
 </script>
-
-
-  <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const searchInput = document.querySelector("input[name='search']");
-  const resultadoContenedor = document.getElementById("resultado-dispositivos");
-
-  if (searchInput) { // 👈 evita error si el input está comentado/no existe
-    searchInput.addEventListener("keyup", function () {
-      const query = searchInput.value;
-
-      fetch(`buscar_dispositivos.php?search=${encodeURIComponent(query)}`)
-        .then(response => response.text())
-        .then(html => {
-          resultadoContenedor.innerHTML = html;
-        })
-        .catch(error => console.error("Error en la búsqueda:", error));
-    });
-  }
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
-  });
-});
-</script>
-
-
 <?php endif; ?>
 
 <?php
@@ -396,6 +471,5 @@ $content = ob_get_clean();
 $pageTitle = "Listado de dispositivos";
 $pageHeader = "Dispositivos";
 $activePage = "dispositivos";
-
 include __DIR__ . '/../../layout.php';
 ?>

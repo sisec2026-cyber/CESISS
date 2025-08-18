@@ -6,7 +6,7 @@
   </button>
 
   <!-- Título -->
-  <h5 class="m-0 flex-grow-1"><?= htmlspecialchars($pageHeader ?? 'SISEC') ?></h5>
+  <h5 class="m-0 flex-grow-1"><?= htmlspecialchars($pageHeader ?? 'CESISS - Consulta Exprés de Sistemas Instalados y Servicios de Suburbia  ') ?></h5>
 
   <!-- Íconos de notificación y usuario -->
   <?php

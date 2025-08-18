@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Administrador', 'Mantenimientos']);
+verificarRol(['Superadmin','Administrador', 'Técnico', 'Mantenimientos']);
 
 include __DIR__ . '/../../includes/db.php';
 
