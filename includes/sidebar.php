@@ -3,7 +3,7 @@
   <div class="d-flex flex-column justify-content-between h-100">
     <div>
       <div class="text-center py-3">
-        <img src="/sisec-ui/public/img/logo.png" alt="Logo SISEC" style="max-height: 100px;">
+        <img src="/sisec-ui/public/img/logoCESISS.png" alt="Logo SISEC" style="max-height: 150px;">
       </div>
 
       <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico'])): ?>
