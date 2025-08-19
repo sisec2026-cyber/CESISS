@@ -101,7 +101,7 @@ $result = $stmt->get_result();
 while ($device = $result->fetch_assoc()):
 ?>
 <tr>
-  <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
+  <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['determinante']) ?></td>
   <td><?= htmlspecialchars($device['nom_equipo']) ?></td>
   <td><?= htmlspecialchars($device['fecha']) ?></td>
   <td><?= htmlspecialchars($device['num_modelos']) ?></td>

@@ -383,9 +383,18 @@ function toggleGruposPorCategoria(cat) {
   tipoCamaraContainer.style.display = (cat === 'camara') ? 'block' : 'none';
   tipoAlarmaContainer?.classList.toggle('d-none', !esAlarmaLike);
 
-  // Ocultar credenciales si es alarma o switch
-  document.querySelector('.campo-user')?.classList.toggle('d-none', esAlarmaLike || cat === 'switch');
-  document.querySelector('.campo-pass')?.classList.toggle('d-none', esAlarmaLike || cat === 'switch');
+  // --- credenciales: ocultar y gestionar required ---
+  const ocultarCred = esAlarmaLike || cat === 'switch';
+  const userWrapper = document.querySelector('.campo-user');
+  const passWrapper = document.querySelector('.campo-pass');
+  const userInput = document.querySelector('[name="user"]');
+  const passInput = document.querySelector('[name="pass"]');
+
+  userWrapper?.classList.toggle('d-none', ocultarCred);
+  passWrapper?.classList.toggle('d-none', ocultarCred);
+
+  if (userInput) userInput.required = !ocultarCred;
+  if (passInput) passInput.required = !ocultarCred;
 
   // Ocultar campos innecesarios cuando es alarma
   ['vms','switch','puerto'].forEach(name => {
@@ -393,6 +402,7 @@ function toggleGruposPorCategoria(cat) {
     campo?.classList.toggle('d-none', esAlarmaLike);
   });
 }
+
 
 // ------------------------------------------------------------
 // 3) Marcas y modelos según categoría

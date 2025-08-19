@@ -14,7 +14,12 @@ function normalize_modelo($s) { return trim((string)$s); }
 
 function normalize_mac($macRaw) {
   $hex = preg_replace('/[^0-9A-Fa-f]/', '', (string)$macRaw);
-  if (strlen($hex) !== 12) return [null, "La MAC debe tener 12 hex dígitos."];
+
+  // Si está vacío, lo aceptamos como "sin MAC"
+  if ($hex === '') return ['', null];
+
+  if (strlen($hex) !== 12) return [null, "La MAC debe tener 12 hex dígitos o déjala vacía."];
+
   $hex = strtoupper($hex);
   $pairs = str_split($hex, 2);
   $mac = implode(':', $pairs);
@@ -23,6 +28,7 @@ function normalize_mac($macRaw) {
   }
   return [$mac, null];
 }
+
 function validate_ipv4_or_null($ipRaw) {
   $ip = trim((string)$ipRaw);
   if ($ip === '') return [null, null];
