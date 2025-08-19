@@ -144,16 +144,16 @@
           <input type="text" name="estado" class="form-control" placeholder="Escribe el status" required>
         </div>
 
-        <div class="col-md-3 campo-user">
-          <label class="form-label">Usuario</label>
-          <input type="text" name="user" class="form-control" placeholder="Nombre de usuario">
-        </div>
-
-        <div class="col-md-3 campo-pass">
-          <label class="form-label">Contraseña</label>
-          <input type="password" name="pass" class="form-control" placeholder="Contraseña de usuario">
-        </div>
+      <div class="col-md-3 campo-user">
+        <label class="form-label">Usuario</label>
+        <input type="text" name="user" class="form-control" placeholder="Nombre de usuario">
       </div>
+
+      <div class="col-md-3 campo-pass">
+        <label class="form-label">Contraseña</label>
+        <input type="password" name="pass" class="form-control" placeholder="Contraseña de usuario">
+      </div>
+    </div>
 
       <!-- BLOQUE 2: Ubicación -->
       <div class="row g-4 mt-3">
