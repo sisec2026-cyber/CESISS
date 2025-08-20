@@ -107,5 +107,3 @@ include __DIR__ . '/../../layout.php';
     });
   });
 </script>
-
-

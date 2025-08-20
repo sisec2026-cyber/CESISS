@@ -7,6 +7,7 @@
       </div>
 
       <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Distrital'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Distrital'])): ?>
         <a href="/sisec-ui/views/inicio/index.php" class="<?= ($activePage ?? '') === 'inicio' ? 'active' : '' ?>">
           <i class="fas fa-home"></i> Inicio
         </a>

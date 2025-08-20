@@ -382,6 +382,7 @@ function toggleGruposPorCategoria(cat) {
   tipoCamaraContainer.style.display = (cat === 'camara') ? 'block' : 'none';
   tipoAlarmaContainer?.classList.toggle('d-none', !esAlarmaLike);
 
+  // --- credenciales: ocultar y gestionar required ---
   const ocultarCred = esAlarmaLike || cat === 'switch';
   const userWrapper = document.querySelector('.campo-user');
   const passWrapper = document.querySelector('.campo-pass');
@@ -394,11 +395,13 @@ function toggleGruposPorCategoria(cat) {
   if (userInput) userInput.required = !ocultarCred;
   if (passInput) passInput.required = !ocultarCred;
 
+  // Ocultar campos innecesarios cuando es alarma
   ['vms','switch','puerto'].forEach(name => {
     const campo = document.querySelector(`[name="${name}"]`)?.closest('.col-md-3');
     campo?.classList.toggle('d-none', esAlarmaLike);
   });
 }
+
 
 // ------------------------------------------------------------
 // 3) Marcas y modelos según categoría
