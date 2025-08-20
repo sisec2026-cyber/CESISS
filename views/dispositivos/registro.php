@@ -3,7 +3,7 @@
   include __DIR__ . '/../../includes/db.php';
 
   verificarAutenticacion();
-  verificarRol(['Superadmin','Administrador', 'Mantenimientos']);
+  verificarRol(['Superadmin','Administrador', 'Técnico', 'Capturista']);
 
   $ciudades = $conn->query("SELECT ID, nom_ciudad FROM ciudades ORDER BY nom_ciudad ASC");
   $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto

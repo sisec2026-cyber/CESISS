@@ -1,8 +1,28 @@
 <?php
-// Si ya hay sesión iniciada, redirige al index
-if (isset($_SESSION['usuario_id'])) {
-  header('Location: views/index.php');
-  exit;
+session_start(); // asegura que la sesión esté iniciada
+
+// Si ya hay sesión iniciada, redirige según el rol
+if (isset($_SESSION['usuario_id']) && isset($_SESSION['rol'])) {
+  switch ($_SESSION['rol']) {
+    case 'Superadmin':
+    case 'Mantenimientos':
+    case 'Distrital':
+    case 'Administrador':
+      header('Location: views/index.php');
+      exit;
+
+    case 'Capturista':
+    case 'Prevencion':
+    case 'Monitorista':
+    case 'Técnico':
+      header('Location: views/listar.php');
+      exit;
+
+    default:
+      // si no coincide con ningún rol esperado
+      header('Location: views/listar.php');
+      exit;
+  }
 }
 
 // Inicializa variables para evitar errores

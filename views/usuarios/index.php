@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion(); // 1️⃣ Verifica si hay sesión iniciada
-verificarRol(['Administrador', 'Superadmin']);
+verificarRol(['Superadmin', 'Administrador']);
 
 ?>
 
@@ -107,5 +107,3 @@ include __DIR__ . '/../../layout.php';
     });
   });
 </script>
-
-

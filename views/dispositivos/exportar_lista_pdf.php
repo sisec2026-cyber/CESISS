@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Superadmin','Administrador', 'Capturista','Técnico', 'Distrital','Prevencion','Mantenimientos', 'Monitorista']);
+verificarRol(['Superadmin','Administrador', 'Capturista','Técnico', 'Distrital','Prevencion','Monitorista','Mantenimientos']);
 require __DIR__ . '/../../vendor/autoload.php';
 include __DIR__ . '/../../includes/db.php';
 use Dompdf\Dompdf;

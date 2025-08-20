@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion(); // Verifica si hay sesión iniciada
-verificarRol(['Superadmin', 'Administrador','Técnico', 'Mantenimientos','Distrital']);
+verificarRol(['Superadmin', 'Prevencion','Administrador','Técnico', 'Mantenimientos','Distrital']);
 
 include __DIR__ . '/../../includes/db.php';
 
@@ -163,33 +163,32 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
 
 <!-- NUEVO: Sección de Cámaras en mantenimiento -->
 <div class="row g-4 mb-4">
-  <div class="col-md-12">
+  <!--div class="col-md-12">
     <div class="card shadow-sm">
       <div class="card-body">
         <h6 class="card-title mb-3">Cámaras en mantenimiento por sucursal</h6>
         <canvas id="chartMtoPorSucursal" height="220"></canvas>
       </div>
     </div>
-  </div>
+  </div-->
 
   <div class="col-md-12">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title mb-3">Listado de cámaras en mantenimiento</h6>
-
+    <div>
+      <div>
+        <!--h6 class="card-title mb-3">Listado de cámaras en mantenimiento</h6>
         <?php if (($mantenimiento ?? 0) == 0): ?>
           <div class="alert alert-info mb-0">No hay cámaras en mantenimiento.</div>
         <?php else: ?>
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle">
               <thead class="table-light">
-                <tr>
+                <tr-->
                   <th style="width: 80px;">ID</th>
                   <th>Equipo</th>
                   <th>Sucursal</th>
                   <th>Estado</th>
                   <th style="width: 120px;">Acciones</th>
-                </tr>
+                </tr->
               </thead>
               <tbody>
                 <?php while ($d = $listado_mto->fetch_assoc()): ?>
@@ -223,16 +222,21 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
 <!-- Botones rápidos -->
 <div class="d-flex justify-content-center gap-3">
   <div class="col-md-3">
-    <a href="/sisec-ui/views/dispositivos/registro.php" class="btn btn-outline-primary w-100 py-3 rounded shadow-sm">
-      <i class="fas fa-qrcode fa-lg me-2"></i> Registro nuevo dispositivo
-    </a>
+    <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
+      <a href="/sisec-ui/views/dispositivos/registro.php" class="btn btn-outline-primary w-100 py-3 rounded shadow-sm">
+        <i class="fas fa-qrcode fa-lg me-2"></i> Registro nuevo dispositivo
+      </a>
+    <?php endif; ?>
   </div>
   <div class="col-md-3">
-    <a href="/sisec-ui/views/usuarios/registrar.php" class="btn btn-outline-success w-100 py-3 rounded shadow-sm">
-      <i class="fas fa-user-plus fa-lg me-2"></i> Registro rápido de usuario
-    </a>
+    <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador'])): ?>
+      <a href="/sisec-ui/views/usuarios/registrar.php" class="btn btn-outline-success w-100 py-3 rounded shadow-sm">
+        <i class="fas fa-user-plus fa-lg me-2"></i> Registro rápido de usuario
+      </a>
+    <?php endif; ?>
   </div>
 </div>
+
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
