@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Superadmin','Administrador', 'Capturista','Técnico', 'Distrital','Prevencion','Mantenimientos', 'Monitorista']);
+verificarRol(['Superadmin','Administrador', 'Capturista','Técnico', 'Distrital','Prevencion','Monitorista','Mantenimientos']);
 require __DIR__ . '/../../vendor/autoload.php';
 include __DIR__ . '/../../includes/db.php';
 use Dompdf\Dompdf;
@@ -9,7 +9,7 @@ use Dompdf\Dompdf;
 $ciudad = isset($_GET['ciudad']) ? (int) $_GET['ciudad'] : 0;
 $municipio = isset($_GET['municipio']) ? (int) $_GET['municipio'] : 0;
 $sucursal = isset($_GET['sucursal']) ? (int) $_GET['sucursal'] : 0;
-$logoSisec = imagenBase64("img/logo.png");
+$logoSisec = imagenBase64("img/logoCESISS.jpeg");
 $nombreSucursal = '';
 if ($sucursal > 0) {
   $stmtSucursal = $conn->prepare("SELECT nom_sucursal FROM sucursales WHERE id = ?");
@@ -134,7 +134,7 @@ tr{
   <tr>
     <td style="text-align: left; width: 50%; border: none;">
       <?php if ($logoSisec): ?>
-        <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="height: 50px;">
+        <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="height: 100px;">
       <?php endif; ?>
     </td>
     <td style="text-align: right; width: 50%; border: none;">

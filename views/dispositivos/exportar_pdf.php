@@ -46,7 +46,7 @@ function imagenBase64($rutaRelativa) {
 }
 
 // Rutas de imágenes
-$logoSisec = imagenBase64("img/logo.png");
+$logoSisec = imagenBase64("img/logoCESISS.jpeg");
 $nombreSucursal = strtolower(str_replace(' ', '', $device['nom_sucursal']));
 $logoSucursal = imagenBase64("img/sucursales/default.png");
 $img1 = !empty($device['imagen']) ? imagenBase64("uploads/" . $device['imagen']) : '';

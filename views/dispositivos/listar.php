@@ -42,15 +42,16 @@ function buildUserScopeWhere(&$types, &$params, $fRegion, $fCiudad, $fMunicipio,
   return $extra;
 }
 
-
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-// Buscar con filtro
+
+// === BLOQUE 2: Construcción de consulta según contexto (búsqueda / sucursal / alcance) ===
 if ($search !== '') {
-  $types = "sssssi";
+  // BÚSQUEDA con alcance de usuario (unifica ambos archivos)
+  $types = "sssssi"; // 4 LIKE, 1 fecha exacta, 1 id exacto
   $params = [];
 
-  // Consulta base
   $sql = "SELECT d.*, 
+    det.numero_tienda AS determinante,
     s.nom_sucursal, 
     m.nom_municipio, 
     c.nom_ciudad,
@@ -59,6 +60,7 @@ if ($search !== '') {
     es.status_equipo
   FROM dispositivos d
   LEFT JOIN sucursales s ON d.sucursal = s.ID
+  LEFT JOIN determinante det ON s.id = det.sucursal_id
   LEFT JOIN municipios m ON s.municipio_id = m.ID
   LEFT JOIN ciudades c ON m.ciudad_id = c.ID
   LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -79,26 +81,27 @@ if ($search !== '') {
   $sql .= " ORDER BY d.id ASC";
 
   $stmt = $conn->prepare($sql);
-
   $likeSearch = "%$search%";
   $bindValues = [$likeSearch, $likeSearch, $likeSearch, $likeSearch, $search, $search];
   $paramsFull = array_merge($bindValues, $params);
-
   $stmt->bind_param($types, ...$paramsFull);
   $stmt->execute();
   $result = $stmt->get_result();
 
 } elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
+  // LISTADO por sucursal seleccionada (AJAX)
   $sucursalId = intval($_GET['sucursal_id']);
   $stmt = $conn->prepare("SELECT d.*, 
-  s.nom_sucursal, 
-  m.nom_municipio, 
-  c.nom_ciudad,
-  eq.nom_equipo,
-  mo.num_modelos,
-  es.status_equipo
+    det.numero_tienda AS determinante,
+    s.nom_sucursal, 
+    m.nom_municipio, 
+    c.nom_ciudad,
+    eq.nom_equipo,
+    mo.num_modelos,
+    es.status_equipo
   FROM dispositivos d
   LEFT JOIN sucursales s ON d.sucursal = s.ID
+  LEFT JOIN determinante det ON s.id = det.sucursal_id
   LEFT JOIN municipios m ON s.municipio_id = m.ID
   LEFT JOIN ciudades c ON m.ciudad_id = c.ID
   LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -109,14 +112,16 @@ if ($search !== '') {
   $stmt->bind_param("i", $sucursalId);
   $stmt->execute();
   $result = $stmt->get_result();
+
 } else {
-  // Si el usuario tiene sucursal/municipio/ciudad/región fija, carga automáticamente
+  // PRECARGA según alcance de usuario (si tiene filtros fijos)
   $types = "";
   $params = [];
   $extra = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
 
   if ($extra) {
     $sql = "SELECT d.*, 
+      det.numero_tienda AS determinante,
       s.nom_sucursal, 
       m.nom_municipio, 
       c.nom_ciudad,
@@ -125,6 +130,7 @@ if ($search !== '') {
       es.status_equipo
     FROM dispositivos d
     LEFT JOIN sucursales s ON d.sucursal = s.ID
+    LEFT JOIN determinante det ON s.id = det.sucursal_id
     LEFT JOIN municipios m ON s.municipio_id = m.ID
     LEFT JOIN ciudades c ON m.ciudad_id = c.ID
     LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -152,14 +158,14 @@ ob_start();
 <h2>Listado de dispositivos</h2>
 <!-- Buscador y botón alineados -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-  <form method="GET" style="display: flex; gap: 10px;">
-    <!--input type="text" name="search" class="form-control" style="width:300px" placeholder="Buscar por ID, equipo, modelo, fecha..." value="<?= htmlspecialchars($search) ?>"-->
-   <!--button-- type="submit" class="btn btn-primary"><i class="fas fa-search"></i></!--button-->
+  <form id="formBusqueda" method="GET" style="display: flex; gap: 10px;">
+    <input type="text" id="search" name="search" class="form-control" style="width:300px" placeholder="Buscar por ID, equipo, modelo, fecha..." disabled>
+    <button type="submit" class="btn btn-primary" disabled><i class="fas fa-search"></i></button>
   </form>
   <button id="btnExportar" class="btn btn-danger" style="display: none;"><i class="fas fa-file-pdf"></i> Exportar Listado</button>
   <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
     <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i> Registrar nuevo dispositivo</a>
-    <?php endif; ?>
+  <?php endif; ?>
 </div>
 
 <script>
@@ -178,7 +184,7 @@ ob_start();
   });
 </script>
 
-                                            <!-- Filtros Busqueda -->
+<!-- Filtros Busqueda -->
 <div class="row mb-3">
   <div class="col-md-4">
     <label for="ciudad" class="form-label">Ciudad</label>
@@ -264,8 +270,7 @@ ob_start();
       <?php if ($result && $result->num_rows > 0): ?>
       <?php while ($device = $result->fetch_assoc()): ?>
       <tr>
-        <!-- folio -->
-        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['id']) ?></td>
+        <td class="d-none d-md-table-cell"><?= htmlspecialchars($device['determinante'] ?? '') ?></td>
         <td><?= htmlspecialchars($device['nom_equipo']) ?></td>
         <td><?= htmlspecialchars($device['fecha']) ?></td>
         <td><?= htmlspecialchars($device['num_modelos']) ?></td>
@@ -348,6 +353,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const resultadoContenedor = document.getElementById('resultado-dispositivos');
   const botonPDF = document.getElementById('btnExportar');
 
+  // Búsqueda dinámica
+  const searchInput  = document.getElementById('search');
+  const searchButton = document.querySelector('#formBusqueda button');
+
   // === Valores fijos del usuario (inyectados desde PHP) ===
   const FIXED_REGION    = <?= $filtroRegion    ? (int)$filtroRegion    : 'null' ?>;
   const FIXED_CIUDAD    = <?= $filtroCiudad    ? (int)$filtroCiudad    : 'null' ?>;
@@ -423,19 +432,53 @@ document.addEventListener("DOMContentLoaded", function () {
       botonPDF.style.display = 'none';
     }
 
+    // Control de búsqueda: habilitar solo si hay sucursal
     if (!sucursalId) {
+      if (searchInput && searchButton) {
+        searchInput.disabled  = true;
+        searchButton.disabled = true;
+        searchInput.value = '';
+      }
       resultadoContenedor.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
       return;
+    } else {
+      if (searchInput && searchButton) {
+        searchInput.disabled  = false;
+        searchButton.disabled = false;
+      }
     }
 
     const params = new URLSearchParams();
     if (ciudadId) params.append('ciudad_id', ciudadId);
     if (municipioId) params.append('municipio_id', municipioId);
     if (sucursalId) params.append('sucursal_id', sucursalId);
+    if (searchInput && searchInput.value.trim()) {
+      params.append('search', searchInput.value.trim());
+    }
 
     fetch(`buscar_dispositivos.php?${params.toString()}`)
       .then(response => response.text())
       .then(html => { resultadoContenedor.innerHTML = html; });
+  }
+
+  // === Búsqueda en vivo ===
+  if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+      const query = this.value.trim();
+      const ciudadId = ciudadSelect.value;
+      const municipioId = municipioSelect.value;
+      const sucursalId = sucursalSelect.value;
+
+      const params = new URLSearchParams();
+      if (ciudadId) params.append('ciudad_id', ciudadId);
+      if (municipioId) params.append('municipio_id', municipioId);
+      if (sucursalId) params.append('sucursal_id', sucursalId);
+      if (query) params.append('search', query);
+
+      fetch(`buscar_dispositivos.php?${params.toString()}`)
+        .then(response => response.text())
+        .then(html => { resultadoContenedor.innerHTML = html; });
+    });
   }
 
   // === Precarga automática según filtros fijos del usuario ===

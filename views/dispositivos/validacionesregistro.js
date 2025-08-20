@@ -125,7 +125,8 @@ const modelosPorMarcaPIR = {
   HONEYWELL: { alambrico: ["IS335","DT7450"], inalambrico: ["5800PIR","5800PIR-RES"] },
   DSC:       { alambrico: ["LC-100-PI","LC-104-PIMW"], inalambrico: ["WS4904P"] },
   BOSCH:     { alambrico: ["ISC-BPR2-W12","ISC-BDL2-WP12"], inalambrico: [] }, 
-  DMP: { alambrico: ["1046747","1164NS-W"], inalambrico: [] }  
+  DMP:       { alambrico: ["1046747","1164NS-W"], inalambrico: [] },
+  OPTEX:     { alambrico: [], inalambrico: [] }
 };
 
 // Contactos magnéticos (CM)
@@ -203,7 +204,7 @@ const modelosPorMarcaEstacionTrabajo = {
 // ------------------------------------------------------------
 // Helpers de normalización y búsqueda
 // ------------------------------------------------------------
-const norm = s => (s ?? '').toString().trim();
+const norm  = s => (s ?? '').toString().trim();
 const normU = s => norm(s).toUpperCase();
 const quitarAcentos = s => norm(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
@@ -261,7 +262,7 @@ function mergeAlarmDicts() {
 const equipoInput = document.getElementById('equipo');
 const marcaSelect = document.getElementById('marca');
 const modeloInput = document.getElementById('modelo');
-const datalist = document.getElementById('sugerencias-modelo');
+const datalist    = document.getElementById('sugerencias-modelo');
 
 const grupoCCTV   = document.querySelector('.grupo-cctv');
 const grupoAlarma = document.querySelector('.grupo-alarma');
@@ -277,6 +278,10 @@ const tipoCamaraContainer = document.getElementById('tipoCamaraContainer'); // "
 const inputTipoAlarma = document.getElementById('tipo_alarma');  // hidden
 const inputTipoSwitch = document.getElementById('tipo_switch');  // hidden
 const inputTipoCCTV   = document.getElementById('tipo_cctv');    // hidden
+
+// --- Elementos para Marca manual ---
+const marcaManualInput     = document.getElementById('marcaManual');
+const toggleMarcaManualBtn = document.getElementById('toggleMarcaManual');
 
 // ------------------------------------------------------------
 // 1) Gestión dropzones
@@ -328,10 +333,8 @@ document.querySelectorAll('.dropzone').forEach(dropzone => {
 // 2) Detección de categoría y visibilidad de bloques
 // ------------------------------------------------------------
 function detectarCategoria(texto) {
-  // normalización fuerte: quita acentos, recorta, pasa a mayúsculas y convierte _ y - en espacios
   const v = quitarAcentos(normU(String(texto))).replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-  // atajos por coincidencia exacta de claves internas (por si el valor ya viene "limpio")
   if (['SWITCH'].includes(v)) return 'switch';
   if (['CAMARA','CCTV'].includes(v)) return 'camara';
   if (['NVR'].includes(v)) return 'nvr';
@@ -341,7 +344,6 @@ function detectarCategoria(texto) {
   if (['ESTACION TRABAJO','ESTACION DE TRABAJO','WORKSTATION','PC','COMPUTADORA'].includes(v)) return 'estacion_trabajo';
   if (['ALARMA'].includes(v)) return 'alarma';
 
-  // coincidencias parciales (por si el usuario escribe frases como "cámara ip", "switch poe", etc.)
   if (v.includes('SWITCH')) return 'switch';
   if (v.includes('CAMARA') || v.includes('CCTV')) return 'camara';
   if (v.includes('NVR')) return 'nvr';
@@ -350,7 +352,6 @@ function detectarCategoria(texto) {
   if (v.includes('MONITOR') || v.includes('DISPLAY')) return 'monitor';
   if (v.includes('ESTACION TRABAJO') || v.includes('ESTACION DE TRABAJO') || v.includes('WORKSTATION') || v.includes('COMPUTADORA') || v.includes('PC')) return 'estacion_trabajo';
 
-  // palabras clave de alarma
   const palabrasClaveAlarmaGenerales = [
     "ALARMA","TRANSMISOR","SENSOR","DETECTOR","HUMO","OVER HEAD","OVERHEAD","ZONA",
     "BOTON","BOTON PANICO","PANICO","ESTACION","PULL STATION","PULL",
@@ -363,7 +364,6 @@ function detectarCategoria(texto) {
 
   return 'otro';
 }
-
 
 function toggleGruposPorCategoria(cat) {
   const esCamaraLike = ['camara','servidor','nvr','dvr'].includes(cat);
@@ -378,16 +378,22 @@ function toggleGruposPorCategoria(cat) {
   campoWin?.classList.toggle('d-none', cat !== 'servidor');
   campoVmsVer?.classList.toggle('d-none', cat !== 'servidor');
 
-  // Botoneras
   tipoSwitchContainer?.classList.toggle('d-none', cat !== 'switch');
   tipoCamaraContainer.style.display = (cat === 'camara') ? 'block' : 'none';
   tipoAlarmaContainer?.classList.toggle('d-none', !esAlarmaLike);
 
-  // Ocultar credenciales si es alarma o switch
-  document.querySelector('.campo-user')?.classList.toggle('d-none', esAlarmaLike || cat === 'switch');
-  document.querySelector('.campo-pass')?.classList.toggle('d-none', esAlarmaLike || cat === 'switch');
+  const ocultarCred = esAlarmaLike || cat === 'switch';
+  const userWrapper = document.querySelector('.campo-user');
+  const passWrapper = document.querySelector('.campo-pass');
+  const userInput = document.querySelector('[name="user"]');
+  const passInput = document.querySelector('[name="pass"]');
 
-  // Ocultar campos innecesarios cuando es alarma
+  userWrapper?.classList.toggle('d-none', ocultarCred);
+  passWrapper?.classList.toggle('d-none', ocultarCred);
+
+  if (userInput) userInput.required = !ocultarCred;
+  if (passInput) passInput.required = !ocultarCred;
+
   ['vms','switch','puerto'].forEach(name => {
     const campo = document.querySelector(`[name="${name}"]`)?.closest('.col-md-3');
     campo?.classList.toggle('d-none', esAlarmaLike);
@@ -414,7 +420,6 @@ const diccionarioPorCategoria = {
   monitor:          modelosPorMarcaMonitor,
   estacionmanual:   modelosPorMarcaEstacionManual,
   estacion_trabajo: modelosPorMarcaEstacionTrabajo,
-  // NUEVA categoría umbrella:
   alarma:           mergeAlarmDicts()
 };
 
@@ -452,7 +457,6 @@ function llenarModelos(cat, mk) {
 // ------------------------------------------------------------
 // 4) Filtrado por conexión + resaltado y clasificación
 // ------------------------------------------------------------
-
 function normalizaConexionLabel(label) {
   const v = quitarAcentos(String(label || '')).toLowerCase();
   if (v.includes('inalambr')) return 'inalambrico';
@@ -460,7 +464,27 @@ function normalizaConexionLabel(label) {
   return null;
 }
 
-// Devuelve modelos para {categoria, marca, conexion}, con fallback si no existe la llave
+// === Marca manual: helpers ===
+function isMarcaManualMode() {
+  return marcaManualInput && !marcaManualInput.classList.contains('d-none');
+}
+function getMarcaActual() {
+  const manual = norm(marcaManualInput?.value);
+  if (isMarcaManualMode() && manual) return manual;
+  return marcaSelect.value;
+}
+function setMarcaValueForSubmit(value) {
+  if (!value) return;
+  const val = norm(value);
+  let opt = [...marcaSelect.options].find(o => normU(o.value) === normU(val));
+  if (!opt) {
+    opt = new Option(val, val, true, true);
+    marcaSelect.add(opt);
+  }
+  marcaSelect.value = opt.value;
+}
+
+// Devuelve modelos para {categoria, marca, conexion}
 function obtenerModelosPorConexion(cat, mk, conexion /* 'alambrico'|'inalambrico' */) {
   const dict = diccionarioPorCategoria[cat];
   if (!dict) return [];
@@ -514,7 +538,7 @@ function actualizarModelosSegunConexion() {
   const conexion = normalizaConexionLabel(inputTipoAlarma.value);
   if (!conexion) return;
 
-  const mk = marcaSelect.value;
+  const mk = getMarcaActual();
   const modelos = obtenerModelosPorConexion(cat, mk, conexion);
   setDatalistModelos(modelos);
 }
@@ -531,7 +555,7 @@ function activarBotones(selector, textoObjetivo) {
 }
 
 function clasificarAlarmaPorModelo(cat) {
-  const mk = marcaSelect.value;
+  const mk = getMarcaActual();
   const modelo = normU(modeloInput.value);
   const dict = diccionarioPorCategoria[cat];
   if (!dict || !modelo) return;
@@ -553,7 +577,7 @@ function clasificarAlarmaPorModelo(cat) {
 
 function clasificarPorModelo(cat) {
   const modelo = normU(modeloInput.value);
-  const mk = marcaSelect.value;
+  const mk = getMarcaActual();
   if (!modelo) return;
 
   if (cat === 'switch') {
@@ -590,7 +614,6 @@ function clasificarPorModelo(cat) {
     return;
   }
 
-  // Categorías de alarma (incluye umbrella)
   if (['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) {
     clasificarAlarmaPorModelo(cat);
   }
@@ -656,7 +679,6 @@ function onEquipoChange() {
   llenarMarcasPorCategoria(cat);
   limpiarDatalist();
 
-  // Limpia el modelo al cambiar de categoría
   modeloInput.value = '';
 
   if (cat !== 'switch')  { inputTipoSwitch.value = ''; activarBotones('.tipo-switch',''); }
@@ -664,7 +686,6 @@ function onEquipoChange() {
   if (!['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat)) {
     inputTipoAlarma.value = ''; activarBotones('#tipoAlarmaContainer .btn','');
   } else {
-    // si ya había elegido Alámbrico/Inalámbrico, aplica el filtro
     actualizarModelosSegunConexion();
   }
 }
@@ -672,18 +693,15 @@ function onEquipoChange() {
 function onMarcaChange() {
   const cat = detectarCategoria(equipoInput.value);
 
-  // Limpia el modelo al cambiar de marca
   modeloInput.value = '';
 
-  // Si es categoría de alarma (incl. umbrella) y ya hay conexión elegida, filtra por conexión.
   if (
     ['alarma','dh','pir','cm','btn','oh','estrobo','rep','drc','estacionmanual'].includes(cat) &&
     normalizaConexionLabel(inputTipoAlarma.value)
   ) {
     actualizarModelosSegunConexion();
   } else {
-    // Comportamiento original
-    llenarModelos(cat, marcaSelect.value);
+    llenarModelos(cat, getMarcaActual());
   }
 
   clasificarPorModelo(cat);
@@ -700,10 +718,9 @@ window.actualizarMarcaYBotones = function () {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // ---- Botones Alámbrico / Inalámbrico (mutuamente exclusivos + filtrado) ----
+  // ---- Botones Alámbrico / Inalámbrico ----
   document.querySelectorAll('.tipo-alarma').forEach(btn => {
     btn.addEventListener('click', () => {
-      // Exclusión mutua visual
       document.querySelectorAll('.tipo-alarma').forEach(b => {
         b.classList.remove('activo');
         b.setAttribute('aria-pressed', 'false');
@@ -711,11 +728,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.add('activo');
       btn.setAttribute('aria-pressed', 'true');
 
-      // Guardar valor normalizado en el hidden
       const conexion = normalizaConexionLabel(btn.textContent);
       inputTipoAlarma.value = conexion === 'inalambrico' ? 'Inalámbrico' : 'Alámbrico';
-
-      // Filtrar inmediatamente el datalist de modelos
       actualizarModelosSegunConexion();
     });
   });
@@ -738,6 +752,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ---- Marca manual: toggle + sincronización ----
+  function showManual() {
+    marcaManualInput.classList.remove('d-none');
+    marcaSelect.disabled = true;
+    setTimeout(() => marcaManualInput.focus(), 0);
+  }
+  function hideManual() {
+    marcaManualInput.classList.add('d-none');
+    marcaSelect.disabled = false;
+  }
+  function syncSelectFromManual() {
+    const val = (marcaManualInput.value || '').trim();
+    if (!val) return;
+    setMarcaValueForSubmit(val);
+    marcaSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  toggleMarcaManualBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (marcaManualInput.classList.contains('d-none')) { showManual(); } else { hideManual(); }
+  });
+  marcaManualInput?.addEventListener('input',   syncSelectFromManual);
+  marcaManualInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); syncSelectFromManual(); }});
+  marcaManualInput?.addEventListener('blur',    syncSelectFromManual);
+
+  // Eventos principales
   equipoInput?.addEventListener('input', onEquipoChange);
   marcaSelect?.addEventListener('change', onMarcaChange);
   modeloInput?.addEventListener('input', onModeloInput);
@@ -756,3 +796,4 @@ setTimeout(() => {
     setTimeout(() => sugerencia.remove(), 1000);
   }
 }, 3000);
+

@@ -13,7 +13,7 @@
   $notificaciones = [];
   $notificaciones_no_vistas = 0;
 
-  if (isset($_SESSION['usuario_rol']) && $_SESSION['usuario_rol'] === 'Administrador') {
+  if (isset($_SESSION['usuario_rol']) && $_SESSION['usuario_rol'] === 'Superadmin') {
       if (!isset($conn)) {
           include __DIR__ . '/db.php';
       }
@@ -34,7 +34,7 @@
 
   <div class="topbar-icons d-flex align-items-center me-3">
     <div class="dropdown position-relative" title="Notificaciones">
-      <?php if (isset($_SESSION['usuario_rol']) && $_SESSION['usuario_rol'] === 'Administrador'): ?>
+      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador'])): ?>
         <a href="#" id="notifDropdown" class="text-white" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration:none; position:relative;">
           <i class="fas fa-bell"></i>
           <?php if ($notificaciones_no_vistas > 0): ?>
