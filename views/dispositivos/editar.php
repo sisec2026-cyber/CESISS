@@ -1,343 +1,441 @@
 <?php
-// views/dispositivos/actualizar.php
-session_start();
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Superadmin','Administrador','Técnico','Mantenimientos','Capturista']);
+verificarRol(['Superadmin','Administrador', 'Técnico', 'Mantenimientos', 'Capturista']);
 
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/notificaciones_mailer.php';
+include __DIR__ . '/../../includes/db.php';
 
-date_default_timezone_set('America/Mexico_City');
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: listar.php');
-  exit;
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    die('ID inválido o no especificado.');
 }
 
-$id = (int)($_POST['id'] ?? 0);
-if ($id <= 0) {
-  die('ID inválido.');
-}
+$id = (int)$_GET['id'];
 
-/* ========= Helpers ========= */
-function estado_label($v) {
-  $map = [1=>'Activo', 2=>'En mantenimiento', 3=>'Desactivado'];
-  return $map[(int)$v] ?? (string)$v;
-}
-
-function fetch_nombre($conn, $sql, $id) {
-  $stmt = $conn->prepare($sql);
-  $stmt->bind_param('i', $id);
-  $stmt->execute();
-  $res = $stmt->get_result()->fetch_row();
-  $stmt->close();
-  return $res ? $res[0] : null;
-}
-
-function save_upload($field, $oldFilename, $uploadsDir) {
-  if (!isset($_FILES[$field]) || empty($_FILES[$field]['tmp_name'])) {
-    return $oldFilename; // conservar
-  }
-  $f = $_FILES[$field];
-  if ($f['error'] !== UPLOAD_ERR_OK) {
-    return $oldFilename; // opcional: manejar error
-  }
-  @mkdir($uploadsDir, 0775, true);
-
-  $tmp = $f['tmp_name'];
-  $info = @getimagesize($tmp);
-  if (!$info) return $oldFilename;
-
-  $mime = $info['mime'] ?? '';
-  $ext = match($mime) {
-    'image/jpeg' => 'jpg',
-    'image/png'  => 'png',
-    'image/gif'  => 'gif',
-    'image/webp' => 'webp',
-    default      => null
-  };
-  if (!$ext) return $oldFilename;
-
-  $base = bin2hex(random_bytes(8)) . '_' . time();
-  $filename = $base . '.' . $ext;
-  $dest = rtrim($uploadsDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
-
-  if (!move_uploaded_file($tmp, $dest)) {
-    return $oldFilename;
-  }
-  return $filename;
-}
-
-/* ========= 1) Traer registro actual (OLD) ========= */
+// Traer dispositivo
 $stmt = $conn->prepare("SELECT * FROM dispositivos WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
-$old = $stmt->get_result()->fetch_assoc();
+$device = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+if (!$device) die('Dispositivo no encontrado.');
 
-if (!$old) { die('Dispositivo no encontrado.'); }
+// Catálogo de equipos
+$equipos = $conn->query("SELECT id, nom_equipo FROM equipos ORDER BY nom_equipo ASC");
 
-/* ========= 2) Entradas del formulario ========= */
-$equipoId = (int)($_POST['equipo'] ?? 0);
-$modeloId = (int)($_POST['modelo'] ?? 0);
-$serie    = trim($_POST['serie'] ?? '');
-$mac      = trim($_POST['mac'] ?? '');
-$servidor = trim($_POST['servidor'] ?? '');
-$vms      = trim($_POST['vms'] ?? '');
-$user     = trim($_POST['usuario'] ?? '');
-$pass     = (string)($_POST['contrasena'] ?? ''); // no enmascarar al guardar
-$switch   = trim($_POST['switch'] ?? '');
-$puerto   = trim($_POST['puerto'] ?? '');
-$sucursal = (int)($_POST['sucursal'] ?? 0);
-$area     = trim($_POST['area'] ?? '');
-$estado   = (int)($_POST['estado'] ?? 1);
-$fecha    = trim($_POST['fecha'] ?? '');
-$obs      = trim($_POST['observaciones'] ?? '');
+// Modelos del equipo actual (filtrados por la relación marcas.equipo_id)
+$equipoActual = (int)($device['equipo'] ?? 0);
+$modeloActual = (int)($device['modelo'] ?? 0);
 
-$equipoEditMode = (int)($_POST['equipo_edit_mode'] ?? 0);
-$equipoEditId   = (int)($_POST['equipo_edit_id'] ?? 0);
-$equipoNombreEd = trim($_POST['equipo_nombre_edit'] ?? '');
-
-$modeloEditMode = (int)($_POST['modelo_edit_mode'] ?? 0);
-$modeloEditId   = (int)($_POST['modelo_edit_id'] ?? 0);
-$modeloNombreEd = trim($_POST['modelo_nombre_edit'] ?? '');
-
-/* ========= 3) Renombrar catálogo (si aplica) ========= */
-if ($equipoEditMode === 1 && $equipoEditId > 0 && $equipoNombreEd !== '') {
-  $upd = $conn->prepare("UPDATE equipos SET nom_equipo = ? WHERE id = ?");
-  $upd->bind_param("si", $equipoNombreEd, $equipoEditId);
-  $upd->execute();
-  $upd->close();
-}
-if ($modeloEditMode === 1 && $modeloEditId > 0 && $modeloNombreEd !== '') {
-  $upd = $conn->prepare("UPDATE modelos SET num_modelos = ? WHERE id = ?");
-  $upd->bind_param("si", $modeloNombreEd, $modeloEditId);
-  $upd->execute();
-  $upd->close();
+$modelosRes = null;
+if ($equipoActual > 0) {
+  $sqlModelos = "
+    SELECT m.id, m.num_modelos
+    FROM modelos m
+    INNER JOIN marcas ma ON ma.id_marcas = m.marca_id
+    WHERE ma.equipo_id = ?
+    ORDER BY m.num_modelos ASC
+  ";
+  $st = $conn->prepare($sqlModelos);
+  $st->bind_param("i", $equipoActual);
+  $st->execute();
+  $modelosRes = $st->get_result();
+  $st->close();
 }
 
-/* ========= 4) Subidas de imagen ========= */
-$uploadsDir = __DIR__ . '/../../public/uploads';
-$imagen  = save_upload('imagen',  $old['imagen']  ?? null, $uploadsDir);
-$imagen2 = save_upload('imagen2', $old['imagen2'] ?? null, $uploadsDir);
-$imagen3 = save_upload('imagen3', $old['imagen3'] ?? null, $uploadsDir);
+// Sucursales
+$sucursales = $conn->query("SELECT id, nom_sucursal FROM sucursales ORDER BY nom_sucursal ASC");
 
-/* ========= 5) Actualizar dispositivo ========= */
-$sql = "UPDATE dispositivos
-        SET equipo=?, modelo=?, serie=?, mac=?, servidor=?, vms=?, `user`=?, `pass`=?,
-            `switch`=?, puerto=?, sucursal=?, area=?, estado=?, fecha=?, observaciones=?,
-            imagen=?, imagen2=?, imagen3=?
-        WHERE id=?";
-$stmt = $conn->prepare($sql);
-$types = 'iissssssss' . 'i' . 's' . 'i' . 'sssss' . 'i'; // = iissssssssisisssssi
-$stmt->bind_param(
-  $types,
-  $equipoId, $modeloId, $serie, $mac, $servidor, $vms, $user, $pass,
-  $switch, $puerto, $sucursal, $area, $estado, $fecha, $obs,
-  $imagen, $imagen2, $imagen3,
-  $id
-);
-$stmt->execute();
-$stmt->close();
+ob_start();
+?>
 
-/* ========= 6) Preparar correo con DIFERENCIAS ========= */
-$editorNombre = $_SESSION['nombre'] ?? 'desconocido';
-$editorRol    = $_SESSION['usuario_rol'] ?? '—';
-$editorFoto   = $_SESSION['foto'] ?? null;
+<h2>Editar dispositivo</h2>
 
-/* Nombre visibles (old/new) */
-$oldEquipoNom = fetch_nombre($conn, "SELECT nom_equipo FROM equipos WHERE id=?", (int)($old['equipo'] ?? 0));
-$newEquipoNom = fetch_nombre($conn, "SELECT nom_equipo FROM equipos WHERE id=?", $equipoId);
+<form action="actualizar.php" method="post" enctype="multipart/form-data" class="row g-3">
+  <input type="hidden" name="id" value="<?= (int)$device['id'] ?>">
 
-$oldModeloNom = fetch_nombre($conn, "SELECT num_modelos FROM modelos WHERE id=?", (int)($old['modelo'] ?? 0));
-$newModeloNom = fetch_nombre($conn, "SELECT num_modelos FROM modelos WHERE id=?", $modeloId);
+<!-- EQUIPO (muestra nombre, envía ID) -->
+<div class="col-md-6">
+  <label class="form-label">Equipo</label>
+  <select name="equipo" id="equipo" class="form-select" required>
+    <option value="" disabled <?= $equipoActual ? '' : 'selected' ?>>-- Selecciona equipo --</option>
+    <?php while ($eq = $equipos->fetch_assoc()): ?>
+      <option value="<?= (int)$eq['id'] ?>" <?= ((int)$eq['id'] === $equipoActual) ? 'selected' : '' ?>>
+        <?= htmlspecialchars($eq['nom_equipo']) ?>
+      </option>
+    <?php endwhile; ?>
+  </select>
 
-$oldSucursalNom = fetch_nombre($conn, "SELECT nom_sucursal FROM sucursales WHERE id=?", (int)($old['sucursal'] ?? 0));
-$newSucursalNom = fetch_nombre($conn, "SELECT nom_sucursal FROM sucursales WHERE id=?", $sucursal);
+  <!-- Botón para activar edición del nombre -->
+  <div class="mt-2">
+    <button type="button" id="btnEquipoEditar" class="btn btn-sm btn-outline-secondary">
+      Editar nombre
+    </button>
+  </div>
 
-$oldEstadoNom = estado_label($old['estado'] ?? '');
-$newEstadoNom = estado_label($estado);
+  <!-- Área de edición de nombre de equipo -->
+  <div id="equipoEditGroup" class="mt-2" style="display:none;">
+    <input type="text" name="equipo_nombre_edit" id="equipo_nombre_edit" class="form-control" placeholder="Nuevo nombre de equipo">
+    <input type="hidden" name="equipo_edit_mode" id="equipo_edit_mode" value="0">
+    <input type="hidden" name="equipo_edit_id" id="equipo_edit_id" value="<?= (int)$equipoActual ?>">
+    <small class="text-muted">Este cambio renombrará el equipo para todos los dispositivos que lo usen.</small>
+  </div>
+</div>
 
-/* Construir tabla de cambios (solo cambios) */
-$diffs = [];
+<!-- MODELO (muestra nombre, envía ID) -->
+<div class="col-md-6">
+  <label class="form-label">Modelo</label>
+  <select name="modelo" id="modelo" class="form-select" required>
+    <?php if (!$modelosRes || $modelosRes->num_rows === 0): ?>
+      <option value="" disabled selected>Selecciona primero un equipo</option>
+    <?php else: ?>
+      <?php while ($mo = $modelosRes->fetch_assoc()): ?>
+        <option value="<?= (int)$mo['id'] ?>" <?= ((int)$mo['id'] === $modeloActual) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($mo['num_modelos']) ?>
+        </option>
+      <?php endwhile; ?>
+    <?php endif; ?>
+  </select>
 
-$push = function($campo, $antes, $ahora) use (&$diffs) {
-  $a = (string)($antes ?? '');
-  $n = (string)($ahora ?? '');
-  if ($a !== $n) {
-    $diffs[] = ['campo'=>$campo, 'antes'=>$a, 'ahora'=>$n];
+  <!-- Botón para activar edición del nombre -->
+  <div class="mt-2">
+    <button type="button" id="btnModeloEditar" class="btn btn-sm btn-outline-secondary">
+      Editar nombre
+    </button>
+  </div>
+
+  <!-- Área de edición de nombre de modelo -->
+  <div id="modeloEditGroup" class="mt-2" style="display:none;">
+    <input type="text" name="modelo_nombre_edit" id="modelo_nombre_edit" class="form-control" placeholder="Nuevo nombre de modelo">
+    <input type="hidden" name="modelo_edit_mode" id="modelo_edit_mode" value="0">
+    <input type="hidden" name="modelo_edit_id" id="modelo_edit_id" value="<?= (int)$modeloActual ?>">
+    <small class="text-muted">Este cambio renombrará el modelo para todos los dispositivos que lo usen.</small>
+  </div>
+</div>
+
+  <div class="col-md-6">
+    <label class="form-label">Serie</label>
+    <input type="text" name="serie" class="form-control" value="<?= htmlspecialchars($device['serie'] ?? '') ?>">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Dirección MAC</label>
+    <input type="text" name="mac" class="form-control" value="<?= htmlspecialchars($device['mac'] ?? '') ?>">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">No. de Servidor</label>
+    <input type="text" name="servidor" class="form-control" value="<?= htmlspecialchars($device['servidor'] ?? '') ?>">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">VMS</label>
+    <input type="text" name="vms" class="form-control" value="<?= htmlspecialchars($device['vms'] ?? '') ?>" required>
+  </div>
+
+  <!-- Usuario del dispositivo -->
+<div class="col-md-6">
+  <label class="form-label">Usuario</label>
+  <div class="input-group">
+    <input
+      type="text"
+      name="usuario"
+      id="usuario"
+      class="form-control"
+      value="<?= htmlspecialchars($device['user'] ?? '') ?>"
+      autocomplete="username"
+      placeholder="Usuario de acceso"
+    >
+    <!-- Botón opcional para habilitar/inhabilitar edición -->
+    <button type="button" class="btn btn-outline-secondary" id="toggleUsuario">
+      Bloquear/Editar
+    </button>
+  </div>
+  <small class="text-muted">Credencial de acceso del equipo/modelo (no de la app).</small>
+</div>
+
+<!-- Contraseña del dispositivo -->
+<div class="col-md-6">
+  <label class="form-label">Contraseña</label>
+  <div class="input-group">
+    <input
+      type="password"
+      name="contrasena"
+      id="contrasena"
+      class="form-control"
+      value="<?= htmlspecialchars($device['pass'] ?? '') ?>"
+      autocomplete="current-password"
+      placeholder="Contraseña de acceso"
+    >
+    <button type="button" class="btn btn-outline-secondary" id="togglePassVis">
+      Mostrar/Ocultar
+    </button>
+  </div>
+  <small class="text-muted">Se guarda tal cual en BD (credencial del dispositivo).</small>
+</div>
+
+
+  <div class="col-md-6">
+    <label class="form-label">Switch</label>
+    <input type="text" name="switch" class="form-control" value="<?= htmlspecialchars($device['switch'] ?? '') ?>">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Puerto</label>
+    <input type="text" name="puerto" class="form-control" value="<?= htmlspecialchars($device['puerto'] ?? '') ?>">
+  </div>
+
+  <!-- Sucursal (muestra nombre como ya lo tienes) -->
+  <div class="col-md-6">
+    <label class="form-label">Sucursal</label>
+    <select name="sucursal" class="form-select" required>
+      <option value="" disabled <?= empty($device['sucursal']) ? 'selected' : '' ?>>-- Selecciona sucursal --</option>
+      <?php while ($s = $sucursales->fetch_assoc()): ?>
+        <?php $nombreSuc = (string)$s['nom_sucursal']; $idSuc = (int)$s['id']; ?>
+        <option value="<?= htmlspecialchars($idSuc) ?>" <?= ($idSuc === (int)$device['sucursal']) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($nombreSuc) ?>
+        </option>
+      <?php endwhile; ?>
+    </select>
+  </div>
+
+  <!-- Área (texto, no hay tabla areas) -->
+  <div class="col-md-6">
+    <label class="form-label">Área</label>
+    <input type="text" name="area" class="form-control" value="<?= htmlspecialchars($device['area'] ?? '') ?>">
+  </div>
+
+  <!-- Estado (tu columna es int; ajusta valores si quieres 1=Activo, etc.) -->
+  <div class="col-md-6">
+    <label class="form-label">Estado</label>
+    <select name="estado" class="form-select" required>
+      <option value="1" <?= ((int)$device['estado'] === 1) ? 'selected' : '' ?>>Activo</option>
+      <option value="2" <?= ((int)$device['estado'] === 2) ? 'selected' : '' ?>>En mantenimiento</option>
+      <option value="3" <?= ((int)$device['estado'] === 3) ? 'selected' : '' ?>>Desactivado</option>
+    </select>
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Fecha</label>
+    <input type="date" name="fecha" class="form-control" value="<?= htmlspecialchars($device['fecha'] ?? '') ?>" required>
+  </div>
+
+  <div class="col-12">
+    <label class="form-label">Observaciones</label>
+    <textarea name="observaciones" class="form-control" rows="3"><?= htmlspecialchars($device['observaciones'] ?? '') ?></textarea>
+  </div>
+
+  <!-- Imágenes -->
+  <div class="col-md-6">
+    <label class="form-label">Imagen actual principal:</label><br>
+    <?php if (!empty($device['imagen'])): ?>
+      <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen']) ?>" width="200" alt="Imagen principal">
+    <?php else: ?><em class="text-muted">Sin imagen</em><?php endif; ?>
+    <br><label class="form-label mt-2">Cambiar imagen principal</label>
+    <input type="file" name="imagen" class="form-control" accept="image/*">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Imagen actual 2:</label><br>
+    <?php if (!empty($device['imagen2'])): ?>
+      <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen2']) ?>" width="200" alt="Imagen 2">
+    <?php else: ?><em class="text-muted">Sin imagen</em><?php endif; ?>
+    <br><label class="form-label mt-2">Cambiar imagen 2</label>
+    <input type="file" name="imagen2" class="form-control" accept="image/*">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Imagen actual 3:</label><br>
+    <?php if (!empty($device['imagen3'])): ?>
+      <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen3']) ?>" width="200" alt="Imagen 3">
+    <?php else: ?><em class="text-muted">Sin imagen</em><?php endif; ?>
+    <br><label class="form-label mt-2">Cambiar imagen 3</label>
+    <input type="file" name="imagen3" class="form-control" accept="image/*">
+  </div>
+
+  <!-- QR -->
+  <div class="col-md-6">
+    <label class="form-label">Código QR:</label><br>
+    <?php if (!empty($device['qr'])): ?>
+      <img src="/sisec-ui/public/qrcodes/<?= htmlspecialchars($device['qr']) ?>" width="150" alt="Código QR">
+    <?php else: ?><em class="text-muted">Sin QR</em><?php endif; ?>
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar cambios</button>
+    <a href="device.php?id=<?= (int)$id ?>" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+
+<script>
+// Al cambiar equipo, cargar modelos de ese equipo
+document.getElementById('equipo').addEventListener('change', async function() {
+  const equipoId = this.value;
+  const modelo   = document.getElementById('modelo');
+  modelo.innerHTML = '<option value="" disabled selected>Cargando modelos...</option>';
+  if (!equipoId) return;
+
+  try {
+    const resp = await fetch('obtener_modelos.php?equipo_id=' + encodeURIComponent(equipoId), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json(); // [{id, num_modelos}]
+    if (!Array.isArray(data) || data.length === 0) {
+      modelo.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
+      return;
+    }
+    modelo.innerHTML = '';
+    for (const m of data) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.num_modelos;
+      modelo.appendChild(opt);
+    }
+  } catch (e) {
+    console.error(e);
+    modelo.innerHTML = '<option value="" disabled selected>Error al cargar modelos</option>';
   }
-};
+});
+</script>
 
-$push('Equipo', $oldEquipoNom, $newEquipoNom);
-$push('Modelo', $oldModeloNom, $newModeloNom);
-$push('Serie', $old['serie'] ?? '', $serie);
-$push('MAC', $old['mac'] ?? '', $mac);
-$push('Servidor', $old['servidor'] ?? '', $servidor);
-$push('VMS', $old['vms'] ?? '', $vms);
-if ((string)($old['user'] ?? '') !== $user) {
-  $diffs[] = ['campo'=>'Usuario', 'antes'=>($old['user'] ?? ''), 'ahora'=>$user];
-}
-// para contraseña, no mostramos valores
-if ((string)($old['pass'] ?? '') !== $pass) {
-  $diffs[] = ['campo'=>'Contraseña', 'antes'=>'(no se muestra)', 'ahora'=>'(modificada)'];
-}
-$push('Switch', $old['switch'] ?? '', $switch);
-$push('Puerto', $old['puerto'] ?? '', $puerto);
-$push('Sucursal', $oldSucursalNom, $newSucursalNom);
-$push('Área', $old['area'] ?? '', $area);
-$push('Estado', $oldEstadoNom, $newEstadoNom);
-$push('Fecha', $old['fecha'] ?? '', $fecha);
-if ((string)($old['observaciones'] ?? '') !== $obs) {
-  $diffs[] = ['campo'=>'Observaciones', 'antes'=>($old['observaciones'] ?? ''), 'ahora'=>$obs];
-}
-if (($old['imagen'] ?? null) !== $imagen)   { $diffs[] = ['campo'=>'Imagen 1', 'antes'=>($old['imagen'] ?? ''), 'ahora'=>$imagen]; }
-if (($old['imagen2'] ?? null) !== $imagen2) { $diffs[] = ['campo'=>'Imagen 2', 'antes'=>($old['imagen2'] ?? ''), 'ahora'=>$imagen2]; }
-if (($old['imagen3'] ?? null) !== $imagen3) { $diffs[] = ['campo'=>'Imagen 3', 'antes'=>($old['imagen3'] ?? ''), 'ahora'=>$imagen3]; }
-
-/* Fecha/hora bonita */
-$nowMx = new DateTime('now', new DateTimeZone('America/Mexico_City'));
-if (class_exists('IntlDateFormatter')) {
-  $fmt = new IntlDateFormatter(
-    'es_MX', IntlDateFormatter::FULL, IntlDateFormatter::SHORT, 'America/Mexico_City',
-    IntlDateFormatter::GREGORIAN, "EEEE d 'de' MMMM 'de' y 'a las' HH:mm:ss"
-  );
-  $fechaHora = ucfirst($fmt->format($nowMx));
-} else {
-  $fechaHora = $nowMx->format('d/m/Y H:i:s');
+<script>
+// Utilidad: obtener texto del option seleccionado
+function selectedText(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  return opt ? opt.textContent.trim() : '';
 }
 
-/* URLs absolutas */
-$scheme  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host    = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$baseUrl = $scheme . '://' . $host . '/sisec-ui';
-$deviceUrl = $baseUrl . '/views/dispositivos/device.php?id=' . $id;
+/* ====== EQUIPO: toggle edición ====== */
+const equipoSel = document.getElementById('equipo');
+const btnEquipoEditar = document.getElementById('btnEquipoEditar');
+const equipoEditGroup = document.getElementById('equipoEditGroup');
+const equipoNombreEdit = document.getElementById('equipo_nombre_edit');
+const equipoEditMode = document.getElementById('equipo_edit_mode');
+const equipoEditId = document.getElementById('equipo_edit_id');
 
-$fotoEditorAbs = null;
-if (!empty($editorFoto)) {
-  $fotoEditorAbs = preg_match('#^https?://#i', $editorFoto) ? $editorFoto : ($scheme . '://' . $host . $editorFoto);
-}
-
-$imgAbs = $imagen ? ($baseUrl . '/public/uploads/' . $imagen) : null;
-
-/* Tabla HTML de diffs */
-$rows = '';
-if (empty($diffs)) {
-  $rows = '<tr><td colspan="3" style="padding:10px 12px; border:1px solid #edf2f7; font-size:14px;">No hubo cambios en los campos.</td></tr>';
-} else {
-  foreach ($diffs as $d) {
-    $campo = htmlspecialchars($d['campo'], ENT_QUOTES, 'UTF-8');
-    $antes = htmlspecialchars((string)$d['antes'], ENT_QUOTES, 'UTF-8');
-    $ahora = htmlspecialchars((string)$d['ahora'], ENT_QUOTES, 'UTF-8');
-    $rows .= "<tr>
-      <td style=\"padding:10px 12px; background:#f7fafc; border:1px solid #edf2f7; font-size:14px; width:30%;\"><strong>{$campo}</strong></td>
-      <td style=\"padding:10px 12px; border:1px solid #edf2f7; font-size:14px;\">{$antes}</td>
-      <td style=\"padding:10px 12px; border:1px solid #edf2f7; font-size:14px;\">{$ahora}</td>
-    </tr>";
+btnEquipoEditar.addEventListener('click', () => {
+  const isHidden = equipoEditGroup.style.display === 'none';
+  if (isHidden) {
+    // Activar edición
+    equipoEditGroup.style.display = '';
+    equipoEditMode.value = '1';
+    equipoEditId.value = equipoSel.value || '';
+    equipoNombreEdit.value = selectedText(equipoSel); // nombre actual
+    btnEquipoEditar.textContent = 'Cancelar edición';
+  } else {
+    // Cancelar edición
+    equipoEditGroup.style.display = 'none';
+    equipoEditMode.value = '0';
+    equipoNombreEdit.value = '';
+    btnEquipoEditar.textContent = 'Editar nombre';
   }
+});
+
+// Si cambian de equipo y está activo el modo edición, actualiza el campo
+equipoSel.addEventListener('change', () => {
+  if (equipoEditMode.value === '1') {
+    equipoEditId.value = equipoSel.value || '';
+    equipoNombreEdit.value = selectedText(equipoSel);
+  }
+});
+
+/* ====== MODELO: toggle edición ====== */
+const modeloSel = document.getElementById('modelo');
+const btnModeloEditar = document.getElementById('btnModeloEditar');
+const modeloEditGroup = document.getElementById('modeloEditGroup');
+const modeloNombreEdit = document.getElementById('modelo_nombre_edit');
+const modeloEditMode = document.getElementById('modelo_edit_mode');
+const modeloEditId = document.getElementById('modelo_edit_id');
+
+btnModeloEditar.addEventListener('click', () => {
+  const isHidden = modeloEditGroup.style.display === 'none';
+  if (isHidden) {
+    // Activar edición
+    modeloEditGroup.style.display = '';
+    modeloEditMode.value = '1';
+    modeloEditId.value = modeloSel.value || '';
+    modeloNombreEdit.value = selectedText(modeloSel); // nombre actual
+    btnModeloEditar.textContent = 'Cancelar edición';
+  } else {
+    // Cancelar edición
+    modeloEditGroup.style.display = 'none';
+    modeloEditMode.value = '0';
+    modeloNombreEdit.value = '';
+    btnModeloEditar.textContent = 'Editar nombre';
+  }
+});
+
+// Si cambian de modelo y está activo el modo edición, actualiza el campo
+modeloSel.addEventListener('change', () => {
+  if (modeloEditMode.value === '1') {
+    modeloEditId.value = modeloSel.value || '';
+    modeloNombreEdit.value = selectedText(modeloSel);
+  }
+});
+
+/* ====== (Ya lo tenías) Cargar modelos cuando cambia equipo ====== */
+document.getElementById('equipo').addEventListener('change', async function() {
+  const equipoId = this.value;
+  const modelo   = document.getElementById('modelo');
+  modelo.innerHTML = '<option value="" disabled selected>Cargando modelos...</option>';
+  if (!equipoId) return;
+
+  try {
+    const resp = await fetch('obtener_modelos.php?equipo_id=' + encodeURIComponent(equipoId), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json(); // [{id, num_modelos}]
+    if (!Array.isArray(data) || data.length === 0) {
+      modelo.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
+      return;
+    }
+    modelo.innerHTML = '';
+    for (const m of data) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.num_modelos;
+      modelo.appendChild(opt);
+    }
+    // Si está activo modo edición de modelo, sincroniza nombre/ID
+    if (modeloEditMode.value === '1') {
+      modeloEditId.value = modelo.value || '';
+      modeloNombreEdit.value = selectedText(modelo);
+    }
+  } catch (e) {
+    console.error(e);
+    modelo.innerHTML = '<option value="" disabled selected>Error al cargar modelos</option>';
+  }
+});
+</script>
+
+<script>
+// Bloquear/editar "Usuario"
+const usuarioInput = document.getElementById('usuario');
+const toggleUsuarioBtn = document.getElementById('toggleUsuario');
+if (toggleUsuarioBtn && usuarioInput) {
+  toggleUsuarioBtn.addEventListener('click', () => {
+    usuarioInput.disabled = !usuarioInput.disabled;
+    toggleUsuarioBtn.textContent = usuarioInput.disabled ? 'Editar' : 'Bloquear';
+  });
 }
 
-/* Correo con estilo */
-$destinatarios = ['marcojazzelarzate@gmail.com', 'marc0_ruiz@hotmail.com'];
-$asunto = 'CESISS · Edición de dispositivo #' . $id;
-
-$editorNombreHtml = htmlspecialchars($editorNombre, ENT_QUOTES, 'UTF-8');
-$editorRolHtml    = htmlspecialchars($editorRol, ENT_QUOTES, 'UTF-8');
-
-$html = <<<HTML
-<!doctype html>
-<html lang="es">
-  <body style="margin:0; padding:0; background:#f5f7fb;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;">
-      <tr>
-        <td align="center" style="padding:24px 12px;">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:100%; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
-            <tr>
-              <td style="background:#3C92A6; padding:20px 24px; color:#ffffff; font-family:Arial, Helvetica, sans-serif;">
-                <h2 style="margin:0; font-size:20px; letter-spacing:.3px;">CESISS</h2>
-                <p style="margin:6px 0 0 0; font-size:13px; opacity:.95;">Notificación de edición de dispositivo</p>
-              </td>
-            </tr>
-
-            <tr>
-              <td style="padding:24px; font-family:Arial, Helvetica, sans-serif; color:#222;">
-                <p style="margin:0 0 12px 0; font-size:15px; line-height:1.5;">
-                  Se han realizado cambios al <strong>dispositivo #{$id}</strong>.
-                </p>
-
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin:16px 0;">
-                  <tr>
-                    <td style="padding:10px 12px; background:#f7fafc; border:1px solid #edf2f7; font-size:14px; width:40%;"><strong>Editado por</strong></td>
-                    <td style="padding:10px 12px; border:1px solid #edf2f7; font-size:14px;">{$editorNombreHtml} ({$editorRolHtml})</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:10px 12px; background:#f7fafc; border:1px solid #edf2f7; font-size:14px;"><strong>Fecha y hora (CDMX)</strong></td>
-                    <td style="padding:10px 12px; border:1px solid #edf2f7; font-size:14px;">{$fechaHora}</td>
-                  </tr>
-                </table>
-
-                <h4 style="margin:18px 0 8px 0; font-size:15px;">Cambios</h4>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin:8px 0 16px 0;">
-                  <tr>
-                    <th align="left" style="padding:10px 12px; background:#eaf6f9; border:1px solid #edf2f7; font-size:13px;">Campo</th>
-                    <th align="left" style="padding:10px 12px; background:#eaf6f9; border:1px solid #edf2f7; font-size:13px;">Antes</th>
-                    <th align="left" style="padding:10px 12px; background:#eaf6f9; border:1px solid #edf2f7; font-size:13px;">Ahora</th>
-                  </tr>
-                  {$rows}
-                </table>
-HTML;
-
-if ($fotoEditorAbs) {
-  $html .= <<<HTML
-                <div style="margin:8px 0 16px 0;">
-                  <p style="margin:0 0 6px 0; font-size:13px; color:#444;">Usuario:</p>
-                  <img src="{$fotoEditorAbs}" alt="{$editorNombreHtml}" width="60" height="60" style="border-radius:50%; display:block; border:1px solid #e6e6e6; object-fit:cover;">
-                </div>
-HTML;
+// Mostrar/Ocultar contraseña
+const passInput = document.getElementById('contrasena');
+const togglePassBtn = document.getElementById('togglePassVis');
+if (togglePassBtn && passInput) {
+  togglePassBtn.addEventListener('click', () => {
+    passInput.type = passInput.type === 'password' ? 'text' : 'password';
+  });
 }
-if ($imgAbs) {
-  $html .= <<<HTML
-                <div style="margin:8px 0 16px 0;">
-                  <p style="margin:0 0 6px 0; font-size:13px; color:#444;">Imagen del dispositivo:</p>
-                  <img src="{$imgAbs}" alt="Imagen dispositivo" width="160" style="display:block; border:1px solid #e6e6e6; border-radius:8px; object-fit:cover;">
-                </div>
-HTML;
-}
+</script>
 
-$html .= <<<HTML
-                <div style="margin:20px 0 8px 0;">
-                  <a href="{$deviceUrl}" 
-                     style="display:inline-block; padding:12px 18px; background:#3C92A6; color:#ffffff; text-decoration:none; font-weight:bold; border-radius:8px; font-size:14px;">
-                     Ver dispositivo
-                  </a>
-                </div>
 
-                <p style="margin:16px 0 0 0; font-size:12px; color:#6b7280;">
-                  Si no reconoces esta edición, revisa el historial y ajusta permisos.
-                </p>
-              </td>
-            </tr>
 
-            <tr>
-              <td style="padding:14px 24px; background:#f9fafb; color:#6b7280; font-family:Arial, Helvetica, sans-serif; font-size:12px; text-align:center;">
-                © CESISS · Este es un mensaje automático, no respondas a este correo.
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-HTML;
+<?php
+$content = ob_get_clean();
+$pageTitle = "Editar dispositivo #$id";
+$pageHeader = "Editar dispositivo";
+$activePage = "";
 
-try {
-  enviarNotificacion($asunto, $html, $destinatarios);
-} catch (Throwable $e) {
-  // no interrumpir el flujo por el correo
-}
-
-/* ========= 7) Redirigir ========= */
-header('Location: device.php?id=' . $id);
-exit;
+include __DIR__ . '/../../layout.php';
