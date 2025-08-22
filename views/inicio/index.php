@@ -1,10 +1,8 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
-verificarAutenticacion(); // Verifica si hay sesión iniciada
-verificarRol(['Superadmin', 'Prevencion','Administrador','Técnico', 'Mantenimientos','Distrital']);
-
+verificarAutenticacion();
+verificarRol(['Superadmin', 'Prevencion','Administrador','Técnico', 'Distrital','Mantenimientos']);
 include __DIR__ . '/../../includes/db.php';
-
 ob_start();
 
 /* ======== Filtros y configuración ======== */
@@ -97,7 +95,6 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
 ?>
 
 <h2 class="mb-4">Panel de control</h2>
-
 <!-- KPIs -->
 <div class="row g-3 mb-4">
   <div class="col-md-3">
@@ -170,25 +167,25 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
         <canvas id="chartMtoPorSucursal" height="220"></canvas>
       </div>
     </div>
-  </div-->
+  </div>
 
   <div class="col-md-12">
     <div>
       <div>
-        <!--h6 class="card-title mb-3">Listado de cámaras en mantenimiento</h6>
+        <-h6 class="card-title mb-3">Listado de cámaras en mantenimiento</-h6>
         <?php if (($mantenimiento ?? 0) == 0): ?>
           <div class="alert alert-info mb-0">No hay cámaras en mantenimiento.</div>
         <?php else: ?>
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle">
               <thead class="table-light">
-                <tr-->
+                <tr>
                   <th style="width: 80px;">ID</th>
                   <th>Equipo</th>
                   <th>Sucursal</th>
                   <th>Estado</th>
                   <th style="width: 120px;">Acciones</th>
-                </tr->
+                </tr>
               </thead>
               <tbody>
                 <?php while ($d = $listado_mto->fetch_assoc()): ?>
@@ -217,7 +214,7 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
       </div>
     </div>
   </div>
-</div>
+</div-->
 
 <!-- Botones rápidos -->
 <div class="d-flex justify-content-center gap-3">

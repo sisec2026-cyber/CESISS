@@ -9,7 +9,7 @@ use Dompdf\Dompdf;
 $ciudad = isset($_GET['ciudad']) ? (int) $_GET['ciudad'] : 0;
 $municipio = isset($_GET['municipio']) ? (int) $_GET['municipio'] : 0;
 $sucursal = isset($_GET['sucursal']) ? (int) $_GET['sucursal'] : 0;
-$logoSisec = imagenBase64("img/logoCESISS.jpeg");
+$logoSisec = imagenBase64("img/logo.png");
 $nombreSucursal = '';
 if ($sucursal > 0) {
   $stmtSucursal = $conn->prepare("SELECT nom_sucursal FROM sucursales WHERE id = ?");
@@ -134,7 +134,7 @@ tr{
   <tr>
     <td style="text-align: left; width: 50%; border: none;">
       <?php if ($logoSisec): ?>
-        <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="height: 100px;">
+        <img src="<?= $logoSisec ?>" alt="Logo SISEC" style="height: 50px;">
       <?php endif; ?>
     </td>
     <td style="text-align: right; width: 50%; border: none;">
