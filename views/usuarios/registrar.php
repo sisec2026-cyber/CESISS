@@ -16,6 +16,7 @@ $stmt = $conexion->query("SELECT COUNT(*) as total FROM usuarios");
 $totalUsuarios = $stmt->fetch_assoc()['total'] ?? 0; // Contar usuarios existentes
 $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
 ?>
+
 <div class="container d-flex justify-content-center min-vh-100">
   <?php if ($limiteAlcanzado): ?>
     <div class="alert alert-danger text-center mb-3">Se ha alcanzado el límite máximo de 1000 usuarios. No se pueden registrar más.</div>

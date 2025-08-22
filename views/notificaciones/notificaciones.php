@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
 verificarRol(['Superadmin', 'Administrador']);
-
 include __DIR__ . '/../../includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['eliminar_id'])) {

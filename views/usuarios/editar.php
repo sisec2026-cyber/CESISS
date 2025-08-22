@@ -18,7 +18,6 @@ if (!$usuario) {
 $pageTitle = "Editar usuario";
 $pageHeader = "Editar usuario";
 $activePage = "usuarios";
-
 ob_start();
 ?>
 

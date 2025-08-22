@@ -1,4 +1,4 @@
-  <?php
+    <?php
   require_once __DIR__ . '/../../includes/auth.php';
   include __DIR__ . '/../../includes/db.php';
 
@@ -307,6 +307,308 @@
 
   <!-- SCRIPTS -->
   <script src="validacionesregistro.js"></script>
+
+<!-- Script para manejo de imágenes, permite CTRL + V, ARRASTRAR Y PEGAR, Y CON OPCION DE N/A EN LA PRIMER IMAGEN -->
+<script>
+(() => {
+  const MAX_SIZE_MB = 10; // límite opcional por archivo
+
+  const dropzones = [1,2,3].map(i => ({
+    i,
+    dz: document.getElementById(`drop-imagen${i}`),
+    input: document.getElementById(`imagen${i}`),
+    preview: document.getElementById(`preview-imagen${i}`),
+    removeBtn: document.querySelector(`button.remove-btn[data-target="imagen${i}"]`),
+    pinBtn: null, // botón "Pegar aquí"
+    tip: null     // badge "Destino de pegar"
+  }));
+
+  let activeDropzone = null;        // dropzone destino para pegar (Ctrl+V)
+  let manualPasteTarget = false;    // true si el usuario seleccionó manualmente el destino
+
+  // ===== Helpers de imagen / input =====
+  function setFileToInput(input, file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+  }
+
+  function clearSlot({ input, preview, removeBtn, dz }) {
+    const dt = new DataTransfer();
+    input.files = dt.files;
+
+    preview.classList.add('d-none');
+    preview.src = '#';
+    removeBtn.classList.add('d-none');
+
+    const msg = dz.querySelector('.mensaje');
+    if (msg) msg.textContent = 'Arrastra una imagen aquí o haz clic';
+  }
+
+  function toast(text) { alert(text); }
+
+  function handleFile(file, ctx) {
+    if (!file.type.startsWith('image/')) return toast('Solo se permiten imágenes.');
+    const sizeMB = file.size / (1024*1024);
+    if (sizeMB > MAX_SIZE_MB) return toast(`La imagen supera ${MAX_SIZE_MB} MB.`);
+
+    setFileToInput(ctx.input, file);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      ctx.preview.src = reader.result;
+      ctx.preview.classList.remove('d-none');
+      ctx.removeBtn.classList.remove('d-none');
+      const msg = ctx.dz.querySelector('.mensaje');
+      if (msg) msg.textContent = `Imagen lista (${file.name})`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Genera PNG con “N/A” (para preview y enviar al backend)
+  function generateNAPngDataURL() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640; canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#f3f4f6';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+
+    ctx.fillStyle = '#6b7280';
+    ctx.font = 'bold 120px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('N/A', canvas.width/2, canvas.height/2);
+
+    return canvas.toDataURL('image/png');
+  }
+
+  function dataURLToFile(dataURL, filename) {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8 = new Uint8Array(n);
+    while (n--) u8[n] = bstr.charCodeAt(n);
+    return new File([u8], filename, { type: mime });
+  }
+
+  async function applyNAtoSlot(ctx) {
+    const naDataURL = generateNAPngDataURL();
+    const file = dataURLToFile(naDataURL, 'NA.png');
+    setFileToInput(ctx.input, file);
+
+    ctx.preview.src = naDataURL;
+    ctx.preview.classList.remove('d-none');
+    ctx.removeBtn.classList.remove('d-none');
+
+    const msg = ctx.dz.querySelector('.mensaje');
+    if (msg) msg.textContent = 'Marcado como N/A';
+  }
+
+  // ===== Crea checkbox “Marcar como N/A” SOLO para Imagen 1 =====
+  const dz1 = document.getElementById('drop-imagen1');
+  const input1 = document.getElementById('imagen1');
+  const ctx1 = dropzones[0]; // referencia útil
+  let chkNAImg1 = null;
+
+  if (dz1) {
+    const naWrap = document.createElement('div');
+    naWrap.className = 'form-check text-start mt-2';
+    naWrap.innerHTML = `
+      <input class="form-check-input" type="checkbox" id="chkNAImg1">
+      <label class="form-check-label" for="chkNAImg1">Marcar como N/A</label>
+    `;
+    dz1.appendChild(naWrap);
+
+    // Evita que el click del checkbox/label burbujee al dropzone y abra el file picker
+    ['click','mousedown','touchstart'].forEach(evt => {
+      naWrap.addEventListener(evt, (e) => e.stopPropagation(), { capture: true });
+    });
+
+    chkNAImg1 = naWrap.querySelector('#chkNAImg1');
+
+    // Si se marca el checkbox, aplicar N/A; si se desmarca, limpiar
+    chkNAImg1.addEventListener('change', () => {
+      if (chkNAImg1.checked) {
+        applyNAtoSlot(ctx1);
+      } else {
+        clearSlot(ctx1);
+      }
+    });
+
+    // En el submit, si no hay imagen 1 o está marcado N/A, aplicar N/A automáticamente
+    const form = dz1.closest('form');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        const noHayImg1 = (input1.files?.length || 0) === 0;
+        if (noHayImg1 || chkNAImg1.checked) {
+          e.preventDefault();
+          applyNAtoSlot(ctx1).then(() => form.submit());
+        }
+      });
+    }
+  }
+
+  // ===== UI para seleccionar destino de pegado (botón y badge) =====
+  function buildPasteTargetUI(ctx) {
+    // Botón "Pegar aquí"
+    const pin = document.createElement('button');
+    pin.type = 'button';
+    pin.className = 'btn btn-outline-primary btn-sm position-absolute top-0 end-0 m-2 paste-pin';
+    pin.title = 'Establecer este cuadro como destino para pegar (Ctrl+V)';
+    pin.innerHTML = '<i class="fas fa-thumbtack"></i> <span class="d-none d-md-inline">Pegar aquí</span>';
+
+    // Badge "Destino de pegar"
+    const tip = document.createElement('span');
+    tip.className = 'badge bg-primary position-absolute top-0 start-0 m-2 d-none';
+    tip.textContent = 'Destino de pegar';
+
+    // Evita que al hacer clic sobre el botón se abra el selector de archivos
+    ['click','mousedown','touchstart'].forEach(evt => {
+      pin.addEventListener(evt, (e) => e.stopPropagation(), { capture: true });
+    });
+
+    pin.addEventListener('click', () => {
+      setActivePasteTarget(ctx, true); // selección manual
+    });
+
+    ctx.dz.style.position = ctx.dz.style.position || 'relative';
+    ctx.dz.appendChild(pin);
+    ctx.dz.appendChild(tip);
+    ctx.pinBtn = pin;
+    ctx.tip = tip;
+  }
+
+  function setActivePasteTarget(ctx, manual=false) {
+    activeDropzone = ctx.dz;
+    manualPasteTarget = !!manual;
+
+    // Resalta visualmente el destino y muestra la badge
+    dropzones.forEach(d => {
+      d.dz.classList.remove('border-primary', 'border-2');
+      if (d.tip) d.tip.classList.add('d-none');
+    });
+    ctx.dz.classList.add('border-primary', 'border-2');
+    if (ctx.tip) ctx.tip.classList.remove('d-none');
+  }
+
+  // Construye UI en cada dropzone
+  dropzones.forEach(buildPasteTargetUI);
+  // Selección por defecto: cuadro 1 (no manual)
+  setActivePasteTarget(dropzones[0], false);
+
+  // ===== Listeners por dropzone =====
+  dropzones.forEach(({ i, dz, input, preview, removeBtn }) => {
+    // Click abre el selector de archivos, excepto si fue en checkbox/label/botón
+    dz.addEventListener('click', (e) => {
+      if (e.target.closest('.form-check, label, input[type="checkbox"], button')) return;
+      input.click();
+    });
+
+    // Drag & Drop
+    ['dragenter','dragover'].forEach(ev => {
+      dz.addEventListener(ev, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add('bg-light');
+        // Si NO hay destino manual, el hover define el destino de pegar
+        if (!manualPasteTarget) {
+          const ctx = dropzones.find(d => d.dz === dz);
+          if (ctx) setActivePasteTarget(ctx, false);
+        }
+      });
+    });
+
+    ['dragleave','dragend','drop'].forEach(ev => {
+      dz.addEventListener(ev, (e) => {
+        if (ev !== 'drop') dz.classList.remove('bg-light');
+      });
+    });
+
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove('bg-light');
+      const file = e.dataTransfer?.files?.[0] || null;
+      if (file) handleFile(file, { i, dz, input, preview, removeBtn });
+      if (i === 1 && chkNAImg1) chkNAImg1.checked = false; // si soltó algo en 1, desmarca N/A
+    });
+
+    // Cambio por selector de archivos
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (file) handleFile(file, { i, dz, input, preview, removeBtn });
+      if (i === 1 && chkNAImg1) chkNAImg1.checked = false;
+    });
+
+    // Botón Eliminar
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearSlot({ input, preview, removeBtn, dz });
+      if (i === 1 && chkNAImg1) chkNAImg1.checked = false;
+    });
+
+    // Foco por teclado: si no hay selección manual, el foco define destino
+    dz.tabIndex = 0;
+    dz.addEventListener('focusin', () => {
+      if (!manualPasteTarget) {
+        const ctx = dropzones.find(d => d.dz === dz);
+        if (ctx) setActivePasteTarget(ctx, false);
+      }
+    });
+  });
+
+  // ===== Atajos de teclado para seleccionar destino: Alt+1, Alt+2, Alt+3 =====
+  document.addEventListener('keydown', (e) => {
+    if (!e.altKey) return;
+    const map = { 'Digit1': 1, 'Digit2': 2, 'Digit3': 3 };
+    const idx = map[e.code];
+    if (!idx) return;
+    const ctx = dropzones[idx - 1];
+    if (ctx) {
+      e.preventDefault();
+      setActivePasteTarget(ctx, true); // selección manual
+    }
+  });
+
+  // ===== Pegar (Ctrl+V) en toda la página =====
+  document.addEventListener('paste', (e) => {
+    const dt = e.clipboardData || window.clipboardData;
+    if (!dt) return;
+
+    let file = null;
+    if (dt.items && dt.items.length) {
+      for (const item of dt.items) {
+        if (item.type && item.type.startsWith('image/')) {
+          const blob = item.getAsFile();
+          if (blob) {
+            file = new File([blob], `pasted-${Date.now()}.png`, { type: blob.type || 'image/png' });
+            break;
+          }
+        }
+      }
+    }
+    if (!file && dt.files && dt.files.length) {
+      const f = dt.files[0];
+      if (f.type.startsWith('image/')) file = f;
+    }
+    if (!file) return;
+
+    // Pega en el destino activo
+    const ctx = dropzones.find(d => d.dz === activeDropzone) || dropzones[0];
+    if (ctx) {
+      handleFile(file, ctx);
+      if (ctx.i === 1 && chkNAImg1) chkNAImg1.checked = false;
+    }
+  });
+})();
+</script>
+<!-- TERMINA SCRIPT DE MANEJO DE IMÁGENES -->
 
 
 

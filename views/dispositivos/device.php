@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado']);
+verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado', 'Capturista']);
 
 include __DIR__ . '/../../includes/db.php';
 
@@ -127,8 +127,11 @@ ob_start();
     </table>
 
     <div class="mt-3 d-flex gap-2">
-      <a href="listar.php" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Volver al listado
+      <?php
+      $returnUrl = isset($_GET['return_url']) ? $_GET['return_url'] : 'listar.php';
+      ?>
+      <a href="<?= htmlspecialchars($returnUrl) ?>" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Volver al listado
       </a>
       <a href="exportar_pdf.php?id=<?= $device['id'] ?>" class="btn btn-danger" target="_blank">
         <i class="fas fa-file-pdf"></i> Exportar PDF

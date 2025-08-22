@@ -10,14 +10,12 @@ if (isset($_SESSION['usuario_id']) && isset($_SESSION['rol'])) {
     case 'Administrador':
       header('Location: views/index.php');
       exit;
-
     case 'Capturista':
     case 'Prevencion':
     case 'Monitorista':
     case 'Técnico':
       header('Location: views/listar.php');
       exit;
-
     default:
       // si no coincide con ningún rol esperado
       header('Location: views/listar.php');
