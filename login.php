@@ -130,7 +130,7 @@ $redirect = $_GET['redirect'] ?? null;
 
 <body>
   <div class="login-box">
-    <img src="/sisec-ui/public/img/logoCESISS.png" alt="Logo SISEC" style="max-height: 250px; margin-bottom: 10px;">
+    <img src="/sisec-ui/public/img/logoCESISS.jpeg" alt="Logo SISEC" style="max-height: 250px; margin-bottom: 10px;">
 
     <?php if ($error): ?>
       <div class="error"><?= htmlspecialchars($error) ?></div>

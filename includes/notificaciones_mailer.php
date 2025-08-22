@@ -3,7 +3,7 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require __DIR__ . '/../vendor/autoload.php'; // Ajusta si tu vendor está en otra ruta
+require __DIR__ . '/../vendor/autoload.php'; 
 
 /**
  * Envía un correo HTML usando Gmail SMTP (App Password).
@@ -21,8 +21,8 @@ function enviarNotificacion(string $asunto, string $htmlCuerpo, array $destinata
         $mail->Port       = 587;
 
         // Remitente
-        $mail->setFrom('notificaciones@cesiss.com', 'Sistema SISEC');
-        $mail->addReplyTo('notificaciones@cesiss.com', 'Sistema SISEC');
+        $mail->setFrom('notificaciones@cesiss.com', 'Sistema CESISS');
+        $mail->addReplyTo('notificaciones@cesiss.com', 'Sistema CESISS');
 
         // Destinatarios
         foreach ($destinatarios as $to) {
