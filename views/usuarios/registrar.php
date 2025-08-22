@@ -31,6 +31,12 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
       <input type="text" class="form-control" id="nombre" name="nombre" required>
     </div>
 
+    <!-- Correo -->
+    <div class="mb-3">
+      <label for="email" class="form-label">Correo</label>
+      <input type="text" class="form-control" id="email" name="email" required>
+    </div>
+
     <!-- Clave -->
     <div class="mb-3">
       <label for="clave" class="form-label">Contraseña</label>
@@ -66,6 +72,18 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
         else checkSpecial.classList.replace('text-success','text-danger'), checkSpecial.textContent='Al menos un carácter especial (!@#$%^&*)';
     });
     </script>
+
+    <!-- Cargo -->
+    <div class="mb-3">
+      <label for="cargo" class="form-label">Cargo</label>
+      <input type="text" class="form-control" id="cargo" name="cargo" required>
+    </div>
+
+    <!-- Empresa -->
+    <div class="mb-3">
+      <label for="empresa" class="form-label">Empresa</label>
+      <input type="text" class="form-control" id="empresa" name="empresa" required>
+    </div>
 
     <!-- Rol -->
     <div class="mb-3">
