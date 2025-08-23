@@ -13,7 +13,8 @@ include __DIR__ . '/../../includes/conexion.php';
 ob_start();
 
 // Obtener lista de usuarios
-$usuarios = $conexion->query("SELECT id, nombre, rol, foto FROM usuarios");
+$usuarios = $conexion->query("SELECT u.id, u.nombre, u.rol, u.foto, u.cargo, u.email, u.empresa, s.nom_sucursal AS sucursal FROM usuarios u LEFT JOIN sucursales s ON u.sucursal = s.ID");
+
 ?>
 
 <h2 class="mb-4">Usuarios registrados</h2>
@@ -31,6 +32,10 @@ $usuarios = $conexion->query("SELECT id, nombre, rol, foto FROM usuarios");
         <th style="width: 50px;"><i class="fas fa-user"></i></th>
         <th>Nombre</th>
         <th>Rol</th>
+        <th>Cargo</th>        
+        <th>Correo</th>
+        <th>Empresa</th>
+        <th>Tienda</th>
         <th style="width: 150px;" class="text-center">Acciones</th>
       </tr>
     </thead>
@@ -46,11 +51,14 @@ $usuarios = $conexion->query("SELECT id, nombre, rol, foto FROM usuarios");
           </td>
           <td><?= htmlspecialchars($u['nombre']) ?></td>
           <td><?= htmlspecialchars($u['rol']) ?></td>
+          <td><?= htmlspecialchars($u['cargo']) ?></td>
+          <td><?= htmlspecialchars($u['email']) ?></td>
+          <td><?= htmlspecialchars($u['empresa']) ?></td>
+          <td><?= htmlspecialchars($u['sucursal'] ?? 'SIN SUCURSAL') ?></td>
           <td class="text-center">
             <a href="editar.php?id=<?= $u['id'] ?>" class="btn btn-sm btn-warning me-1">
               <i class="fas fa-edit"></i>
             </a>
-
             <!-- Botón eliminar que abre el modal -->
             <button type="button" 
                     class="btn btn-sm btn-danger btn-eliminar" 

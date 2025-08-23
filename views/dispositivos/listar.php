@@ -4,7 +4,7 @@ verificarAutenticacion(); // Verifica si hay sesión iniciada
 verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado','Técnico','Capturista','Distrital','Prevencion','Monitorista']);
 include __DIR__ . '/../../includes/db.php';
 
-//Filtros del usuario logueado ===
+//Filtros del usuario logueado
   $userId = $_SESSION['usuario_id'] ?? null;
   $filtroRegion = $filtroCiudad = $filtroMunicipio = $filtroSucursal = null;
   if ($userId) {
