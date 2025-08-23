@@ -210,15 +210,16 @@ try {
   $id = $stmt->insert_id;
 
   /* ========== 6) Notificación interna (DB) ========== */
-  if (!empty($_SESSION['usuario_rol']) && $_SESSION['usuario_rol'] !== 'Administrador') {
-    $mensaje = "El Mantenimientos " . ($_SESSION['nombre'] ?? '') . " registró un nuevo dispositivo.";
+if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
+    $nombreUsuario = trim($_SESSION['nombre'] ?? 'desconocido');
+    $mensaje = sprintf('El usuario "%s" registró un nuevo dispositivo.', $nombreUsuario);
     $stmtNotif = $conn->prepare("
       INSERT INTO notificaciones (usuario_id, mensaje, fecha, visto, dispositivo_id)
       VALUES (?, ?, NOW(), 0, ?)
     ");
     $stmtNotif->bind_param("isi", $_SESSION['usuario_id'], $mensaje, $id);
     $stmtNotif->execute();
-  }
+}
 
   /* ========== 7) QR ========== */
   require_once __DIR__ . '/../../config.php';

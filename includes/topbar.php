@@ -7,25 +7,37 @@
     <!-- Título -->
     <h5 class="m-0 flex-grow-1"><?= htmlspecialchars($pageHeader ?? 'CESISS - Consulta Exprés de Sistemas Instalados y Servicios de Suburbia  ') ?></h5>
     <!-- Íconos de notificación y usuario -->
-    <?php
-    $notificaciones = [];
-    $notificaciones_no_vistas = 0;
-    if (isset($_SESSION['usuario_rol']) && $_SESSION['usuario_rol'] === 'Superadmin') {
-      if (!isset($conn)) {
-        include __DIR__ . '/db.php';
-      }
-    $sql = "SELECT * FROM notificaciones ORDER BY fecha DESC LIMIT 5";
-    $result = $conn->query($sql);
-    if ($result) {
-      while ($row = $result->fetch_assoc()) {
+<?php
+$notificaciones = [];
+$notificaciones_no_vistas = 0;
+
+if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador'])) {
+    if (!isset($conn)) include __DIR__ . '/db.php';
+
+    $stmt = $conn->prepare("
+      SELECT n.id, n.mensaje, n.fecha, n.visto, n.dispositivo_id
+      FROM notificaciones n
+      INNER JOIN usuarios u ON u.id = n.usuario_id
+      WHERE u.rol <> 'Superadmin'     -- solo mostrar acciones hechas por NO-Superadmin
+        AND n.usuario_id <> ?         -- opcional: no mostrar las que yo mismo generé
+      ORDER BY n.fecha DESC
+      LIMIT 5
+    ");
+
+    $miId = (int)($_SESSION['usuario_id'] ?? 0);
+    $stmt->bind_param("i", $miId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    while ($row = $result->fetch_assoc()) {
         $notificaciones[] = $row;
-        if ($row['visto'] == 0) {
-          $notificaciones_no_vistas++;
-        }
-      }
+        if ((int)$row['visto'] === 0) $notificaciones_no_vistas++;
     }
-    }
-    ?>
+    $stmt->close();
+}
+?>
+
+
     <div class="topbar-icons d-flex align-items-center me-3">
       <div class="dropdown position-relative" title="Notificaciones">
         <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador'])): ?>
@@ -33,16 +45,31 @@
           <?php if ($notificaciones_no_vistas > 0): ?><span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
           <?php endif; ?>
           </a>
-          <ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="notifDropdown" style="min-width: 300px;">
-            <?php if (count($notificaciones) === 0): ?><li class="dropdown-item text-center text-muted">No hay notificaciones</li>
-            <?php else: ?>
-              <?php foreach ($notificaciones as $notif): ?><li class="dropdown-item<?= $notif['visto'] == 0 ? ' fw-bold' : '' ?>" style="white-space: normal;"><?= htmlspecialchars($notif['mensaje']) ?><br>
-                <small class="text-muted"><?= date('d/m/Y H:i', strtotime($notif['fecha'])) ?></small></li>
-                <li><hr class="dropdown-divider"></li>
-                <?php endforeach; ?>
-                <li><a href="/sisec-ui/views/notificaciones/notificaciones.php" class="dropdown-item text-center">Ver todas</a></li>
-            <?php endif; ?>
-          </ul>
+
+<ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="notifDropdown" style="min-width: 300px;">
+  <?php if (count($notificaciones) === 0): ?>
+    <li class="dropdown-item text-center text-muted">No hay notificaciones</li>
+  <?php else: ?>
+    <?php foreach ($notificaciones as $notif): ?>
+      <li>
+        <a href="/sisec-ui/views/notificaciones/ir.php?id=<?= (int)$notif['id'] ?>"
+           class="dropdown-item<?= ((int)$notif['visto'] === 0 ? ' fw-bold' : '') ?>"
+           style="white-space: normal;">
+          <?php
+            // Opcional: oculta cualquier URL o token que hayas metido en el mensaje
+            $texto = preg_replace('/\\[\\[url:[^\\]]+\\]\\]/', '', $notif['mensaje']);
+            echo htmlspecialchars(trim($texto), ENT_QUOTES, 'UTF-8');
+          ?>
+          <br>
+          <small class="text-muted"><?= date('d/m/Y H:i', strtotime($notif['fecha'])) ?></small>
+        </a>
+      </li>
+      <li><hr class="dropdown-divider"></li>
+    <?php endforeach; ?>
+    <li><a href="/sisec-ui/views/notificaciones/notificaciones.php" class="dropdown-item text-center">Ver todas</a></li>
+  <?php endif; ?>
+</ul>
+
           <?php else: ?>
             <i class="fas fa-bell" style="opacity:0.5;"></i>
           <?php endif; ?>
