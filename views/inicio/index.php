@@ -5,96 +5,108 @@ verificarRol(['Superadmin', 'Prevencion','Administrador','Técnico', 'Distrital'
 include __DIR__ . '/../../includes/db.php';
 ob_start();
 
-/* ======== Filtros y configuración ======== */
-$collation   = 'utf8mb4_general_ci'; // En MySQL 8: 'utf8mb4_0900_ai_ci'
-$filtroCamara = "e.nom_equipo COLLATE $collation LIKE 'camara%'";
-$filtroSensor = "e.nom_equipo COLLATE $collation LIKE 'sensor%'";
+/* ======== Config ======== */
+$collation    = 'utf8mb4_general_ci'; // En MySQL 8: 'utf8mb4_0900_ai_ci'
 $estadoMto    = 'En mantenimiento';
 
 /* ======== KPIs ======== */
-// Cámaras (todas las variantes: Camara Bullet, Camara Domo, etc.)
 $camaras = $conn->query("
-    SELECT COUNT(*) AS total 
-    FROM dispositivos d
-    INNER JOIN equipos e ON d.equipo = e.id
-    WHERE $filtroCamara
+  SELECT COUNT(*) AS total
+  FROM dispositivos d
+  INNER JOIN equipos e ON d.equipo = e.id
+  WHERE e.nom_equipo COLLATE $collation LIKE 'camara%'
 ")->fetch_assoc()['total'] ?? 0;
 
-// Sensores (por coherencia con FK a 'equipos')
 $sensores = $conn->query("
-    SELECT COUNT(*) AS total
-    FROM dispositivos d
-    INNER JOIN equipos e ON d.equipo = e.id
-    WHERE $filtroSensor
+  SELECT COUNT(*) AS total
+  FROM dispositivos d
+  INNER JOIN equipos e ON d.equipo = e.id
+  WHERE e.nom_equipo COLLATE $collation LIKE 'sensor%'
 ")->fetch_assoc()['total'] ?? 0;
 
-// Usuarios
 $usuarios = $conn->query("SELECT COUNT(*) AS total FROM usuarios")->fetch_assoc()['total'] ?? 0;
 
-// Cámaras en mantenimiento (solo cámaras con estado "En mantenimiento")
 $mantenimiento = $conn->query("
-    SELECT COUNT(*) AS total
-    FROM dispositivos d 
-    INNER JOIN equipos e ON d.equipo = e.id
-    INNER JOIN status s  ON d.estado = s.id
-    WHERE $filtroCamara
-      AND s.status_equipo = '$estadoMto'
+  SELECT COUNT(*) AS total
+  FROM dispositivos d
+  INNER JOIN equipos e ON d.equipo = e.id
+  INNER JOIN status s  ON d.estado = s.id
+  WHERE e.nom_equipo COLLATE $collation LIKE 'camara%'
+    AND s.status_equipo = '$estadoMto'
 ")->fetch_assoc()['total'] ?? 0;
 
-/* ======== Gráfica de barras (RESTABLECIDA): todos los dispositivos por sucursal ======== */
-$equipos_result = $conn->query("
-    SELECT s.nom_sucursal AS nombre_sucursal, COUNT(*) as cantidad 
-    FROM dispositivos d
-    INNER JOIN sucursales s ON d.sucursal = s.id
-    GROUP BY s.nom_sucursal 
-    ORDER BY s.nom_sucursal ASC
-");
-$equipos_dispositivos = [];
-while ($row = $equipos_result->fetch_assoc()) {
-    $equipos_dispositivos[$row['nombre_sucursal']] = (int)$row['cantidad'];
+
+/* ======== Prefijos por categoría (lista actual) ======== */
+/* CCTV */
+$prefijosCCTV = [
+  "racks%", "camara%", "dvr%", "nvr%", "servidor%", "monitor%", "biometrico%",
+  "videoportero%", "videotelefono%", "ups%"
+];
+/* ALARMA */
+$prefijosAlarma = [
+  "sensor%", "dh%", "pir%", "cm%", "oh%", "estrobo%", "rep%", "drc%", "estacion%",
+  "teclado%", "sirena%", "boton%"
+];
+
+/* Helper para armar ORs de LIKE seguros */
+function build_likes($col, $collation, $prefixes) {
+  $likes = [];
+  foreach ($prefixes as $p) {
+    $p = str_replace("'", "''", $p); // escapar comillas por seguridad
+    $likes[] = "$col COLLATE $collation LIKE '$p'";
+  }
+  return '(' . implode(' OR ', $likes) . ')';
 }
 
-/* ======== Actividad demo (como lo tenías) ======== */
-$actividad = [27, 17, 16, 28, 13, 4, 0];
+/* WHERE combinado: sólo categorías de interés (CCTV o ALARMA) */
+$whereCCTV   = build_likes('e.nom_equipo', $collation, $prefijosCCTV);
+$whereAlarma = build_likes('e.nom_equipo', $collation, $prefijosAlarma);
+$whereCategorias = "($whereCCTV OR $whereAlarma)";
 
-/* ======== NUEVO: datos para “Cámaras en mantenimiento” ======== */
-// Listado detallado de cámaras en mantenimiento
-$listado_mto = $conn->query("
-  SELECT 
-    d.id,
-    e.nom_equipo                      AS equipo,
-    COALESCE(su.nom_sucursal, '—')    AS sucursal,
-    s.status_equipo                   AS estado
-  FROM dispositivos d
-  INNER JOIN equipos e ON d.equipo = e.id
-  INNER JOIN status s  ON d.estado = s.id
-  LEFT  JOIN sucursales su ON d.sucursal = su.id
-  WHERE $filtroCamara
-    AND s.status_equipo = '$estadoMto'
-  ORDER BY su.nom_sucursal ASC, d.id DESC
-");
+/* CASE para clasificar en SQL */
+$caseCCTV   = "CASE WHEN $whereCCTV THEN 1 ELSE 0 END";
+$caseALARMA = "CASE WHEN $whereAlarma THEN 1 ELSE 0 END";
 
-// Agregación por sucursal para la nueva gráfica
-$mto_por_sucursal = $conn->query("
-  SELECT COALESCE(su.nom_sucursal, 'Sin sucursal') AS nombre_sucursal, COUNT(*) AS cantidad
+/* ======== Consulta: Dispositivos CCTV vs Alarma por sucursal ======== */
+$sql = "
+  SELECT s.nom_sucursal AS sucursal,
+         SUM($caseCCTV)   AS cctv,
+         SUM($caseALARMA) AS alarma
   FROM dispositivos d
-  INNER JOIN equipos e ON d.equipo = e.id
-  INNER JOIN status s  ON d.estado = s.id
-  LEFT  JOIN sucursales su ON d.sucursal = su.id
-  WHERE $filtroCamara
-    AND s.status_equipo = '$estadoMto'
-  GROUP BY nombre_sucursal
-  ORDER BY nombre_sucursal ASC
-");
-$mtoLabels = [];
-$mtoData   = [];
-while ($r = $mto_por_sucursal->fetch_assoc()) {
-  $mtoLabels[] = $r['nombre_sucursal'];
-  $mtoData[]   = (int)$r['cantidad'];
+  INNER JOIN equipos e    ON d.equipo   = e.id
+  INNER JOIN sucursales s ON d.sucursal = s.id
+  WHERE $whereCategorias
+  GROUP BY s.nom_sucursal
+";
+$labels = []; $cctvData = []; $alarmaData = [];
+$res = $conn->query($sql);
+while ($r = $res->fetch_assoc()) {
+  $labels[]     = $r['sucursal'];
+  $cctvData[]   = (int)$r['cctv'];
+  $alarmaData[] = (int)$r['alarma'];
 }
+
+/* Ordenar por total desc manteniendo correspondencia */
+$rows = [];
+for ($i = 0; $i < count($labels); $i++) {
+  $rows[] = [
+    'label'  => $labels[$i],
+    'cctv'   => $cctvData[$i],
+    'alarma' => $alarmaData[$i],
+    'total'  => $cctvData[$i] + $alarmaData[$i]
+  ];
+}
+usort($rows, fn($a,$b) => $b['total'] <=> $a['total']);
+$labels     = array_column($rows, 'label');
+$cctvData   = array_column($rows, 'cctv');
+$alarmaData = array_column($rows, 'alarma');
+
+/* Alto fijo recomendado para vertical (evita “saltos”) */
+$chartHeight = 420;
 ?>
 
 <h2 class="mb-4">Panel de control</h2>
+
 <!-- KPIs -->
 <div class="row g-3 mb-4">
   <div class="col-md-3">
@@ -135,86 +147,24 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
   </div>
 </div>
 
-<!-- Gráficas -->
+<!-- ÚNICA GRÁFICA: Dispositivos por sucursal (CCTV vs Alarma, apilado vertical) -->
 <div class="row g-4 mb-4">
-  <!-- (RESTABLECIDA) Dispositivos por sucursal -->
-  <div class="col-md-6">
+  <div class="col-12">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h6 class="card-title mb-3">Dispositivos por sucursal</h6>
-        <canvas id="chartDispositivos" height="200"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Actividad semanal (como lo tenías) -->
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title mb-3">Actividad de los últimos 7 días</h6>
-        <canvas id="chartActividad" height="200"></canvas>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h6 class="card-title mb-0">Dispositivos por sucursal</h6>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill text-bg-light">Ordenado por total</span>
+          </div>
+        </div>
+        <div class="mt-3" style="height: <?= (int)$chartHeight ?>px;">
+          <canvas id="chartStacked"></canvas>
+        </div>
       </div>
     </div>
   </div>
 </div>
-
-<!-- NUEVO: Sección de Cámaras en mantenimiento -->
-<div class="row g-4 mb-4">
-  <!--div class="col-md-12">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title mb-3">Cámaras en mantenimiento por sucursal</h6>
-        <canvas id="chartMtoPorSucursal" height="220"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-12">
-    <div>
-      <div>
-        <-h6 class="card-title mb-3">Listado de cámaras en mantenimiento</-h6>
-        <?php if (($mantenimiento ?? 0) == 0): ?>
-          <div class="alert alert-info mb-0">No hay cámaras en mantenimiento.</div>
-        <?php else: ?>
-          <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 80px;">ID</th>
-                  <th>Equipo</th>
-                  <th>Sucursal</th>
-                  <th>Estado</th>
-                  <th style="width: 120px;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php while ($d = $listado_mto->fetch_assoc()): ?>
-                  <tr>
-                    <td><?= (int)$d['id'] ?></td>
-                    <td><?= htmlspecialchars($d['equipo'] ?? 'Camara', ENT_QUOTES, 'UTF-8') ?></td>
-                    <td><?= htmlspecialchars($d['sucursal'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
-                    <td>
-                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                        <?= htmlspecialchars($d['estado'] ?? $estadoMto, ENT_QUOTES, 'UTF-8') ?>
-                      </span>
-                    </td>
-                    <td>
-                      <a class="btn btn-sm btn-outline-primary"
-                         href="/sisec-ui/views/dispositivos/device.php?id=<?= (int)$d['id'] ?>">
-                        Ver
-                      </a>
-                    </td>
-                  </tr>
-                <?php endwhile; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php endif; ?>
-
-      </div>
-    </div>
-  </div>
-</div-->
 
 <!-- Botones rápidos -->
 <div class="d-flex justify-content-center gap-3">
@@ -234,71 +184,125 @@ while ($r = $mto_por_sucursal->fetch_assoc()) {
   </div>
 </div>
 
+<!-- Estilos extra (look pro y llamativo, similar al anterior) -->
+<style>
+  .card { border: 1px solid #eef2f7; }
+  .card .card-title { font-weight: 700; letter-spacing: .2px; }
+  .text-bg-light { background: #f5f7fb !important; }
+  /* Sombra suave al canvas y bordes redondeados */
+  #chartStacked { border-radius: 14px; box-shadow: 0 0 0 1px #eef2f7 inset; }
+</style>
 
-<!-- Chart.js -->
+<!-- Chart.js + DataLabels -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 <script>
-  // (RESTABLECIDA) Gráfica: Dispositivos por sucursal
-  const ctx1 = document.getElementById('chartDispositivos').getContext('2d');
-  new Chart(ctx1, {
+(function () {
+  const labels     = <?= json_encode($labels, JSON_UNESCAPED_UNICODE) ?>;
+  const cctvData   = <?= json_encode($cctvData) ?>;
+  const alarmaData = <?= json_encode($alarmaData) ?>;
+
+  const canvas = document.getElementById('chartStacked');
+  const ctx = canvas.getContext('2d');
+
+// Gradientes más fuertes (vertical: arriba->abajo)
+const gradCCTV = ctx.createLinearGradient(0, 0, 0, canvas.height);
+gradCCTV.addColorStop(0, 'rgba(0,123,255,0.95)');  // azul intenso
+gradCCTV.addColorStop(1, 'rgba(0,123,255,0.35)');  
+
+const gradAlarma = ctx.createLinearGradient(0, 0, 0, canvas.height);
+gradAlarma.addColorStop(0, 'rgba(40,167,69,0.95)'); // verde intenso
+gradAlarma.addColorStop(1, 'rgba(40,167,69,0.35)'); 
+
+  const totales = labels.map((_, i) => (cctvData[i] || 0) + (alarmaData[i] || 0));
+
+  new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: <?= json_encode(array_keys($equipos_dispositivos), JSON_UNESCAPED_UNICODE) ?>,
-      datasets: [{
-        label: 'Cantidad',
-        data: <?= json_encode(array_values($equipos_dispositivos)) ?>,
-        backgroundColor: '#4aa3df'
-      }]
+      labels,
+      datasets: [
+        {
+          label: 'CCTV',
+          data: cctvData,
+          backgroundColor: gradCCTV,
+          borderColor: '#0056b3',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          barThickness: 'flex',
+          maxBarThickness: 48,
+          hoverBorderWidth: 2
+        },
+        {
+          label: 'Alarma',
+          data: alarmaData,
+          backgroundColor: gradAlarma,
+          borderColor: '#1e7e34',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          barThickness: 'flex',
+          maxBarThickness: 48,
+          hoverBorderWidth: 2
+        }
+      ]
     },
     options: {
+      // Vertical (sin indexAxis:'y')
       responsive: true,
-      plugins: { legend: { display: false } },
+      maintainAspectRatio: false,
+      layout: { padding: { top: 6, right: 14, left: 6, bottom: 0 } },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { usePointStyle: true, pointStyle: 'rectRounded' }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(25, 28, 36, 0.9)',
+          padding: 10,
+          displayColors: true,
+          callbacks: {
+            footer: (items) => {
+              const i = items[0].dataIndex;
+              return 'Total: ' + totales[i];
+            }
+          }
+        },
+        datalabels: {
+          color: '#0f172a',
+          anchor: 'end',
+          align: 'end',   // arriba de la barra
+          clamp: true,
+          offset: 6,
+          font: { weight: '700', size: 11 },
+          formatter: (val, ctx) => {
+            const dsIndex = ctx.datasetIndex;
+            const dataIndex = ctx.dataIndex;
+            // Total solo en el último dataset (Alarma) para no duplicar números
+            if (dsIndex === (ctx.chart.data.datasets.length - 1)) {
+              return totales[dataIndex];
+            }
+            return null;
+          }
+        }
+      },
       scales: {
-        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
-        y: { beginAtZero: true, precision: 0 }
-      }
-    }
-  });
-
-  // Gráfica: Actividad de los últimos 7 días
-  const ctx2 = document.getElementById('chartActividad').getContext('2d');
-  new Chart(ctx2, {
-    type: 'line',
-    data: {
-      labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-      datasets: [{
-        label: 'Registros',
-        data: <?= json_encode($actividad) ?>,
-        fill: true,
-        backgroundColor: 'rgba(0,123,255,0.2)',
-        borderColor: '#007bff',
-        tension: 0.25
-      }]
+        x: {
+          stacked: true,
+          ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 },
+          grid: { color: 'rgba(0,0,0,0.06)', borderDash: [4, 4] }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          grid: { display: false }
+        }
+      },
+      animation: { duration: 650, easing: 'easeOutCubic' }
     },
-    options: { responsive: true }
+    plugins: [ChartDataLabels]
   });
-
-  // NUEVA: Gráfica: Cámaras en mantenimiento por sucursal
-  const ctx3 = document.getElementById('chartMtoPorSucursal').getContext('2d');
-  new Chart(ctx3, {
-    type: 'bar',
-    data: {
-      labels: <?= json_encode($mtoLabels, JSON_UNESCAPED_UNICODE) ?>,
-      datasets: [{
-        label: 'Cámaras en mantenimiento',
-        data: <?= json_encode($mtoData) ?>,
-        backgroundColor: '#dc3545'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
-        y: { beginAtZero: true, precision: 0 }
-      }
-    }
-  });
+})();
 </script>
 
 <?php
