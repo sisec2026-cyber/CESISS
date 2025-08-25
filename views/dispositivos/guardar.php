@@ -242,8 +242,7 @@ if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
 
   /* ========== 8) Notificación por CORREO (HTML con estilo) ========== */
         $destinatarios = [
-            'marcojazzelarzate@gmail.com',
-            'marc0_ruiz@hotmail.com',
+            'notificacionescesiss@gmail.com',
         ];
 
   // URL para ver el dispositivo (usa BASE_URL si existe; si no, link relativo)

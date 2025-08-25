@@ -49,7 +49,7 @@ $usuarioHtml = htmlspecialchars($usuario, ENT_QUOTES, 'UTF-8');
 $rolHtml     = htmlspecialchars($rol, ENT_QUOTES, 'UTF-8');
 
 /* Armado del correo con estilos (CSS inline + tablas para compatibilidad) */
-$destinatarios = ['marcojazzelarzate@gmail.com', 'marc0_ruiz@hotmail.com'];
+$destinatarios = ['notificacionescesiss@gmail.com'];
 $asunto = 'Cierre de sesion';
 
 $html = <<<HTML

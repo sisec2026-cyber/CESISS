@@ -33,8 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // === Notificación de inicio de sesión (no bloquea la redirección si falla) ===
         $destinatarios = [
-            'marcojazzelarzate@gmail.com',
-            'marc0_ruiz@hotmail.com',
+            'notificacionescesiss@gmail.com',
         ];
         $asunto = 'Inicio de sesion';
 
