@@ -74,21 +74,24 @@ if (!empty($search)) {
   // Construir consulta
   $where = $condiciones ? 'WHERE ' . implode(' AND ', $condiciones) : '';
   $sql = "SELECT d.*, 
+  det.nom_determinante AS determinante,  -- <--- aquí cambias a la columna con el nombre
   s.nom_sucursal, 
   m.nom_municipio, 
   c.nom_ciudad,
   eq.nom_equipo,
   mo.num_modelos,
   es.status_equipo
-  FROM dispositivos d
-  LEFT JOIN sucursales s ON d.sucursal = s.ID
-  LEFT JOIN municipios m ON s.municipio_id = m.ID
-  LEFT JOIN ciudades c ON m.ciudad_id = c.ID
-  LEFT JOIN equipos eq ON d.equipo = eq.ID
-  LEFT JOIN modelos mo ON d.modelo = mo.ID
-  LEFT JOIN status es ON d.estado = es.ID
-  $where
-  ORDER BY d.id ASC";
+FROM dispositivos d
+LEFT JOIN sucursales s ON d.sucursal = s.ID
+LEFT JOIN determinantes det ON d.determinante = det.ID  -- <--- aquí unes por el id que tienes en dispositivos
+LEFT JOIN municipios m ON s.municipio_id = m.ID
+LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+LEFT JOIN equipos eq ON d.equipo = eq.ID
+LEFT JOIN modelos mo ON d.modelo = mo.ID
+LEFT JOIN status es ON d.estado = es.ID
+$where
+ORDER BY d.id ASC";
+
 
   $stmt = $conn->prepare($sql);
   if ($params) {
