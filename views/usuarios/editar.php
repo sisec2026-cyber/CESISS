@@ -33,6 +33,18 @@ ob_start();
       <input type="text" class="form-control" id="nombre" name="nombre" value="<?= htmlspecialchars($usuario['nombre']) ?>" required>
     </div>
 
+    <!-- Cargo -->
+    <div class="mb-3">
+      <label for="cargo" class="form-label">Cargo</label>
+      <input type="text" class="form-control" id="cargo" name="cargo" required>
+    </div>
+
+    <!-- Empresa -->
+    <div class="mb-3">
+      <label for="empresa" class="form-label">Empresa</label>
+      <input type="text" class="form-control" id="empresa" name="empresa" required>
+    </div>
+
     <!-- Rol -->
     <div class="mb-3">
       <label for="rol" class="form-label">Rol</label>

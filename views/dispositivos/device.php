@@ -128,13 +128,19 @@ ob_start();
 
     <div class="mt-3 d-flex gap-2">
       <?php
-      $returnUrl = isset($_GET['return_url']) ? $_GET['return_url'] : 'listar.php';
+      // Construir la URL de regreso conservando filtros
+      $filters = $_GET;
+      unset($filters['id']); // eliminamos el id del dispositivo
+      $returnUrl = 'listar.php';
+      if ($filters) {
+          $returnUrl .= '?' . http_build_query($filters);
+      }
       ?>
-      <a href="<?= htmlspecialchars($returnUrl) ?>" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Volver al listado
+      <a href="<?= htmlspecialchars($_GET['return_url'] ?? 'listar.php') ?>" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver al listado
       </a>
       <a href="exportar_pdf.php?id=<?= $device['id'] ?>" class="btn btn-danger" target="_blank">
-        <i class="fas fa-file-pdf"></i> Exportar PDF
+          <i class="fas fa-file-pdf"></i> Exportar PDF
       </a>
     </div>
   </div>

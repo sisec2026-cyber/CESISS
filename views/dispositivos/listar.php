@@ -47,7 +47,7 @@ include __DIR__ . '/../../includes/db.php';
     $types = "sssssi";
     $params = [];
     $sql = "SELECT d.*, 
-      det.numero_tienda AS determinante,
+      det.nom_determinante AS determinantes,
       s.nom_sucursal, 
       m.nom_municipio, 
       c.nom_ciudad,
@@ -56,7 +56,7 @@ include __DIR__ . '/../../includes/db.php';
       es.status_equipo
     FROM dispositivos d
     LEFT JOIN sucursales s ON d.sucursal = s.ID
-    LEFT JOIN determinante det ON s.id = det.sucursal_id
+    LEFT JOIN determinantes det ON s.id = det.sucursal_id
     LEFT JOIN municipios m ON s.municipio_id = m.ID
     LEFT JOIN ciudades c ON m.ciudad_id = c.ID
     LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -84,7 +84,7 @@ include __DIR__ . '/../../includes/db.php';
     //Listado por sucursal seleccionada
     $sucursalId = intval($_GET['sucursal_id']);
     $stmt = $conn->prepare("SELECT d.*, 
-      det.numero_tienda AS determinante,
+      det.nom_determinante AS determinantes,
       s.nom_sucursal, 
       m.nom_municipio, 
       c.nom_ciudad,
@@ -93,7 +93,7 @@ include __DIR__ . '/../../includes/db.php';
       es.status_equipo
     FROM dispositivos d
     LEFT JOIN sucursales s ON d.sucursal = s.ID
-    LEFT JOIN determinante det ON s.id = det.sucursal_id
+    LEFT JOIN determinantes det ON s.id = det.sucursal_id
     LEFT JOIN municipios m ON s.municipio_id = m.ID
     LEFT JOIN ciudades c ON m.ciudad_id = c.ID
     LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -111,7 +111,7 @@ include __DIR__ . '/../../includes/db.php';
     $extra = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
     if ($extra) {
       $sql = "SELECT d.*, 
-        det.numero_tienda AS determinante,
+        det.nom_determinante AS determinantes,
         s.nom_sucursal, 
         m.nom_municipio, 
         c.nom_ciudad,
@@ -120,7 +120,7 @@ include __DIR__ . '/../../includes/db.php';
         es.status_equipo
       FROM dispositivos d
       LEFT JOIN sucursales s ON d.sucursal = s.ID
-      LEFT JOIN determinante det ON s.id = det.sucursal_id
+      LEFT JOIN determinantes det ON s.id = det.sucursal_id
       LEFT JOIN municipios m ON s.municipio_id = m.ID
       LEFT JOIN ciudades c ON m.ciudad_id = c.ID
       LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -145,10 +145,11 @@ ob_start();
   <h2>Listado de dispositivos</h2>
   <!-- Buscador y botón alineados -->
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-    <form id="formBusqueda" method="GET" style="display: flex; gap: 10px;">
-      <input type="text" id="search" name="search" class="form-control" style="width:300px" placeholder="Busca equipo, modelo, fecha..." disabled>
-      <button type="submit" class="btn btn-primary" disabled><i class="fas fa-search"></i></button>
+    <form id="formBusqueda" method="GET" style="display: none; gap: 10px;">
+      <input type="text" id="search" name="search" class="form-control" style="width:300px" placeholder="Busca equipo, modelo, fecha...">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
     </form>
+
     <button id="btnExportar" class="btn btn-danger" style="display: none;"><i class="fas fa-file-pdf"></i> Exportar Listado</button>
       <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
       <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i> Registrar nuevo dispositivo</a>
@@ -391,8 +392,10 @@ ob_start();
       //Mostrar botón PDF solo con los 3 niveles
       if (ciudadId && municipioId && sucursalId) {
         botonPDF.style.display = 'inline-block';
+        formBusqueda.style.display = 'flex'; // lo mostramos igual que exportar
       } else {
         botonPDF.style.display = 'none';
+        formBusqueda.style.display = 'none'; // lo ocultamos
       }
       //Control de búsqueda: habilitar solo si hay sucursal
       if (!sucursalId) {
