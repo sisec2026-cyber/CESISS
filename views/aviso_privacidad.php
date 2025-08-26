@@ -1,0 +1,108 @@
+<?php
+// Página pública: NO requiere login
+$TITLE = 'Aviso de Privacidad - CESISS';
+?>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title><?= htmlspecialchars($TITLE) ?></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Font Awesome (iconos) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root{
+      --brand: #3C92A6;
+      --brand-2:#24a3c1;
+      --bg-1:#07161a;
+      --bg-2:#0a2128;
+      --fg:#cfe5ea;
+      --muted:#9ab7bf;
+      --card:#0d1e24;
+      --card-border:#16323a;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    body{
+      margin:0; background: radial-gradient(1200px 800px at 10% -20%, #0c1b20, transparent),
+                           radial-gradient(1200px 800px at 100% 120%, #0b242c, transparent),
+                           linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color:var(--fg); font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
+      min-height:100vh; padding-bottom:84px; /* espacio para el footer fijo */
+    }
+    .container{ max-width: 980px; margin: 90px auto 40px; padding: 0 16px; }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border:1px solid var(--card-border); border-radius:16px; box-shadow: var(--shadow);
+      padding:24px;
+    }
+    h1{
+      display:flex; gap:.6rem; align-items:center; margin:0 0 8px 0;
+      font-size: clamp(22px, 2.6vw, 28px);
+    }
+    .subtitle{ color:var(--muted); margin-bottom: 18px; }
+    h2{ margin-top: 24px; color:#e7f6fa; font-size: 1.15rem; }
+    p, li{ color:#cfe5ea; line-height:1.6; }
+    .tag{
+      display:inline-flex; align-items:center; gap:.4rem;
+      border:1px solid var(--card-border); background:#0c1b20; color:#aee6f2;
+      font-size:.85rem; padding:.2rem .6rem; border-radius:999px; margin-right:.4rem;
+    }
+    a { color:#7fd3e5; text-decoration:none; }
+    a:hover { color:#a6e9f5; text-decoration:underline; }
+    .list{ padding-left: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1><i class="fa-solid fa-shield-halved"></i> Aviso de Privacidad</h1>
+      <div class="subtitle">Última actualización: <?= date('F Y') ?></div>
+
+      <p>
+        En <strong>CESISS</strong> nos tomamos muy en serio la protección de tus datos personales.
+        Este aviso describe qué datos recopilamos, con qué finalidad y cuáles son tus derechos.
+      </p>
+
+      <h2><i class="fa-regular fa-file-lines"></i> ¿Qué datos recopilamos?</h2>
+      <ul class="list">
+        <li>Datos de identificación (nombre y apellidos).</li>
+        <li>Datos de contacto (correo electrónico y teléfono).</li>
+        <li>Metadatos técnicos mínimos para seguridad y auditoría.</li>
+      </ul>
+
+      <h2><i class="fa-solid fa-bullseye"></i> Finalidades</h2>
+      <p>
+        Utilizamos tus datos para operar y mejorar el sistema, dar seguimiento a solicitudes de soporte,
+        notificar cambios relevantes y cumplir obligaciones legales aplicables.
+      </p>
+
+      <h2><i class="fa-solid fa-lock"></i> Seguridad</h2>
+      <p>
+        Aplicamos medidas organizativas y técnicas para proteger tus datos. El acceso está restringido a personal autorizado.
+      </p>
+
+      <h2><i class="fa-solid fa-user-shield"></i> Derechos ARCO</h2>
+      <p>
+        Puedes <a href="<?= htmlspecialchars('/sisec-ui/views/soporte.php') ?>">contactarnos</a> para
+        ejercer tus derechos de Acceso, Rectificación, Cancelación u Oposición. Atenderemos tu solicitud en los
+        plazos previstos por la normativa aplicable.
+      </p>
+
+      <h2><i class="fa-solid fa-rotate"></i> Cambios al aviso</h2>
+      <p>
+        Podremos actualizar este aviso para reflejar mejoras o cambios normativos. Te notificaremos dentro del sistema.
+      </p>
+
+      <p class="subtitle">
+        <span class="tag"><i class="fa-solid fa-building-shield"></i> CESISS</span>
+        <span class="tag"><i class="fa-solid fa-envelope"></i> soportecesiss@gmail.com</span>
+      </p>
+    </div>
+  </div>
+
+  <?php
+  // Si tu footer no depende de la sesión/roles, puedes incluirlo tal cual:
+  include __DIR__ . '/../includes/footer.php';
+  ?>
+</body>
+</html>

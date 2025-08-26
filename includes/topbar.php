@@ -20,7 +20,7 @@
     color: var(--topbar-fg);
     isolation: isolate;      /* aísla blending de pseudo-elementos */
     box-shadow: var(--topbar-shadow);
-    overflow: hidden;        /* oculta blobs fuera del header */
+    overflow: visible;        /* oculta blobs fuera del header */
   }
 
   /* Base oscura siempre visible (evita “blanco”) */
