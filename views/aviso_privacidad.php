@@ -65,33 +65,50 @@ $TITLE = 'Aviso de Privacidad - CESISS';
 
       <h2><i class="fa-regular fa-file-lines"></i> ¿Qué datos recopilamos?</h2>
       <ul class="list">
-        <li>Datos de identificación (nombre y apellidos).</li>
-        <li>Datos de contacto (correo electrónico y teléfono).</li>
-        <li>Metadatos técnicos mínimos para seguridad y auditoría.</li>
+        <li>Nombre completo.</li>
+        <li>Correo electrónico.</li>
+        <li>Teléfono de contacto.</li>
+        <li>Usuario y contraseña asignados por la empresa.</li>
+        <li>Historial de consultas en el sistema.</li>
       </ul>
 
       <h2><i class="fa-solid fa-bullseye"></i> Finalidades</h2>
-      <p>
-        Utilizamos tus datos para operar y mejorar el sistema, dar seguimiento a solicitudes de soporte,
-        notificar cambios relevantes y cumplir obligaciones legales aplicables.
-      </p>
+      <p>Los datos personales serán utilizados para las siguientes finalidades:</p>
+      <ul class="list">
+        <li>Permitir el acceso seguro a la plataforma digital</li>
+        <li>Consultar sistemas instalados y servicios de mantenimiento.</li>
+        <li>Mantener un historial de servicios otorgados.</li>
+        <li>Contacto para aclaraciones y soporte técnico</li>
 
-      <h2><i class="fa-solid fa-lock"></i> Seguridad</h2>
+      <h2><i class="fa-solid fa-lock"></i> Transferencia de datos personales</h2>
       <p>
-        Aplicamos medidas organizativas y técnicas para proteger tus datos. El acceso está restringido a personal autorizado.
+       Sus datos personales no serán transferidos a terceros, únicamente para fines de verificación de servicios, 
+       así como los casos previstos por la Ley.
       </p>
 
       <h2><i class="fa-solid fa-user-shield"></i> Derechos ARCO</h2>
+      <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse (ARCO) el tratamiento de sus datos personales.</p>
       <p>
-        Puedes <a href="<?= htmlspecialchars('/sisec-ui/views/soporte.php') ?>">contactarnos</a> para
-        ejercer tus derechos de Acceso, Rectificación, Cancelación u Oposición. Atenderemos tu solicitud en los
-        plazos previstos por la normativa aplicable.
+      Para ejercer estos derechos, podrá enviar una solicitud al correo: soporte@cesiss.com,  
+      indicando su nombre completo, los datos a los que desea acceder, rectificar, cancelar u oponerse, y adjuntando copia de una identificación oficial.
       </p>
+
+      <h2><i class="fa-solid fa-rotate"></i> Opciones para limitar uso o divulgación de Datos</h2>
+      <p>
+        Usted puede limitar el uso o divulgación de sus datos personales enviando un correo a la dirección señalada en el punto anterior, 
+        o solicitando la cancelación de su usuario en la Plataforma.
+      </p>
+
+      <h2><i class="fa-solid fa-user-shield"></i> Uso de Cookies</h2>
+      <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse (ARCO) el tratamiento de sus datos personales.</p>
 
       <h2><i class="fa-solid fa-rotate"></i> Cambios al aviso</h2>
       <p>
-        Podremos actualizar este aviso para reflejar mejoras o cambios normativos. Te notificaremos dentro del sistema.
+        Este aviso de Privacidad puede sufrir modificaciones o actualizaciones. 
+        Cualquier cambio será publicado en la presente página web, (indicando la fecha de la última actualización).
       </p>
+
+      <h2><i class="fa-solid fa-building"></i> Información de contacto</h2>
 
       <p class="subtitle">
         <span class="tag"><i class="fa-solid fa-building-shield"></i> CESISS</span>
