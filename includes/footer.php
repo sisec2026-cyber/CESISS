@@ -140,9 +140,9 @@ if (!defined('CESISS_FOOTER_CSS')) {
 
     <div class="foot-center">
       <div class="foot-links">
-        <a href="<?= htmlspecialchars($cesiss_base) ?>/views/aviso_privacidad.php">Terminos y Condiciones</a>
+        <a href="<?= htmlspecialchars($cesiss_base) ?>/views/condiciones.php">Terminos y Condiciones</a>
         <span class="sep">·</span>
-        <a href="<?= htmlspecialchars($cesiss_base) ?>/views/condiciones.php">Aviso de privacidad</a>
+        <a href="<?= htmlspecialchars($cesiss_base) ?>/views/aviso_privacidad.php">Aviso de privacidad</a>
         <span class="sep">·</span>
         <a href="<?= htmlspecialchars($cesiss_base) ?>/views/soporte.php">Soporte</a>
         <span class="sep">·</span>
