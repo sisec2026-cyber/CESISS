@@ -1,3 +1,4 @@
+editar
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
@@ -47,6 +48,15 @@ $sucursales = $conn->query("SELECT id, nom_sucursal FROM sucursales ORDER BY nom
 
 ob_start();
 ?>
+<?php
+$back = !empty($_GET['return_url'])
+  ? $_GET['return_url']
+  : '/sisec-ui/views/dispositivos/listar.php';
+?>
+<a href="<?= htmlspecialchars($back) ?>" class="btn btn-outline-secondary mb-3">
+  <i class="fas fa-arrow-left"></i> Volver al listado
+</a>
+
 
 <h2>Editar dispositivo</h2>
 

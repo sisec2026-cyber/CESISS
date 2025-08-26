@@ -98,7 +98,8 @@
   .topbar .btn, .topbar .dropdown-toggle, .topbar i, .topbar h5 { color: var(--topbar-fg) !important; }
 
   /* Dropdown más legible sobre topbar oscuro */
-  .topbar .dropdown-menu{ min-width:300px; }
+  .topbar .dropdown-menu{ min-width:300px;  
+  z-index: 2000; }
 </style>
 
 <header class="topbar d-flex align-items-center text-white"
