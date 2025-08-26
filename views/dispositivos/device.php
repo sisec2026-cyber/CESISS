@@ -1,7 +1,8 @@
+device
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado', 'Capturista']);
+verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado', 'Capturista', 'Prevencion']);
 
 include __DIR__ . '/../../includes/db.php';
 
@@ -76,6 +77,16 @@ if (!file_exists($logoAbsolutePath)) {
    ================== */
 ob_start();
 ?>
+
+<?php
+$back = !empty($_GET['return_url'])
+  ? $_GET['return_url']
+  : '/sisec-ui/views/dispositivos/listar.php';
+?>
+<a href="<?= htmlspecialchars($back) ?>" class="btn btn-outline-secondary mb-3">
+  <i class="fas fa-arrow-left"></i> Volver al listado
+</a>
+
 
 <h2>Ficha técnica</h2>
 
@@ -195,4 +206,3 @@ $pageTitle = "Ficha dispositivo " . htmlspecialchars($device['nom_sucursal'] ?? 
 $pageHeader = "Dispositivo " . htmlspecialchars($device['nom_sucursal'] ?? '') . " | " . htmlspecialchars($device['nom_equipo'] ?? '');
 $activePage = "";
 include __DIR__ . '/../../layout.php';
-
