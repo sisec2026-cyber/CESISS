@@ -255,7 +255,7 @@ $update->close();
 ======================= */
 if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
     $mensaje    = sprintf(
-        'El usuario "%s" registró un nuevo dispositivo.',
+        'El usuario "%s" actualizó un dispositivo.',
         $_SESSION['nombre'] ?? 'N/D'
     );
     $usuario_id = (int)($_SESSION['usuario_id'] ?? 0);
