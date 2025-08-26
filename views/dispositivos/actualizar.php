@@ -254,7 +254,10 @@ $update->close();
    Notificación para Mantenimientos (tu lógica original)
 ======================= */
 if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
-    $mensaje    = "El Mantenimientos " . ($_SESSION['nombre'] ?? 'N/D') . " modificó el dispositivo con ID #$id.";
+    $mensaje    = sprintf(
+        'El usuario "%s" registró un nuevo dispositivo.',
+        $_SESSION['nombre'] ?? 'N/D'
+    );
     $usuario_id = (int)($_SESSION['usuario_id'] ?? 0);
 
     $stmtNotif = $conn->prepare("
@@ -265,6 +268,7 @@ if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
     $stmtNotif->execute();
     $stmtNotif->close();
 }
+
 
 /* =======================
    Redirigir
