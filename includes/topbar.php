@@ -20,7 +20,7 @@
     color: var(--topbar-fg);
     isolation: isolate;      /* aísla blending de pseudo-elementos */
     box-shadow: var(--topbar-shadow);
-    overflow: hidden;        /* oculta blobs fuera del header */
+    overflow: visible;        /* oculta blobs fuera del header */
   }
 
   /* Base oscura siempre visible (evita “blanco”) */
@@ -98,7 +98,8 @@
   .topbar .btn, .topbar .dropdown-toggle, .topbar i, .topbar h5 { color: var(--topbar-fg) !important; }
 
   /* Dropdown más legible sobre topbar oscuro */
-  .topbar .dropdown-menu{ min-width:300px; }
+  .topbar .dropdown-menu{ min-width:300px;  
+  z-index: 2000; }
 </style>
 
 <header class="topbar d-flex align-items-center text-white"
