@@ -279,7 +279,9 @@ $redirect = $_GET['redirect'] ?? null;
     </form>
 
     <div class="text-center mt-3">
-      <a class="muted-link" href="views/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
+      <a class="muted-link" href="views/inicio/crearuser.php">¿No tienes cuenta? ¡Regístrate!</a>
+      <br>
+      <a class="muted-link" href="views/inicio/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
     </div>
   </main>
 

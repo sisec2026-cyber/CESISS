@@ -51,6 +51,7 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
         </small>
       </div>
     </div>
+    <!--Script para los carácteres de la contraseña-->
     <script>
     const claveInput = document.getElementById('clave');
     const checkLength = document.getElementById('checkLength');

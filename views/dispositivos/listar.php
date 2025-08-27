@@ -1,11 +1,10 @@
-listar
 <?php 
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion(); // Verifica si hay sesión iniciada
-verificarRol(['Superadmin','Administrador', 'Mantenimientos', 'Invitado','Técnico','Capturista','Distrital','Prevencion','Monitorista']);
+verificarRol(['Superadmin','Administrador','Capturista','Técnico','Distrital','Prevencion','Mantenimientos','Monitorista']);
 include __DIR__ . '/../../includes/db.php';
 
-// ====== Filtros del usuario logueado ======
+// Filtros del usuario logueado
 $userId = $_SESSION['usuario_id'] ?? null;
 $filtroRegion = $filtroCiudad = $filtroMunicipio = $filtroSucursal = null;
 
@@ -19,8 +18,7 @@ if ($userId) {
   $filtroMunicipio = !empty($userFilter['municipio']) ? (int)$userFilter['municipio'] : null;
   $filtroSucursal  = !empty($userFilter['sucursal'])  ? (int)$userFilter['sucursal']  : null;
 }
-
-// ====== Helper para armar WHERE por alcance de usuario ======
+// Helper para armar WHERE por alcance de usuario
 function buildUserScopeWhere(&$types, &$params, $fRegion, $fCiudad, $fMunicipio, $fSucursal) {
   $extra = [];
   if ($fSucursal) {
@@ -42,9 +40,35 @@ function buildUserScopeWhere(&$types, &$params, $fRegion, $fCiudad, $fMunicipio,
   }
   return $extra;
 }
-
-// ====== Construcción de consulta según contexto (búsqueda / sucursal / alcance) ======
+// Construcción de consulta según contexto (búsqueda / sucursal / alcance)
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$detSearch = isset($_GET['determinante']) ? trim($_GET['determinante']) : '';
+if ($detSearch !== '') {// Búsqueda exclusiva por determinante
+  $types = "s";
+  $params = ["%$detSearch%"];
+  $sql = "SELECT d.*, 
+      det.nom_determinante AS determinantes,
+      s.nom_sucursal, 
+      m.nom_municipio, 
+      c.nom_ciudad,
+      eq.nom_equipo,
+      mo.num_modelos,
+      es.status_equipo
+    FROM dispositivos d
+    LEFT JOIN sucursales s ON d.sucursal = s.ID
+    LEFT JOIN determinantes det ON s.id = det.sucursal_id
+    LEFT JOIN municipios m ON s.municipio_id = m.ID
+    LEFT JOIN ciudades c ON m.ciudad_id = c.ID
+    LEFT JOIN equipos eq ON d.equipo = eq.ID
+    LEFT JOIN modelos mo ON d.modelo = mo.ID
+    LEFT JOIN status es ON d.estado = es.ID
+    WHERE det.nom_determinante LIKE ?";
+  $sql .= " ORDER BY d.id ASC";
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param($types, ...$params);
+  $stmt->execute();
+  $result = $stmt->get_result();
+}
 if ($search !== '') {
   // --- BÚSQUEDA con alcance de usuario ---
   $types = "sssssi";
@@ -82,9 +106,7 @@ if ($search !== '') {
   $stmt->bind_param($types, ...$paramsFull);
   $stmt->execute();
   $result = $stmt->get_result();
-
-} elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
-  // --- Listado por sucursal seleccionada ---
+} elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) { // --- Listado por sucursal seleccionada ---
   $sucursalId = intval($_GET['sucursal_id']);
   $stmt = $conn->prepare("SELECT d.*, 
       det.nom_determinante AS determinantes,
@@ -107,9 +129,7 @@ if ($search !== '') {
   $stmt->bind_param("i", $sucursalId);
   $stmt->execute();
   $result = $stmt->get_result();
-
-} else {
-  // --- Precarga según alcance de usuario (si tiene filtros fijos) ---
+} else { // --- Precarga según alcance de usuario (si tiene filtros fijos) ---
   $types = "";
   $params = [];
   $extra = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
@@ -137,8 +157,7 @@ if ($search !== '') {
     $stmt->execute();
     $result = $stmt->get_result();
   } else {
-    // El usuario puede ver todo, pero mantiene la UX: no mostrar nada hasta elegir sucursal
-    $result = false;
+    $result = false; // El usuario puede ver todo, pero mantiene la UX: no mostrar nada hasta elegir sucursal
   }
 }
 
@@ -155,7 +174,6 @@ ob_start();
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
       </div>
     <?php endif; ?>
-
     <?php if (!empty($_SESSION['flash_warning'])): ?>
       <div class="alert alert-warning alert-dismissible fade show" role="alert" data-autohide="true">
         <i class="fas fa-exclamation-triangle me-1"></i>
@@ -163,7 +181,6 @@ ob_start();
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
       </div>
     <?php endif; ?>
-
     <?php if (!empty($_SESSION['flash_error'])): ?>
       <div class="alert alert-danger alert-dismissible fade show" role="alert" data-autohide="true">
         <i class="fas fa-times-circle me-1"></i>
@@ -172,29 +189,31 @@ ob_start();
       </div>
     <?php endif; ?>
   </div>
-  <?php 
-    // Limpiar flashes para que no reaparezcan tras refresh
-    unset($_SESSION['flash_success'], $_SESSION['flash_warning'], $_SESSION['flash_error']); 
+  <?php
+    unset($_SESSION['flash_success'], $_SESSION['flash_warning'], $_SESSION['flash_error']); // Limpiar flashes para que no reaparezcan tras refresh
   ?>
 <?php endif; ?>
 
-
-
-
-
+<!-- Búsqueda exclusiva por determinante -->
+<div class="mb-3">
+  <form method="GET" class="d-flex" style="gap:10px; max-width:400px;">
+    <input type="text" name="determinante" class="form-control" 
+           placeholder="Buscar por determinante" 
+           value="<?= htmlspecialchars($_GET['determinante'] ?? '') ?>">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+  </form>
+</div>
 <!-- Buscador y botón alineados -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
   <form id="formBusqueda" method="GET" style="display: none; gap: 10px;">
     <input type="text" id="search" name="search" class="form-control" style="width:300px" placeholder="Busca equipo, modelo, fecha...">
     <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
   </form>
-
   <button id="btnExportar" class="btn btn-danger" style="display: none;">
-    <i class="fas fa-file-pdf"></i> Exportar Listado
+    <i class="fas fa-file-pdf"></i>Exportar Listado
   </button>
-
   <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Mantenimientos','Capturista','Técnico'])): ?>
-    <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i> Registrar nuevo dispositivo</a>
+    <a href="registro.php" class="btn btn-primary"><i class="fas fa-plus"></i>Registrar nuevo dispositivo</a>
   <?php endif; ?>
 </div>
 
@@ -595,8 +614,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 </script>
-
-
 <?php
 $content = ob_get_clean();
 $pageTitle = "Listado de dispositivos";

@@ -1,0 +1,90 @@
+/* Background login recuperar contraseña y crear usuario */
+
+/* Fondo degradado */
+body {
+  background: linear-gradient(135deg, #3C92A7, #5BC0BE);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Tarjeta centrada */
+.card {
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  background: #ffffffcc; /* Blanco semitransparente */
+  backdrop-filter: blur(10px); /* efecto vidrio */
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+/* Título */
+.card h4 {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #3C92A7;
+}
+
+/* Input */
+.form-control {
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #3C92A7;
+  box-shadow: 0 0 6px #3C92A7;
+}
+
+/* Botón */
+.btn-primary {
+  border-radius: 12px;
+  background: #3C92A7;
+  border: none;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-primary:hover {
+  background: #5BC0BE;
+  transform: scale(1.03);
+}
+
+/* Animación entrada */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= Responsive ================= */
+@media (max-width: 992px) { /* Tablets */
+  .card {
+    padding: 20px !important;
+    max-width: 90% !important;
+  }
+}
+
+@media (max-width: 576px) { /* Móviles */
+  .row > .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 15px;
+  }
+
+  #passwordChecklist small {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  #passwordChecklist span {
+    flex: 1 1 48%;
+  }
+
+  .d-flex.justify-content-between.flex-wrap.gap-2 {
+    flex-direction: column;
+  }
+
+  .d-flex.justify-content-between.flex-wrap.gap-2 .btn {
+    flex-grow: 1;
+  }
+}

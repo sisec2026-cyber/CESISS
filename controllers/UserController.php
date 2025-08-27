@@ -135,38 +135,47 @@ case 'actualizar':
                     exit;
                 }
                 break;
-            case 'ciudades':
-                if(isset($_GET['region'])){
-                    $regionId = (int)$_GET['region'];
-                    $res = $conexion->query("SELECT id, nom_ciudad AS nombre FROM ciudades WHERE region_id = $regionId");
-                    $data = $res->fetch_all(MYSQLI_ASSOC);
-                    header('Content-Type: application/json');
-                    echo json_encode($data);
-                    exit;
-                }
-                break;
-            
-            case 'municipios':
-                if(isset($_GET['ciudad'])){
-                    $ciudadId = (int)$_GET['ciudad'];
-                    $res = $conexion->query("SELECT id, nom_municipio AS nombre FROM municipios WHERE ciudad_id = $ciudadId");
-                    $data = $res->fetch_all(MYSQLI_ASSOC);
-                    header('Content-Type: application/json');
-                    echo json_encode($data);
-                    exit;
-                }
-                break;
-            
-            case 'sucursales':
-                if(isset($_GET['municipio'])){
-                    $municipioId = (int)$_GET['municipio'];
-                    $res = $conexion->query("SELECT id, nom_sucursal AS nombre FROM sucursales WHERE municipio_id = $municipioId");
-                    $data = $res->fetch_all(MYSQLI_ASSOC);
-                    header('Content-Type: application/json');
-                    echo json_encode($data);
-                exit;
-            }
-            break;
+
+            case 'regiones':
+    $res = $conexion->query("SELECT id, nom_region AS nombre FROM regiones WHERE id IN (1,3,6)");
+    $data = $res->fetch_all(MYSQLI_ASSOC);
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+
+
+case 'ciudades':
+    if(isset($_GET['region'])){
+        $regionId = (int)$_GET['region'];
+        $res = $conexion->query("SELECT id, nom_ciudad AS nombre FROM ciudades WHERE region_id = $regionId");
+        $data = $res->fetch_all(MYSQLI_ASSOC);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+    break;
+
+case 'municipios':
+    if(isset($_GET['ciudad'])){
+        $ciudadId = (int)$_GET['ciudad'];
+        $res = $conexion->query("SELECT id, nom_municipio AS nombre FROM municipios WHERE ciudad_id = $ciudadId");
+        $data = $res->fetch_all(MYSQLI_ASSOC);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+    break;
+
+case 'sucursales':
+    if(isset($_GET['municipio'])){
+        $municipioId = (int)$_GET['municipio'];
+        $res = $conexion->query("SELECT id, nom_sucursal AS nombre FROM sucursales WHERE municipio_id = $municipioId");
+        $data = $res->fetch_all(MYSQLI_ASSOC);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+    break;
             default:
             die("Acción no válida.");
 }
