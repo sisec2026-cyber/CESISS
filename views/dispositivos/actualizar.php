@@ -37,8 +37,8 @@ function move_upload_unique(string $field, string $destDir, ?string $fallback = 
    Entrada
 ======================= */
 $id             = (int)($_POST['id'] ?? 0);
-$equipo         = isset($_POST['equipo']) ? (int)$_POST['equipo'] : 0;      // FK → int
-$modelo         = isset($_POST['modelo']) ? (int)$_POST['modelo'] : 0;      // FK → int
+$equipo         = isset($_POST['equipo']) ? (int)$_POST['equipo'] : 0;    // FK → int
+$modelo         = isset($_POST['modelo']) ? (int)$_POST['modelo'] : 0;    // FK → int
 $serie          = trim($_POST['serie'] ?? '');
 $mac            = trim($_POST['mac'] ?? '');
 $servidor       = trim($_POST['servidor'] ?? '');
@@ -46,232 +46,185 @@ $vms            = trim($_POST['vms'] ?? '');
 $vms_otro       = trim($_POST['vms_otro'] ?? '');
 $switchTxt      = trim($_POST['switch'] ?? '');
 $puerto         = trim($_POST['puerto'] ?? '');
-/* Estos dos eran los originales por nombre */
-$sucursal       = trim($_POST['sucursal'] ?? '');
+$sucursal       = isset($_POST['sucursal']) ? (int)$_POST['sucursal'] : 0; // FK int
 $area           = trim($_POST['area'] ?? '');
-/* Estos son los nuevos por ID desde el formulario con <select> (opcional) */
-$sucursal_id    = isset($_POST['sucursal_id']) && $_POST['sucursal_id'] !== '' ? (int)$_POST['sucursal_id'] : null;
-$area_id        = isset($_POST['area_id'])     && $_POST['area_id']     !== '' ? (int)$_POST['area_id']     : null;
-
-$estado         = isset($_POST['estado']) ? (int)$_POST['estado'] : 1;      // enum numérico (1,2,3)
+$estado         = isset($_POST['estado']) ? (int)$_POST['estado'] : 1;
 $fecha          = $_POST['fecha'] ?? date('Y-m-d');
 $observaciones  = trim($_POST['observaciones'] ?? '');
 $usuarioDis     = trim($_POST['usuario'] ?? '');
 $contrasenaDis  = trim($_POST['contrasena'] ?? '');
 
-/* Si seleccionó "Otro", usar el valor personalizado */
 if (strcasecmp($vms, 'Otro') === 0 && $vms_otro !== '') {
     $vms = $vms_otro;
 }
 
 /* =======================
-   Mapear IDs -> NOMBRES
-   (para seguir guardando en columnas sucursal/area actuales)
+   Estado actual
 ======================= */
-if ($sucursal_id) {
-    $stmtSuc = $conn->prepare("SELECT nom_sucursal FROM sucursales WHERE id = ?");
-    $stmtSuc->bind_param("i", $sucursal_id);
-    $stmtSuc->execute();
-    if ($row = $stmtSuc->get_result()->fetch_assoc()) {
-        $sucursal = $row['nom_sucursal'] ?? $sucursal;
-    }
-    $stmtSuc->close();
-}
-
-if ($area_id) {
-    $stmtArea = $conn->prepare("SELECT nom_area FROM areas WHERE id = ?");
-    $stmtArea->bind_param("i", $area_id);
-    $stmtArea->execute();
-    if ($row = $stmtArea->get_result()->fetch_assoc()) {
-        $area = $row['nom_area'] ?? $area;
-    }
-    $stmtArea->close();
-}
-
-/* =======================
-   Obtener datos actuales (para conservar imágenes/qr)
-======================= */
-$stmt = $conn->prepare("SELECT imagen, imagen2, imagen3, qr, modelo AS modelo_actual FROM dispositivos WHERE id = ?");
+$stmt = $conn->prepare("SELECT equipo AS equipo_actual, modelo AS modelo_actual, imagen, imagen2, imagen3, qr FROM dispositivos WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $actual = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-if (!$actual) {
-    die('Dispositivo no encontrado.');
-}
+if (!$actual) die('Dispositivo no encontrado.');
 
-/* =======================
-   Manejo de archivos
-======================= */
-$imagen   = $actual['imagen']  ?? null;
-$imagen2  = $actual['imagen2'] ?? null;
-$imagen3  = $actual['imagen3'] ?? null;
-$qr       = $actual['qr']      ?? null;
+/* Archivos */
+$imagen   = move_upload_unique('imagen',  __DIR__ . "/../../public/uploads/",  $actual['imagen']  ?? null);
+$imagen2  = move_upload_unique('imagen2', __DIR__ . "/../../public/uploads/",  $actual['imagen2'] ?? null);
+$imagen3  = move_upload_unique('imagen3', __DIR__ . "/../../public/uploads/",  $actual['imagen3'] ?? null);
+$qr       = move_upload_unique('qr',      __DIR__ . "/../../public/qrcodes/", $actual['qr']      ?? null);
 
-$uploadDir = __DIR__ . "/../../public/uploads/";
-$qrDir     = __DIR__ . "/../../public/qrcodes/";
-
-$imagen  = move_upload_unique('imagen',  $uploadDir, $imagen);
-$imagen2 = move_upload_unique('imagen2', $uploadDir, $imagen2);
-$imagen3 = move_upload_unique('imagen3', $uploadDir, $imagen3);
-/* Si permites reemplazar el archivo QR manualmente (normalmente no es necesario) */
-$qr      = move_upload_unique('qr',      $qrDir,     $qr);
-
-/* =======================
-   Edición individual: EQUIPO
-   (crear/reutilizar y reasignar SOLO este dispositivo)
-======================= */
+/* Flags edición individual */
 $equipo_edit_mode   = isset($_POST['equipo_edit_mode']) && $_POST['equipo_edit_mode'] === '1';
 $equipo_nombre_edit = trim($_POST['equipo_nombre_edit'] ?? '');
 
-if ($equipo_edit_mode && $equipo_nombre_edit !== '') {
-    // ¿Ya existe ese equipo (case-insensitive)?
-    $q = $conn->prepare("SELECT id FROM equipos WHERE UPPER(nom_equipo) = UPPER(?) LIMIT 1");
-    $q->bind_param("s", $equipo_nombre_edit);
-    $q->execute();
-    $ex = $q->get_result()->fetch_assoc();
-    $q->close();
-
-    if ($ex) {
-        $equipo = (int)$ex['id']; // reutilizar
-    } else {
-        // crear nuevo equipo
-        $ins = $conn->prepare("INSERT INTO equipos (nom_equipo) VALUES (?)");
-        $ins->bind_param("s", $equipo_nombre_edit);
-        $ins->execute();
-        $equipo = $ins->insert_id;
-        $ins->close();
-    }
-}
-
-/* =======================
-   Edición individual: MODELO
-   (crear/reutilizar heredando marca_id del modelo base)
-======================= */
 $modelo_edit_mode   = isset($_POST['modelo_edit_mode']) && $_POST['modelo_edit_mode'] === '1';
 $modelo_nombre_edit = trim($_POST['modelo_nombre_edit'] ?? '');
 
-if ($modelo_edit_mode && $modelo_nombre_edit !== '') {
-    // Tomar marca_id del modelo base (el seleccionado o el que ya tenía el dispositivo)
-    $modeloBaseId = $modelo ?: (int)($actual['modelo_actual'] ?? 0);
-    $marcaId = null;
-
-    if ($modeloBaseId > 0) {
-        $q = $conn->prepare("SELECT marca_id FROM modelos WHERE id = ? LIMIT 1");
-        $q->bind_param("i", $modeloBaseId);
-        $q->execute();
-        $marcaId = $q->get_result()->fetch_assoc()['marca_id'] ?? null;
-        $q->close();
-    }
-
-    if ($marcaId) {
-        // ¿Ya existe el modelo con ese nombre para esa marca?
-        $q = $conn->prepare("SELECT id FROM modelos WHERE marca_id = ? AND UPPER(num_modelos) = UPPER(?) LIMIT 1");
-        $q->bind_param("is", $marcaId, $modelo_nombre_edit);
+/* =======================
+   Transacción
+======================= */
+$conn->begin_transaction();
+try {
+    /* 1) Equipo: si se edita nombre, crear/reutilizar sin tocar modelo */
+    if ($equipo_edit_mode && $equipo_nombre_edit !== '') {
+        $q = $conn->prepare("SELECT id FROM equipos WHERE UPPER(nom_equipo) = UPPER(?) LIMIT 1");
+        $q->bind_param("s", $equipo_nombre_edit);
         $q->execute();
         $ex = $q->get_result()->fetch_assoc();
         $q->close();
 
         if ($ex) {
-            $modelo = (int)$ex['id']; // reutilizar
+            $equipo = (int)$ex['id'];
         } else {
-            $ins = $conn->prepare("INSERT INTO modelos (num_modelos, marca_id) VALUES (?, ?)");
-            $ins->bind_param("si", $modelo_nombre_edit, $marcaId);
+            $ins = $conn->prepare("INSERT INTO equipos (nom_equipo) VALUES (?)");
+            $ins->bind_param("s", $equipo_nombre_edit);
             $ins->execute();
-            $modelo = $ins->insert_id;
+            $equipo = $ins->insert_id;
             $ins->close();
         }
     }
-    // Si no hubo marcaId, no creamos para no romper integridad (opcional: avisar al usuario)
-}
 
-/* =======================
-   Validaciones mínimas
-======================= */
-if ($id <= 0)            die('ID inválido.');
-if ($equipo <= 0)        die('Selecciona un equipo válido.');
-if ($modelo <= 0)        die('Selecciona un modelo válido.');
-if (!$sucursal)          die('Selecciona una sucursal.');
-if (!$fecha)             die('La fecha es requerida.');
+    /* 2) Modelo: si se edita nombre, crear/reutilizar sin tocar equipo */
+    if ($modelo_edit_mode && $modelo_nombre_edit !== '') {
+        $modeloBaseId = $modelo > 0 ? $modelo : (int)($actual['modelo_actual'] ?? 0);
+        $marcaId = null;
 
-/* =======================
-   Actualizar base de datos
-======================= */
-$sql = "
-UPDATE dispositivos 
-SET 
-  equipo = ?, 
-  modelo = ?, 
-  serie = ?, 
-  mac = ?, 
-  servidor = ?, 
-  vms = ?, 
-  `switch` = ?, 
-  puerto = ?, 
-  sucursal = ?, 
-  area = ?, 
-  estado = ?, 
-  fecha = ?, 
-  observaciones = ?, 
-  imagen = ?, 
-  imagen2 = ?, 
-  imagen3 = ?, 
-  qr = ?, 
-  `user` = ?, 
-  `pass` = ?
-WHERE id = ?
-";
+        if ($modeloBaseId > 0) {
+            $q = $conn->prepare("SELECT marca_id FROM modelos WHERE id = ? LIMIT 1");
+            $q->bind_param("i", $modeloBaseId);
+            $q->execute();
+            $row = $q->get_result()->fetch_assoc();
+            $marcaId = $row['marca_id'] ?? null;
+            $q->close();
+        }
 
-$update = $conn->prepare($sql);
-$update->bind_param(
-    "iissssssssissssssssi",
-    $equipo,          // i
-    $modelo,          // i
-    $serie,           // s
-    $mac,             // s
-    $servidor,        // s
-    $vms,             // s
-    $switchTxt,       // s
-    $puerto,          // s
-    $sucursal,        // s (sigues guardando nombre)
-    $area,            // s (sigues guardando nombre)
-    $estado,          // i
-    $fecha,           // s (YYYY-mm-dd)
-    $observaciones,   // s
-    $imagen,          // s
-    $imagen2,         // s
-    $imagen3,         // s
-    $qr,              // s
-    $usuarioDis,      // s
-    $contrasenaDis,   // s
-    $id               // i
-);
-$update->execute();
-$update->close();
+        if ($marcaId) {
+            $q = $conn->prepare("SELECT id FROM modelos WHERE marca_id = ? AND UPPER(num_modelos) = UPPER(?) LIMIT 1");
+            $q->bind_param("is", $marcaId, $modelo_nombre_edit);
+            $q->execute();
+            $ex = $q->get_result()->fetch_assoc();
+            $q->close();
 
-/* =======================
-   Notificación para Mantenimientos (tu lógica original)
-======================= */
-if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
-    $mensaje    = sprintf(
-        'El usuario "%s" actualizó un dispositivo.',
-        $_SESSION['nombre'] ?? 'N/D'
+            if ($ex) {
+                $modelo = (int)$ex['id'];
+            } else {
+                $ins = $conn->prepare("INSERT INTO modelos (num_modelos, marca_id) VALUES (?, ?)");
+                $ins->bind_param("si", $modelo_nombre_edit, $marcaId);
+                $ins->execute();
+                $modelo = $ins->insert_id;
+                $ins->close();
+            }
+        } else {
+            // No se pudo inferir marca → mantener modelo previo
+            $modelo = (int)($actual['modelo_actual'] ?? 0);
+        }
+    }
+
+    /* 3) Si no eligió modelo, mantener el actual */
+    if ($modelo <= 0) {
+        $modelo = (int)($actual['modelo_actual'] ?? 0);
+    }
+
+    /* 4) Validaciones */
+    if ($id <= 0)       throw new Exception('ID inválido.');
+    if ($equipo <= 0)   throw new Exception('Selecciona un equipo válido.');
+    if ($modelo <= 0)   throw new Exception('Selecciona o crea un modelo válido.');
+    if ($sucursal <= 0) throw new Exception('Selecciona una sucursal válida.');
+    if (!$fecha)        throw new Exception('La fecha es requerida.');
+
+    /* 5) UPDATE */
+    $sql = "
+        UPDATE dispositivos SET 
+            equipo = ?, 
+            modelo = ?, 
+            serie = ?, 
+            mac = ?, 
+            servidor = ?, 
+            vms = ?, 
+            `switch` = ?, 
+            puerto = ?, 
+            sucursal = ?, 
+            area = ?, 
+            estado = ?, 
+            fecha = ?, 
+            observaciones = ?, 
+            imagen = ?, 
+            imagen2 = ?, 
+            imagen3 = ?, 
+            qr = ?, 
+            `user` = ?, 
+            `pass` = ?
+        WHERE id = ?
+    ";
+    $up = $conn->prepare($sql);
+    // 20 parámetros → 20 letras
+    $up->bind_param(
+        "iissssssisissssssssi",
+        $equipo,        // i 1
+        $modelo,        // i 2
+        $serie,         // s 3
+        $mac,           // s 4
+        $servidor,      // s 5
+        $vms,           // s 6
+        $switchTxt,     // s 7
+        $puerto,        // s 8
+        $sucursal,      // i 9
+        $area,          // s 10
+        $estado,        // i 11
+        $fecha,         // s 12
+        $observaciones, // s 13
+        $imagen,        // s 14
+        $imagen2,       // s 15
+        $imagen3,       // s 16
+        $qr,            // s 17
+        $usuarioDis,    // s 18
+        $contrasenaDis, // s 19
+        $id             // i 20
     );
-    $usuario_id = (int)($_SESSION['usuario_id'] ?? 0);
+    $up->execute();
+    $up->close();
 
-    $stmtNotif = $conn->prepare("
-        INSERT INTO notificaciones (usuario_id, mensaje, fecha, visto, dispositivo_id) 
-        VALUES (?, ?, NOW(), 0, ?)
-    ");
-    $stmtNotif->bind_param("isi", $usuario_id, $mensaje, $id);
-    $stmtNotif->execute();
-    $stmtNotif->close();
+    /* 6) Notificación */
+    if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
+        $mensaje    = "El Mantenimientos " . ($_SESSION['nombre'] ?? 'N/D') . " modificó el dispositivo con ID #$id.";
+        $usuario_id = (int)($_SESSION['usuario_id'] ?? 0);
+
+        $stmtNotif = $conn->prepare("
+            INSERT INTO notificaciones (usuario_id, mensaje, fecha, visto, dispositivo_id) 
+            VALUES (?, ?, NOW(), 0, ?)
+        ");
+        $stmtNotif->bind_param("isi", $usuario_id, $mensaje, $id);
+        $stmtNotif->execute();
+        $stmtNotif->close();
+    }
+
+    $conn->commit();
+    header("Location: device.php?id=$id");
+    exit;
+
+} catch (Throwable $e) {
+    $conn->rollback();
+    die('Error al actualizar: ' . htmlspecialchars($e->getMessage()));
 }
-
-
-/* =======================
-   Redirigir
-======================= */
-header("Location: device.php?id=$id");
-exit;

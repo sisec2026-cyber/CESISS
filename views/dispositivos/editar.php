@@ -1,4 +1,3 @@
-editar
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
@@ -12,7 +11,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-// Traer dispositivo
+// Dispositivo
 $stmt = $conn->prepare("SELECT * FROM dispositivos WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -20,13 +19,14 @@ $device = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$device) die('Dispositivo no encontrado.');
 
-// Catálogo de equipos
+// Equipos
 $equipos = $conn->query("SELECT id, nom_equipo FROM equipos ORDER BY nom_equipo ASC");
 
-// Modelos del equipo actual (filtrados por la relación marcas.equipo_id)
+// Equipo/Modelo actuales
 $equipoActual = (int)($device['equipo'] ?? 0);
 $modeloActual = (int)($device['modelo'] ?? 0);
 
+// Modelos del equipo actual
 $modelosRes = null;
 if ($equipoActual > 0) {
   $sqlModelos = "
@@ -46,6 +46,16 @@ if ($equipoActual > 0) {
 // Sucursales
 $sucursales = $conn->query("SELECT id, nom_sucursal FROM sucursales ORDER BY nom_sucursal ASC");
 
+// Nombre del modelo actual (por si no aparece en la lista)
+$modeloNombreActual = null;
+if ($modeloActual > 0) {
+  $q = $conn->prepare("SELECT num_modelos FROM modelos WHERE id = ? LIMIT 1");
+  $q->bind_param("i", $modeloActual);
+  $q->execute();
+  $modeloNombreActual = ($q->get_result()->fetch_assoc()['num_modelos'] ?? null);
+  $q->close();
+}
+
 ob_start();
 ?>
 <?php
@@ -57,70 +67,92 @@ $back = !empty($_GET['return_url'])
   <i class="fas fa-arrow-left"></i> Volver al listado
 </a>
 
-
 <h2>Editar dispositivo</h2>
 
 <form action="actualizar.php" method="post" enctype="multipart/form-data" class="row g-3">
   <input type="hidden" name="id" value="<?= (int)$device['id'] ?>">
 
-<!-- EQUIPO (muestra nombre, envía ID) -->
-<div class="col-md-6">
-  <label class="form-label">Equipo</label>
-  <select name="equipo" id="equipo" class="form-select" required>
-    <option value="" disabled <?= $equipoActual ? '' : 'selected' ?>>-- Selecciona equipo --</option>
-    <?php while ($eq = $equipos->fetch_assoc()): ?>
-      <option value="<?= (int)$eq['id'] ?>" <?= ((int)$eq['id'] === $equipoActual) ? 'selected' : '' ?>>
-        <?= htmlspecialchars($eq['nom_equipo']) ?>
-      </option>
-    <?php endwhile; ?>
-  </select>
-
-  <!-- Botón para activar edición del nombre -->
-  <div class="mt-2">
-    <button type="button" id="btnEquipoEditar" class="btn btn-sm btn-outline-secondary">
-      Editar nombre
-    </button>
-  </div>
-
-  <!-- Área de edición de nombre de equipo -->
-  <div id="equipoEditGroup" class="mt-2" style="display:none;">
-    <input type="text" name="equipo_nombre_edit" id="equipo_nombre_edit" class="form-control" placeholder="Nuevo nombre de equipo">
-    <input type="hidden" name="equipo_edit_mode" id="equipo_edit_mode" value="0">
-    <input type="hidden" name="equipo_edit_id" id="equipo_edit_id" value="<?= (int)$equipoActual ?>">
-    <small class="text-muted">Este cambio renombrará el equipo para todos los dispositivos que lo usen.</small>
-  </div>
-</div>
-
-<!-- MODELO (muestra nombre, envía ID) -->
-<div class="col-md-6">
-  <label class="form-label">Modelo</label>
-  <select name="modelo" id="modelo" class="form-select" required>
-    <?php if (!$modelosRes || $modelosRes->num_rows === 0): ?>
-      <option value="" disabled selected>Selecciona primero un equipo</option>
-    <?php else: ?>
-      <?php while ($mo = $modelosRes->fetch_assoc()): ?>
-        <option value="<?= (int)$mo['id'] ?>" <?= ((int)$mo['id'] === $modeloActual) ? 'selected' : '' ?>>
-          <?= htmlspecialchars($mo['num_modelos']) ?>
+  <!-- EQUIPO -->
+  <div class="col-md-6">
+    <label class="form-label">Equipo</label>
+    <select name="equipo" id="equipo" class="form-select" required>
+      <option value="" disabled <?= $equipoActual ? '' : 'selected' ?>>-- Selecciona equipo --</option>
+      <?php while ($eq = $equipos->fetch_assoc()): ?>
+        <option value="<?= (int)$eq['id'] ?>" <?= ((int)$eq['id'] === $equipoActual) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($eq['nom_equipo']) ?>
         </option>
       <?php endwhile; ?>
-    <?php endif; ?>
-  </select>
+    </select>
 
-  <!-- Botón para activar edición del nombre -->
-  <div class="mt-2">
-    <button type="button" id="btnModeloEditar" class="btn btn-sm btn-outline-secondary">
-      Editar nombre
-    </button>
+    <div class="mt-2">
+      <button type="button" id="btnEquipoEditar" class="btn btn-sm btn-outline-secondary">
+        Editar nombre
+      </button>
+    </div>
+
+    <div id="equipoEditGroup" class="mt-2" style="display:none;">
+      <input type="text" name="equipo_nombre_edit" id="equipo_nombre_edit" class="form-control" placeholder="Nuevo nombre de equipo">
+      <input type="hidden" name="equipo_edit_mode" id="equipo_edit_mode" value="0">
+      <small class="text-muted">Cambia solo el nombre para este dispositivo (crea/reutiliza un equipo).</small>
+    </div>
   </div>
 
-  <!-- Área de edición de nombre de modelo -->
-  <div id="modeloEditGroup" class="mt-2" style="display:none;">
-    <input type="text" name="modelo_nombre_edit" id="modelo_nombre_edit" class="form-control" placeholder="Nuevo nombre de modelo">
-    <input type="hidden" name="modelo_edit_mode" id="modelo_edit_mode" value="0">
-    <input type="hidden" name="modelo_edit_id" id="modelo_edit_id" value="<?= (int)$modeloActual ?>">
-    <small class="text-muted">Este cambio renombrará el modelo para todos los dispositivos que lo usen.</small>
+  <!-- MODELO -->
+  <div class="col-md-6">
+    <label class="form-label">Modelo</label>
+    <?php
+      $opciones = [];
+      $tieneLista = ($modelosRes && $modelosRes->num_rows > 0);
+      $modeloAparece = false;
+
+      if ($tieneLista) {
+        while ($mo = $modelosRes->fetch_assoc()) {
+          $idMo  = (int)$mo['id'];
+          $txtMo = (string)$mo['num_modelos'];
+          if ($idMo === $modeloActual) $modeloAparece = true;
+          $opciones[] = ['id' => $idMo, 'txt' => $txtMo];
+        }
+      }
+    ?>
+    <select
+      name="modelo"
+      id="modelo"
+      class="form-select"
+      required
+      data-modelo-actual-id="<?= (int)$modeloActual ?>"
+      data-modelo-actual-txt="<?= htmlspecialchars($modeloNombreActual ?? '') ?>"
+    >
+      <?php if (!$tieneLista): ?>
+        <option value="" disabled selected>No hay modelos para este equipo</option>
+      <?php endif; ?>
+
+      <?php foreach ($opciones as $op): ?>
+        <option value="<?= $op['id'] ?>" <?= ($op['id'] === $modeloActual) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($op['txt']) ?>
+        </option>
+      <?php endforeach; ?>
+
+      <?php if ($modeloActual > 0 && !$modeloAparece && $modeloNombreActual): ?>
+        <optgroup label="Modelo actual (fuera del equipo)">
+          <option value="<?= (int)$modeloActual ?>" selected>
+            (Actual) <?= htmlspecialchars($modeloNombreActual) ?>
+          </option>
+        </optgroup>
+      <?php endif; ?>
+    </select>
+
+    <div class="mt-2">
+      <button type="button" id="btnModeloEditar" class="btn btn-sm btn-outline-secondary">
+        Editar nombre
+      </button>
+    </div>
+
+    <div id="modeloEditGroup" class="mt-2" style="display:none;">
+      <input type="text" name="modelo_nombre_edit" id="modelo_nombre_edit" class="form-control" placeholder="Nuevo nombre de modelo">
+      <input type="hidden" name="modelo_edit_mode" id="modelo_edit_mode" value="0">
+      <small class="text-muted">Cambia solo el nombre para este dispositivo (crea/reutiliza un modelo en la misma marca del modelo base).</small>
+    </div>
   </div>
-</div>
 
   <div class="col-md-6">
     <label class="form-label">Serie</label>
@@ -142,47 +174,40 @@ $back = !empty($_GET['return_url'])
     <input type="text" name="vms" class="form-control" value="<?= htmlspecialchars($device['vms'] ?? '') ?>" required>
   </div>
 
-  <!-- Usuario del dispositivo -->
-<div class="col-md-6">
-  <label class="form-label">Usuario</label>
-  <div class="input-group">
-    <input
-      type="text"
-      name="usuario"
-      id="usuario"
-      class="form-control"
-      value="<?= htmlspecialchars($device['user'] ?? '') ?>"
-      autocomplete="username"
-      placeholder="Usuario de acceso"
-    >
-    <!-- Botón opcional para habilitar/inhabilitar edición -->
-    <button type="button" class="btn btn-outline-secondary" id="toggleUsuario">
-      Bloquear/Editar
-    </button>
+  <!-- Usuario / Contraseña -->
+  <div class="col-md-6">
+    <label class="form-label">Usuario</label>
+    <div class="input-group">
+      <input
+        type="text"
+        name="usuario"
+        id="usuario"
+        class="form-control"
+        value="<?= htmlspecialchars($device['user'] ?? '') ?>"
+        autocomplete="username"
+        placeholder="Usuario de acceso"
+      >
+      <button type="button" class="btn btn-outline-secondary" id="toggleUsuario">Bloquear/Editar</button>
+    </div>
+    <small class="text-muted">Credencial del dispositivo.</small>
   </div>
-  <small class="text-muted">Credencial de acceso del equipo/modelo (no de la app).</small>
-</div>
 
-<!-- Contraseña del dispositivo -->
-<div class="col-md-6">
-  <label class="form-label">Contraseña</label>
-  <div class="input-group">
-    <input
-      type="password"
-      name="contrasena"
-      id="contrasena"
-      class="form-control"
-      value="<?= htmlspecialchars($device['pass'] ?? '') ?>"
-      autocomplete="current-password"
-      placeholder="Contraseña de acceso"
-    >
-    <button type="button" class="btn btn-outline-secondary" id="togglePassVis">
-      Mostrar/Ocultar
-    </button>
+  <div class="col-md-6">
+    <label class="form-label">Contraseña</label>
+    <div class="input-group">
+      <input
+        type="password"
+        name="contrasena"
+        id="contrasena"
+        class="form-control"
+        value="<?= htmlspecialchars($device['pass'] ?? '') ?>"
+        autocomplete="current-password"
+        placeholder="Contraseña de acceso"
+      >
+      <button type="button" class="btn btn-outline-secondary" id="togglePassVis">Mostrar/Ocultar</button>
+    </div>
+    <small class="text-muted">Se guarda tal cual en BD.</small>
   </div>
-  <small class="text-muted">Se guarda tal cual en BD (credencial del dispositivo).</small>
-</div>
-
 
   <div class="col-md-6">
     <label class="form-label">Switch</label>
@@ -194,27 +219,26 @@ $back = !empty($_GET['return_url'])
     <input type="text" name="puerto" class="form-control" value="<?= htmlspecialchars($device['puerto'] ?? '') ?>">
   </div>
 
-  <!-- Sucursal (muestra nombre como ya lo tienes) -->
+  <!-- Sucursal (ID) -->
   <div class="col-md-6">
     <label class="form-label">Sucursal</label>
     <select name="sucursal" class="form-select" required>
       <option value="" disabled <?= empty($device['sucursal']) ? 'selected' : '' ?>>-- Selecciona sucursal --</option>
       <?php while ($s = $sucursales->fetch_assoc()): ?>
-        <?php $nombreSuc = (string)$s['nom_sucursal']; $idSuc = (int)$s['id']; ?>
-        <option value="<?= htmlspecialchars($idSuc) ?>" <?= ($idSuc === (int)$device['sucursal']) ? 'selected' : '' ?>>
-          <?= htmlspecialchars($nombreSuc) ?>
+        <?php $idSuc = (int)$s['id']; ?>
+        <option value="<?= $idSuc ?>" <?= ($idSuc === (int)$device['sucursal']) ? 'selected' : '' ?>>
+          <?= htmlspecialchars((string)$s['nom_sucursal']) ?>
         </option>
       <?php endwhile; ?>
     </select>
   </div>
 
-  <!-- Área (texto, no hay tabla areas) -->
+  <!-- Área (texto libre) -->
   <div class="col-md-6">
     <label class="form-label">Área</label>
     <input type="text" name="area" class="form-control" value="<?= htmlspecialchars($device['area'] ?? '') ?>">
   </div>
 
-  <!-- Estado (tu columna es int; ajusta valores si quieres 1=Activo, etc.) -->
   <div class="col-md-6">
     <label class="form-label">Estado</label>
     <select name="estado" class="form-select" required>
@@ -276,64 +300,29 @@ $back = !empty($_GET['return_url'])
   </div>
 </form>
 
+<!-- ================= JS ================= -->
 <script>
-// Al cambiar equipo, cargar modelos de ese equipo
-document.getElementById('equipo').addEventListener('change', async function() {
-  const equipoId = this.value;
-  const modelo   = document.getElementById('modelo');
-  modelo.innerHTML = '<option value="" disabled selected>Cargando modelos...</option>';
-  if (!equipoId) return;
-
-  try {
-    const resp = await fetch('obtener_modelos.php?equipo_id=' + encodeURIComponent(equipoId), {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json(); // [{id, num_modelos}]
-    if (!Array.isArray(data) || data.length === 0) {
-      modelo.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
-      return;
-    }
-    modelo.innerHTML = '';
-    for (const m of data) {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.num_modelos;
-      modelo.appendChild(opt);
-    }
-  } catch (e) {
-    console.error(e);
-    modelo.innerHTML = '<option value="" disabled selected>Error al cargar modelos</option>';
-  }
-});
-</script>
-
-<script>
-// Utilidad: obtener texto del option seleccionado
+// util: texto del option seleccionado
 function selectedText(sel) {
   const opt = sel.options[sel.selectedIndex];
   return opt ? opt.textContent.trim() : '';
 }
 
-/* ====== EQUIPO: toggle edición ====== */
+/* ===== EQUIPO: toggle edición ===== */
 const equipoSel = document.getElementById('equipo');
 const btnEquipoEditar = document.getElementById('btnEquipoEditar');
 const equipoEditGroup = document.getElementById('equipoEditGroup');
 const equipoNombreEdit = document.getElementById('equipo_nombre_edit');
 const equipoEditMode = document.getElementById('equipo_edit_mode');
-const equipoEditId = document.getElementById('equipo_edit_id');
 
 btnEquipoEditar.addEventListener('click', () => {
   const isHidden = equipoEditGroup.style.display === 'none';
   if (isHidden) {
-    // Activar edición
     equipoEditGroup.style.display = '';
     equipoEditMode.value = '1';
-    equipoEditId.value = equipoSel.value || '';
-    equipoNombreEdit.value = selectedText(equipoSel); // nombre actual
+    equipoNombreEdit.value = selectedText(equipoSel);
     btnEquipoEditar.textContent = 'Cancelar edición';
   } else {
-    // Cancelar edición
     equipoEditGroup.style.display = 'none';
     equipoEditMode.value = '0';
     equipoNombreEdit.value = '';
@@ -341,33 +330,21 @@ btnEquipoEditar.addEventListener('click', () => {
   }
 });
 
-// Si cambian de equipo y está activo el modo edición, actualiza el campo
-equipoSel.addEventListener('change', () => {
-  if (equipoEditMode.value === '1') {
-    equipoEditId.value = equipoSel.value || '';
-    equipoNombreEdit.value = selectedText(equipoSel);
-  }
-});
-
-/* ====== MODELO: toggle edición ====== */
+/* ===== MODELO: toggle edición ===== */
 const modeloSel = document.getElementById('modelo');
 const btnModeloEditar = document.getElementById('btnModeloEditar');
 const modeloEditGroup = document.getElementById('modeloEditGroup');
 const modeloNombreEdit = document.getElementById('modelo_nombre_edit');
 const modeloEditMode = document.getElementById('modelo_edit_mode');
-const modeloEditId = document.getElementById('modelo_edit_id');
 
 btnModeloEditar.addEventListener('click', () => {
   const isHidden = modeloEditGroup.style.display === 'none';
   if (isHidden) {
-    // Activar edición
     modeloEditGroup.style.display = '';
     modeloEditMode.value = '1';
-    modeloEditId.value = modeloSel.value || '';
-    modeloNombreEdit.value = selectedText(modeloSel); // nombre actual
+    modeloNombreEdit.value = selectedText(modeloSel);
     btnModeloEditar.textContent = 'Cancelar edición';
   } else {
-    // Cancelar edición
     modeloEditGroup.style.display = 'none';
     modeloEditMode.value = '0';
     modeloNombreEdit.value = '';
@@ -375,52 +352,78 @@ btnModeloEditar.addEventListener('click', () => {
   }
 });
 
-// Si cambian de modelo y está activo el modo edición, actualiza el campo
-modeloSel.addEventListener('change', () => {
-  if (modeloEditMode.value === '1') {
-    modeloEditId.value = modeloSel.value || '';
-    modeloNombreEdit.value = selectedText(modeloSel);
-  }
-});
+/* ===== Cambiar equipo preservando el modelo ===== */
+(function() {
+  const modeloActualId  = (modeloSel.dataset.modeloActualId || '').trim();
+  const modeloActualTxt = (modeloSel.dataset.modeloActualTxt || '').trim();
 
-/* ====== (Ya lo tenías) Cargar modelos cuando cambia equipo ====== */
-document.getElementById('equipo').addEventListener('change', async function() {
-  const equipoId = this.value;
-  const modelo   = document.getElementById('modelo');
-  modelo.innerHTML = '<option value="" disabled selected>Cargando modelos...</option>';
-  if (!equipoId) return;
+  equipoSel.addEventListener('change', async function() {
+    const equipoId = this.value;
 
-  try {
-    const resp = await fetch('obtener_modelos.php?equipo_id=' + encodeURIComponent(equipoId), {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json(); // [{id, num_modelos}]
-    if (!Array.isArray(data) || data.length === 0) {
-      modelo.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
-      return;
-    }
-    modelo.innerHTML = '';
-    for (const m of data) {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.num_modelos;
-      modelo.appendChild(opt);
-    }
-    // Si está activo modo edición de modelo, sincroniza nombre/ID
-    if (modeloEditMode.value === '1') {
-      modeloEditId.value = modelo.value || '';
-      modeloNombreEdit.value = selectedText(modelo);
-    }
-  } catch (e) {
-    console.error(e);
-    modelo.innerHTML = '<option value="" disabled selected>Error al cargar modelos</option>';
-  }
-});
-</script>
+    // selección previa (si el usuario no cambió modelo)
+    const seleccionadoAntesId  = modeloSel.value || modeloActualId;
+    const seleccionadoAntesTxt = (function() {
+      if (modeloSel.value) {
+        const opt = modeloSel.options[modeloSel.selectedIndex];
+        return opt ? opt.textContent.trim() : '';
+      }
+      return modeloActualTxt;
+    })();
 
-<script>
-// Bloquear/editar "Usuario"
+    modeloSel.innerHTML = '<option value="" disabled selected>Cargando modelos...</option>';
+    if (!equipoId) return;
+
+    try {
+      const resp = await fetch('obtener_modelos.php?equipo_id=' + encodeURIComponent(equipoId), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json(); // [{id, num_modelos}]
+
+      // poblar
+      modeloSel.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      (Array.isArray(data) ? data : []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = String(m.id);
+        opt.textContent = m.num_modelos;
+        frag.appendChild(opt);
+      });
+      modeloSel.appendChild(frag);
+
+      // ¿sigue el anterior?
+      const existe = seleccionadoAntesId && Array.from(modeloSel.options).some(o => String(o.value) === String(seleccionadoAntesId));
+
+      if (existe) {
+        modeloSel.value = String(seleccionadoAntesId);
+      } else if (seleccionadoAntesId) {
+        // agregar opción temporal para no perder el modelo actual
+        const og = document.createElement('optgroup');
+        og.label = 'Modelo actual (fuera del equipo)';
+        const opt = document.createElement('option');
+        opt.value = String(seleccionadoAntesId);
+        opt.textContent = '(Actual) ' + (seleccionadoAntesTxt || ('ID ' + String(seleccionadoAntesId)));
+        og.appendChild(opt);
+        modeloSel.insertBefore(og, modeloSel.firstChild);
+        modeloSel.value = String(seleccionadoAntesId);
+      } else {
+        // sin previo: selecciona el primero si existe
+        if (modeloSel.options.length) modeloSel.selectedIndex = 0;
+      }
+
+      // si estás editando nombre de modelo, sincroniza el input con lo visible
+      if (modeloEditMode.value === '1') {
+        modeloNombreEdit.value = selectedText(modeloSel);
+      }
+
+    } catch (e) {
+      console.error(e);
+      modeloSel.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
+    }
+  });
+})();
+
+/* ===== Usuario / Pass toggles ===== */
 const usuarioInput = document.getElementById('usuario');
 const toggleUsuarioBtn = document.getElementById('toggleUsuario');
 if (toggleUsuarioBtn && usuarioInput) {
@@ -429,8 +432,6 @@ if (toggleUsuarioBtn && usuarioInput) {
     toggleUsuarioBtn.textContent = usuarioInput.disabled ? 'Editar' : 'Bloquear';
   });
 }
-
-// Mostrar/Ocultar contraseña
 const passInput = document.getElementById('contrasena');
 const togglePassBtn = document.getElementById('togglePassVis');
 if (togglePassBtn && passInput) {
@@ -440,12 +441,9 @@ if (togglePassBtn && passInput) {
 }
 </script>
 
-
-
 <?php
 $content = ob_get_clean();
 $pageTitle = "Editar dispositivo #$id";
 $pageHeader = "Editar dispositivo";
 $activePage = "";
-
 include __DIR__ . '/../../layout.php';
