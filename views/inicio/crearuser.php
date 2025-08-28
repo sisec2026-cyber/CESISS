@@ -255,4 +255,3 @@ document.getElementById('municipio').addEventListener('change', function(){
 </script>
 </body>
 </html>
-

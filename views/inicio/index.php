@@ -35,31 +35,21 @@ $mantenimiento = $conn->query("
     AND s.status_equipo = '$estadoMto'
 ")->fetch_assoc()['total'] ?? 0;
 
-
-/* ======== Prefijos por categoría (lista actual) ======== */
-/* CCTV */
-$prefijosCCTV = [
-  "racks%", "camara%", "dvr%", "nvr%", "servidor%", "monitor%", "biometrico%",
-  "videoportero%", "videotelefono%", "ups%"
-];
-/* ALARMA */
-$prefijosAlarma = [
-  "sensor%", "dh%", "pir%", "cm%", "oh%", "estrobo%", "rep%", "drc%", "estacion%",
-  "teclado%", "sirena%", "boton%"
-];
+/* Prefijos por categoría */
+$prefijosCCTV = ["racks%", "camara%", "dvr%", "nvr%", "servidor%", "monitor%", "biometrico%", "videoportero%", "videotelefono%", "ups%"];
+$prefijosAlarma = ["sensor%", "dh%", "pir%", "cm%", "oh%", "estrobo%", "rep%", "drc%", "estacion%", "teclado%", "sirena%", "boton%"];
 
 /* Helper para armar ORs de LIKE seguros */
 function build_likes($col, $collation, $prefixes) {
   $likes = [];
   foreach ($prefixes as $p) {
-    $p = str_replace("'", "''", $p); // escapar comillas por seguridad
+    $p = str_replace("'", "''", $p);
     $likes[] = "$col COLLATE $collation LIKE '$p'";
   }
   return '(' . implode(' OR ', $likes) . ')';
 }
 
-/* WHERE combinado: sólo categorías de interés (CCTV o ALARMA) */
-$whereCCTV   = build_likes('e.nom_equipo', $collation, $prefijosCCTV);
+$whereCCTV = build_likes('e.nom_equipo', $collation, $prefijosCCTV);
 $whereAlarma = build_likes('e.nom_equipo', $collation, $prefijosAlarma);
 $whereCategorias = "($whereCCTV OR $whereAlarma)";
 
@@ -67,46 +57,42 @@ $whereCategorias = "($whereCCTV OR $whereAlarma)";
 $caseCCTV   = "CASE WHEN $whereCCTV THEN 1 ELSE 0 END";
 $caseALARMA = "CASE WHEN $whereAlarma THEN 1 ELSE 0 END";
 
-/* ======== Consulta: Dispositivos CCTV vs Alarma por sucursal ======== */
-$sql = "
-  SELECT s.nom_sucursal AS sucursal,
-         SUM($caseCCTV)   AS cctv,
-         SUM($caseALARMA) AS alarma
-  FROM dispositivos d
-  INNER JOIN equipos e    ON d.equipo   = e.id
-  INNER JOIN sucursales s ON d.sucursal = s.id
-  WHERE $whereCategorias
-  GROUP BY s.nom_sucursal
-";
-$labels = []; $cctvData = []; $alarmaData = [];
-$res = $conn->query($sql);
-while ($r = $res->fetch_assoc()) {
-  $labels[]     = $r['sucursal'];
-  $cctvData[]   = (int)$r['cctv'];
-  $alarmaData[] = (int)$r['alarma'];
-}
+/* ======== Consulta jerárquica ======== */
+$sqlJerarquico = "SELECT
+r.nom_region    AS region,
+c.nom_ciudad    AS ciudad,
+m.nom_municipio AS municipio,
+s.nom_sucursal  AS sucursal,
+SUM($caseCCTV)   AS cctv,
+SUM($caseALARMA) AS alarma
+FROM dispositivos d
+INNER JOIN equipos e     ON d.equipo   = e.id
+INNER JOIN sucursales s  ON d.sucursal = s.id
+INNER JOIN municipios m  ON s.municipio_id = m.id
+INNER JOIN ciudades c    ON m.ciudad_id    = c.id
+INNER JOIN regiones r    ON c.region_id    = r.id
+WHERE $whereCategorias
+GROUP BY r.nom_region, c.nom_ciudad, m.nom_municipio, s.nom_sucursal";
 
-/* Ordenar por total desc manteniendo correspondencia */
-$rows = [];
-for ($i = 0; $i < count($labels); $i++) {
-  $rows[] = [
-    'label'  => $labels[$i],
-    'cctv'   => $cctvData[$i],
-    'alarma' => $alarmaData[$i],
-    'total'  => $cctvData[$i] + $alarmaData[$i]
+$datosJerarquicos = [];
+$resJer = $conn->query($sqlJerarquico);
+while ($r = $resJer->fetch_assoc()) {
+  $region    = $r['region'];
+  $ciudad    = $r['ciudad'];
+  $municipio = $r['municipio'];
+  $sucursal  = $r['sucursal'];
+  if (!isset($datosJerarquicos[$region])) $datosJerarquicos[$region] = [];
+  if (!isset($datosJerarquicos[$region][$ciudad])) $datosJerarquicos[$region][$ciudad] = [];
+  if (!isset($datosJerarquicos[$region][$ciudad][$municipio])) $datosJerarquicos[$region][$ciudad][$municipio] = [];
+  
+  $datosJerarquicos[$region][$ciudad][$municipio][$sucursal] = [
+    "cctv"   => (int)$r['cctv'],
+    "alarma" => (int)$r['alarma']
   ];
 }
-usort($rows, fn($a,$b) => $b['total'] <=> $a['total']);
-$labels     = array_column($rows, 'label');
-$cctvData   = array_column($rows, 'cctv');
-$alarmaData = array_column($rows, 'alarma');
-
-/* Alto fijo recomendado para vertical (evita “saltos”) */
-$chartHeight = 420;
 ?>
 
 <h2 class="mb-4">Panel de control</h2>
-
 <!-- KPIs -->
 <div class="row g-3 mb-4">
   <div class="col-md-3">
@@ -147,19 +133,17 @@ $chartHeight = 420;
   </div>
 </div>
 
-<!-- ÚNICA GRÁFICA: Dispositivos por sucursal (CCTV vs Alarma, apilado vertical) -->
+<!-- Gráfica Pastel Drilldown -->
 <div class="row g-4 mb-4">
   <div class="col-12">
     <div class="card shadow-sm">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <h6 class="card-title mb-0">Dispositivos por sucursal</h6>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge rounded-pill text-bg-light">Ordenado por total</span>
-          </div>
+          <h6 class="card-title mb-0">Dispositivos por Región / Ciudad / Municipio / Sucursal</h6>
+          <button id="btnVolver" class="btn btn-sm btn-outline-secondary d-none">← Volver</button>
         </div>
-        <div class="mt-3" style="height: <?= (int)$chartHeight ?>px;">
-          <canvas id="chartStacked"></canvas>
+        <div class="mt-3" style="height: 450px;">
+          <canvas id="chartPastel"></canvas>
         </div>
       </div>
     </div>
@@ -184,127 +168,96 @@ $chartHeight = 420;
   </div>
 </div>
 
-<!-- Estilos extra (look pro y llamativo, similar al anterior) -->
+<!-- Estilos extra -->
 <style>
-  .card { border: 1px solid #eef2f7; }
-  .card .card-title { font-weight: 700; letter-spacing: .2px; }
-  .text-bg-light { background: #f5f7fb !important; }
-  /* Sombra suave al canvas y bordes redondeados */
-  #chartStacked { border-radius: 14px; box-shadow: 0 0 0 1px #eef2f7 inset; }
+.card { border: 1px solid #eef2f7; }
+.card .card-title { font-weight: 700; letter-spacing: .2px; }
+.text-bg-light { background: #f5f7fb !important; }
 </style>
 
-<!-- Chart.js + DataLabels -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
 <script>
-(function () {
-  const labels     = <?= json_encode($labels, JSON_UNESCAPED_UNICODE) ?>;
-  const cctvData   = <?= json_encode($cctvData) ?>;
-  const alarmaData = <?= json_encode($alarmaData) ?>;
+const datosJerarquicos = <?php echo json_encode($datosJerarquicos, JSON_UNESCAPED_UNICODE); ?>;
+let nivel = "region";
+let ruta  = [];
+let miChart = null;
 
-  const canvas = document.getElementById('chartStacked');
-  const ctx = canvas.getContext('2d');
+function sumaTotales(nodo) {
+    if (nodo && typeof nodo === 'object' && 'cctv' in nodo && 'alarma' in nodo) {
+        return (nodo.cctv || 0) + (nodo.alarma || 0);
+    }
+    return Object.values(nodo || {}).reduce((acc, hijo) => acc + sumaTotales(hijo), 0);
+}
 
-// Gradientes más fuertes (vertical: arriba->abajo)
-const gradCCTV = ctx.createLinearGradient(0, 0, 0, canvas.height);
-gradCCTV.addColorStop(0, 'rgba(0,123,255,0.95)');  // azul intenso
-gradCCTV.addColorStop(1, 'rgba(0,123,255,0.35)');  
+function renderChart(nodo) {
+    const etiquetas = Object.keys(nodo || {});
+    const coloresPastel = ["#6dcdf0ff","#FFD1DC","#FDFD96","#77DD77","#CBAACB","#FFB347"];
+    const valores = etiquetas.map(k => sumaTotales(nodo[k]));
+    if (miChart) miChart.destroy();
+    const ctx = document.getElementById('chartPastel').getContext('2d');
+    miChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                data: valores,
+                backgroundColor: etiquetas.map((_, i) => coloresPastel[i % coloresPastel.length])
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.label}: ${ctx.parsed}`
+                    }
+                }
+            },
+            onClick: (evt, elems) => {
+                if (!elems.length) return;
+                const i = elems[0].index;
+                const clave = etiquetas[i];
+                ruta.push(clave);
+                if (nivel === "region") { nivel = "ciudad"; renderChart(nodo[clave]); }
+                else if (nivel === "ciudad") { nivel = "municipio"; renderChart(nodo[clave]); }
+                else if (nivel === "municipio") { nivel = "sucursal"; renderChart(nodo[clave]); }
+                else { renderSucursal(nodo[clave]); }
+                document.getElementById('btnVolver').classList.remove('d-none');
+            }
+        }
+    });
+}
 
-const gradAlarma = ctx.createLinearGradient(0, 0, 0, canvas.height);
-gradAlarma.addColorStop(0, 'rgba(40,167,69,0.95)'); // verde intenso
-gradAlarma.addColorStop(1, 'rgba(40,167,69,0.35)'); 
-
-  const totales = labels.map((_, i) => (cctvData[i] || 0) + (alarmaData[i] || 0));
-
-  new Chart(ctx, {
-    type: 'bar',
+function renderSucursal(datos) {
+  if (miChart) miChart.destroy();
+  const ctx = document.getElementById('chartPastel').getContext('2d');
+  const cctv = datos.cctv || 0;
+  const alarma = datos.alarma || 0;
+  miChart = new Chart(ctx, {
+    type: 'doughnut',
     data: {
-      labels,
-      datasets: [
-        {
-          label: 'CCTV',
-          data: cctvData,
-          backgroundColor: gradCCTV,
-          borderColor: '#0056b3',
-          borderWidth: 1.5,
-          borderRadius: 10,
-          barThickness: 'flex',
-          maxBarThickness: 48,
-          hoverBorderWidth: 2
-        },
-        {
-          label: 'Alarma',
-          data: alarmaData,
-          backgroundColor: gradAlarma,
-          borderColor: '#1e7e34',
-          borderWidth: 1.5,
-          borderRadius: 10,
-          barThickness: 'flex',
-          maxBarThickness: 48,
-          hoverBorderWidth: 2
-        }
-      ]
-    },
-    options: {
-      // Vertical (sin indexAxis:'y')
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 6, right: 14, left: 6, bottom: 0 } },
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: { usePointStyle: true, pointStyle: 'rectRounded' }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(25, 28, 36, 0.9)',
-          padding: 10,
-          displayColors: true,
-          callbacks: {
-            footer: (items) => {
-              const i = items[0].dataIndex;
-              return 'Total: ' + totales[i];
-            }
-          }
-        },
-        datalabels: {
-          color: '#0f172a',
-          anchor: 'end',
-          align: 'end',   // arriba de la barra
-          clamp: true,
-          offset: 6,
-          font: { weight: '700', size: 11 },
-          formatter: (val, ctx) => {
-            const dsIndex = ctx.datasetIndex;
-            const dataIndex = ctx.dataIndex;
-            // Total solo en el último dataset (Alarma) para no duplicar números
-            if (dsIndex === (ctx.chart.data.datasets.length - 1)) {
-              return totales[dataIndex];
-            }
-            return null;
-          }
-        }
-      },
-      scales: {
-        x: {
-          stacked: true,
-          ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 },
-          grid: { color: 'rgba(0,0,0,0.06)', borderDash: [4, 4] }
-        },
-        y: {
-          stacked: true,
-          beginAtZero: true,
-          ticks: { precision: 0 },
-          grid: { display: false }
-        }
-      },
-      animation: { duration: 650, easing: 'easeOutCubic' }
-    },
-    plugins: [ChartDataLabels]
-  });
-})();
+      labels: ["CCTV", "Alarma"],
+      datasets: [{ data: [cctv, alarma], backgroundColor: ["#96c7fcff", "#79ac85ff"] }]
+    }, options: {
+      responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+}
+
+document.getElementById('btnVolver').addEventListener('click', () => {
+  ruta.pop();
+  if (ruta.length === 0) {
+    nivel = "region"; renderChart(datosJerarquicos); document.getElementById('btnVolver').classList.add('d-none');
+  } else if (ruta.length === 1) { nivel = "ciudad"; renderChart(datosJerarquicos[ruta[0]]); }
+  else if (ruta.length === 2) { nivel = "municipio"; renderChart(datosJerarquicos[ruta[0]][ruta[1]]); }
+  else if (ruta.length === 3) { nivel = "sucursal"; renderChart(datosJerarquicos[ruta[0]][ruta[1]][ruta[2]]); }
+});
+// Inicializar
+renderChart(datosJerarquicos);
 </script>
 
 <?php
 $content = ob_get_clean();
 include __DIR__ . '/../../layout.php';
+?>

@@ -133,7 +133,7 @@
 
         <div class="col-md-3">
           <label class="form-label">Número de serie</label>
-          <input type="text" name="serie" class="form-control" placeholder="Escribe el número de serie">
+          <input type="text" name="serie" class="form-control" placeholder="Escribe el número de serie" required>
         </div>
 
         <div class="col-md-3">
@@ -153,12 +153,12 @@
 
       <div class="col-md-3 campo-user">
         <label class="form-label">Usuario</label>
-        <input type="text" name="user" class="form-control" placeholder="Nombre de usuario">
+        <input type="text" name="user" class="form-control" placeholder="Nombre de usuario" required>
       </div>
 
       <div class="col-md-3 campo-pass">
         <label class="form-label">Contraseña</label>
-        <input type="password" name="pass" class="form-control" placeholder="Contraseña de usuario">
+        <input type="password" name="pass" class="form-control" placeholder="Contraseña de usuario" required>
       </div>
     </div>
 
@@ -183,12 +183,12 @@
 
         <div class="col-md-3">
           <label class="form-label">Sucursal</label>
-          <input type="text" name="sucursal" class="form-control" placeholder="Ej. SB Plaza las antenas">
+          <input type="text" name="sucursal" class="form-control" placeholder="Ej. SB Plaza las antenas" required>
         </div>
 
         <div class="col-md-3">
           <label class="form-label">Determinante</label>
-          <input type="text" name="determinante" class="form-control" placeholder="Num determinante">
+          <input type="text" name="determinante" class="form-control" placeholder="Num determinante" required>
         </div>
       </div>
 

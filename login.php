@@ -219,6 +219,19 @@ $redirect = $_GET['redirect'] ?? null;
     }
     .muted-link{ color:#7fd3e5; text-decoration: none; }
     .muted-link:hover{ color:#a6e9f5; text-decoration: underline; }
+
+    /* Arreglar el cuadro blanco molesto en labels flotantes */
+  .form-floating > label {
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+  /* Bootstrap mete pseudo-elemento para cubrir */
+  .form-floating > label::after {
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
   </style>
 </head>
 <body>
