@@ -29,11 +29,11 @@ $TITLE = 'Aviso de Privacidad - CESISS';
       color:var(--fg); font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
       min-height:100vh; padding-bottom:84px; /* espacio para el footer fijo */
     }
-    .container{ max-width: 980px; margin: 90px auto 40px; padding: 0 16px; }
+    .container{ max-width: 980px; margin: 90px auto 40px; padding: 0 16px; position: relative; z-index: 1; }
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
       border:1px solid var(--card-border); border-radius:16px; box-shadow: var(--shadow);
-      padding:24px;
+      padding:24px; position: relative; z-index: 2;
     }
     h1{
       display:flex; gap:.6rem; align-items:center; margin:0 0 8px 0;
@@ -50,6 +50,36 @@ $TITLE = 'Aviso de Privacidad - CESISS';
     a { color:#7fd3e5; text-decoration:none; }
     a:hover { color:#a6e9f5; text-decoration:underline; }
     .list{ padding-left: 1rem; }
+
+    /* Chip ARCO */
+    .hl{
+      display:inline-flex; align-items:center;
+      background: linear-gradient(180deg, rgba(127,211,229,.18), rgba(127,211,229,.08));
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 0 .45rem;
+      color: #aee6f2 !important;
+      text-decoration: none !important;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+      transition: box-shadow .2s ease, transform .08s ease;
+      white-space: nowrap;
+      cursor: pointer;
+      position: relative; z-index: 3;
+      pointer-events: auto !important; /* fuerza clic en el propio elemento */
+    }
+    .hl:hover, .hl:focus-visible{
+      text-decoration: none;
+      box-shadow: 0 0 0 3px rgba(127,211,229,.25), 0 0 18px rgba(127,211,229,.25);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    /* Si usas topbar con pseudo-elementos, que no bloqueen clics */
+    header.topbar::before,
+    header.topbar::after { pointer-events: none !important; }
+
+    /* --- DEBUG opcional para ver overlays (quitalo luego) --- */
+    /* * { outline: 1px dashed rgba(255,0,0,.15); } */
   </style>
 </head>
 <body>
@@ -79,6 +109,7 @@ $TITLE = 'Aviso de Privacidad - CESISS';
         <li>Consultar sistemas instalados y servicios de mantenimiento.</li>
         <li>Mantener un historial de servicios otorgados.</li>
         <li>Contacto para aclaraciones y soporte técnico</li>
+      </ul>
 
       <h2><i class="fa-solid fa-lock"></i> Transferencia de datos personales</h2>
       <p>
@@ -87,10 +118,25 @@ $TITLE = 'Aviso de Privacidad - CESISS';
       </p>
 
       <h2><i class="fa-solid fa-user-shield"></i> Derechos ARCO</h2>
-      <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse (ARCO) el tratamiento de sus datos personales.</p>
       <p>
-      Para ejercer estos derechos, podrá enviar una solicitud al correo: soporte@cesiss.com,  
-      indicando su nombre completo, los datos a los que desea acceder, rectificar, cancelar u oponerse, y adjuntando copia de una identificación oficial.
+        Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse 
+        <!-- 1) ENLACE normal -->
+        (<a id="arco-link" class="hl" href="arco.php" aria-label="Conoce tus derechos ARCO">ARCO</a>)
+        <!-- 2) WRAPPER con onClick por si algún CSS anula el <a> -->
+        <span id="arco-fallback"
+              role="link"
+              tabindex="0"
+              style="margin-left:.35rem; display:inline-block; font-size:.9rem; opacity:.85; cursor:pointer;"
+              onclick="window.location.href='arco.php';"
+              onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); this.click(); }">
+          (clic alternativo)
+        </span>
+        al tratamiento de sus datos personales.
+      </p>
+
+      <p>
+        Para ejercer estos derechos, podrá enviar una solicitud al correo: soporte@cesiss.com,  
+        indicando su nombre completo, los datos a los que desea acceder, rectificar, cancelar u oponerse, y adjuntando copia de una identificación oficial.
       </p>
 
       <h2><i class="fa-solid fa-rotate"></i> Opciones para limitar uso o divulgación de Datos</h2>
@@ -109,7 +155,6 @@ $TITLE = 'Aviso de Privacidad - CESISS';
       </p>
 
       <h2><i class="fa-solid fa-building"></i> Información de contacto</h2>
-
       <p class="subtitle">
         <span class="tag"><i class="fa-solid fa-building-shield"></i> CESISS</span>
         <span class="tag"><i class="fa-solid fa-envelope"></i> soportecesiss@gmail.com</span>
@@ -117,9 +162,32 @@ $TITLE = 'Aviso de Privacidad - CESISS';
     </div>
   </div>
 
-  <?php
-  // Si tu footer no depende de la sesión/roles, puedes incluirlo tal cual:
-  include __DIR__ . '/../includes/footer.php';
-  ?>
+  <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
+  <!-- 3) DIAGNÓSTICO: resalta el elemento que está arriba del link (quítalo luego) -->
+  <script>
+    (function () {
+      const link = document.getElementById('arco-link');
+      if (!link) return;
+
+      // Si el click llega al <a>, lo sabremos en consola.
+      link.addEventListener('click', () => console.log('[ARCO] click en el <a> OK'));
+
+      // Detecta qué elemento está por encima del centro del enlace:
+      requestAnimationFrame(() => {
+        const r = link.getBoundingClientRect();
+        const x = Math.round(r.left + r.width / 2);
+        const y = Math.round(r.top + r.height / 2);
+        const topEl = document.elementFromPoint(x, y);
+
+        if (topEl && topEl !== link) {
+          console.warn('[ARCO] Hay un overlay encima del enlace:', topEl);
+          try { topEl.style.outline = '3px dashed red'; } catch(e){}
+          // Intenta permitir que el enlace reciba clics:
+          try { topEl.style.pointerEvents = 'none'; console.warn('[ARCO] Se puso pointer-events:none al overlay detectado.'); } catch(e){}
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 <?php
 // Página pública: NO requiere login
-$TITLE = 'Aviso de Privacidad - CESISS';
+$TITLE = 'Términos y condiciones de uso - CESISS';
 ?>
 <!doctype html>
 <html lang="es">
@@ -102,9 +102,6 @@ $TITLE = 'Aviso de Privacidad - CESISS';
     </div>
   </div>
 
-  <?php
-  // Si tu footer no depende de la sesión/roles, puedes incluirlo tal cual:
-  include __DIR__ . '/../includes/footer.php';
-  ?>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>
 </body>
 </html>

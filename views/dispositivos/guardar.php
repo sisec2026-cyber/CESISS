@@ -54,6 +54,7 @@ try {
   // Otros
   $fecha            = $_POST['fecha'] ?? null;
   $estado_nombre    = trim($_POST['estado'] ?? '');
+  // (legacy) Estos dos ahora sólo los usaremos como “display” si vienen:
   $sucursal_nombre  = trim($_POST['sucursal'] ?? '');
   $observaciones    = trim($_POST['observaciones'] ?? '');
   $serie            = trim($_POST['serie'] ?? '');
@@ -70,11 +71,18 @@ try {
   $version_windows  = trim($_POST['version_windows'] ?? '');
   $zona_alarma      = trim($_POST['zona_alarma'] ?? '');
   $tipo_sensor      = trim($_POST['tipo_sensor'] ?? '');
+  // (legacy) determinante texto libre, sólo para compatibilidad visual:
   $determinante_nom = trim($_POST['determinante'] ?? '');
 
   // Selects
   $ciudad_id    = isset($_POST['ciudad']) ? (int)$_POST['ciudad'] : null;
   $municipio_id = isset($_POST['municipio']) ? (int)$_POST['municipio'] : null;
+
+  // NUEVOS nombres del flujo en cascada:
+  $sucursal_id_post     = $_POST['sucursal_id'] ?? '';          // puede ser ID o '__NEW_SUCURSAL__'
+  $sucursal_nueva       = trim($_POST['sucursal_nueva'] ?? ''); // texto cuando es nueva
+  $determinante_id_post = $_POST['determinante_id'] ?? '';       // puede ser ID o '__NEW_DETERMINANTE__'
+  $determinante_nueva   = trim($_POST['determinante_nueva'] ?? '');
 
   // MAC/IP
   list($mac, $macErr) = normalize_mac($_POST['mac'] ?? '');
@@ -124,16 +132,6 @@ try {
     "INSERT INTO modelos (num_modelos, marca_id) VALUES (?, ?)",
     "si", "si", [$modelo_nombre, $marca_id], [$modelo_nombre, $marca_id]
   );
-  $sucursal_id = $getOrCreate(
-    "SELECT id FROM sucursales WHERE nom_sucursal = ?",
-    "INSERT INTO sucursales (nom_sucursal, municipio_id) VALUES (?, ?)",
-    "s", "si", [$sucursal_nombre], [$sucursal_nombre, $municipio_id]
-  );
-  $determinante_id = $getOrCreate(
-    "SELECT id FROM determinantes WHERE nom_determinante = ? AND sucursal_id = ?",
-    "INSERT INTO determinantes (nom_determinante, sucursal_id) VALUES (?, ?)",
-    "si", "si", [$determinante_nom, $sucursal_id], [$determinante_nom, $sucursal_id]
-  );
   $estado_id = $getOrCreate(
     "SELECT id FROM status WHERE status_equipo = ?",
     "INSERT INTO status (status_equipo) VALUES (?)",
@@ -165,7 +163,76 @@ try {
     );
   }
 
-  /* ========== 4) Imágenes ========== */
+  /* ========== 4) Sucursal & Determinante (NUEVA LÓGICA) ========== */
+  // Necesitamos IDs finales y nombres para el correo
+  $sucursal_id_final = null;
+  $determinante_id_final = null;
+  $sucursal_nombre_mostrar = '';     // para el correo
+  $determinante_nom_mostrar = '';    // para el correo
+
+  // Constantes usadas por el front
+  $OPT_NEW_SUC   = '__NEW_SUCURSAL__';
+  $OPT_NEW_DET   = '__NEW_DETERMINANTE__';
+
+  if ($ciudad_id <= 0 || $municipio_id <= 0) {
+    throw new Exception('Falta seleccionar Ciudad y Municipio.');
+  }
+
+  if ($sucursal_id_post === $OPT_NEW_SUC) {
+    // Nueva sucursal -> se requiere nombre y determinante nueva
+    if ($sucursal_nueva === '') throw new Exception('Debes escribir el nombre de la nueva sucursal.');
+    $sucursal_id_final = $getOrCreate(
+      "SELECT id FROM sucursales WHERE municipio_id = ? AND nom_sucursal = ?",
+      "INSERT INTO sucursales (nom_sucursal, municipio_id) VALUES (?, ?)",
+      "is", "si", [$municipio_id, $sucursal_nueva], [$sucursal_nueva, $municipio_id]
+    );
+    $sucursal_nombre_mostrar = $sucursal_nueva; // para el correo
+
+    if ($determinante_nueva === '') throw new Exception('Debes escribir la determinante para la nueva sucursal.');
+    $determinante_id_final = $getOrCreate(
+      "SELECT id FROM determinantes WHERE sucursal_id = ? AND nom_determinante = ?",
+      "INSERT INTO determinantes (nom_determinante, sucursal_id) VALUES (?, ?)",
+      "is", "si", [$sucursal_id_final, $determinante_nueva], [$determinante_nueva, $sucursal_id_final]
+    );
+    $determinante_nom_mostrar = $determinante_nueva; // para el correo
+
+  } else {
+    // Sucursal existente
+    $sucursal_id_final = (int)$sucursal_id_post;
+    if ($sucursal_id_final <= 0) throw new Exception('Selecciona una sucursal válida.');
+
+    // Obtenemos su nombre para el correo
+    $stmtSucNom = $conn->prepare("SELECT nom_sucursal FROM sucursales WHERE id = ?");
+    $stmtSucNom->bind_param("i", $sucursal_id_final);
+    $stmtSucNom->execute();
+    $rsSucNom = $stmtSucNom->get_result()->fetch_assoc();
+    $sucursal_nombre_mostrar = $rsSucNom['nom_sucursal'] ?? $sucursal_nombre; // fallback legacy
+
+    if ($determinante_id_post === $OPT_NEW_DET) {
+      if ($determinante_nueva === '') throw new Exception('Debes escribir la nueva determinante.');
+      $determinante_id_final = $getOrCreate(
+        "SELECT id FROM determinantes WHERE sucursal_id = ? AND nom_determinante = ?",
+        "INSERT INTO determinantes (nom_determinante, sucursal_id) VALUES (?, ?)",
+        "is", "si", [$sucursal_id_final, $determinante_nueva], [$determinante_nueva, $sucursal_id_final]
+      );
+      $determinante_nom_mostrar = $determinante_nueva; // para el correo
+    } else {
+      $determinante_id_final = (int)$determinante_id_post;
+      if ($determinante_id_final <= 0) throw new Exception('Selecciona una determinante válida.');
+      // Obtenemos su nombre para el correo
+      $stmtDetNom = $conn->prepare("SELECT nom_determinante FROM determinantes WHERE id = ?");
+      $stmtDetNom->bind_param("i", $determinante_id_final);
+      $stmtDetNom->execute();
+      $rsDetNom = $stmtDetNom->get_result()->fetch_assoc();
+      $determinante_nom_mostrar = $rsDetNom['nom_determinante'] ?? $determinante_nom; // fallback legacy
+    }
+  }
+
+  // Backward compatibility (si vinieron legacy names y no hay display todavía)
+  if ($sucursal_nombre_mostrar === '' && $sucursal_nombre !== '') $sucursal_nombre_mostrar = $sucursal_nombre;
+  if ($determinante_nom_mostrar === '' && $determinante_nom !== '') $determinante_nom_mostrar = $determinante_nom;
+
+  /* ========== 5) Imágenes ========== */
   $imagenes = ['imagen1' => '', 'imagen2' => '', 'imagen3' => ''];
   $destino = __DIR__ . "/../../public/uploads/";
   if (!is_dir($destino)) { @mkdir($destino, 0775, true); }
@@ -182,7 +249,7 @@ try {
     }
   }
 
-  /* ========== 5) INSERT principal (incluye qr placeholder) ========== */
+  /* ========== 6) INSERT principal (incluye qr placeholder) ========== */
   $qr_placeholder = '';
 
   $stmt = $conn->prepare("
@@ -195,11 +262,12 @@ try {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ");
 
+  // ¡Respetado tal cual!
   $types = "iisiii" . str_repeat("s", 15) . "iiii" . str_repeat("s", 6);
 
   $stmt->bind_param(
     $types,
-    $determinante_id, $equipo_id, $fecha, $modelo_id, $estado_id, $sucursal_id,
+    $determinante_id_final, $equipo_id, $fecha, $modelo_id, $estado_id, $sucursal_id_final,
     $observaciones, $serie, $mac, $vms, $servidor, $switch_txt, $puerto,
     $area, $rc, $imagenes['imagen1'], $imagenes['imagen2'], $imagenes['imagen3'], $qr_placeholder, $user_txt, $pass_txt,
     $marca_id, $alarma_id, $switch_id, $cctv_id,
@@ -209,17 +277,17 @@ try {
   $stmt->execute();
   $id = $stmt->insert_id;
 
-  /* ========== 6) Notificación interna (DB) ========== */
-if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
-    $nombreUsuario = trim($_SESSION['nombre'] ?? 'desconocido');
-    $mensaje = sprintf('El usuario "%s" registró un nuevo dispositivo.', $nombreUsuario);
-    $stmtNotif = $conn->prepare("
-      INSERT INTO notificaciones (usuario_id, mensaje, fecha, visto, dispositivo_id)
-      VALUES (?, ?, NOW(), 0, ?)
-    ");
-    $stmtNotif->bind_param("isi", $_SESSION['usuario_id'], $mensaje, $id);
-    $stmtNotif->execute();
-}
+  /* ========== 6.1) Notificación interna (DB) ========== */
+  if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
+      $nombreUsuario = trim($_SESSION['nombre'] ?? 'desconocido');
+      $mensaje = sprintf('El usuario "%s" registró un nuevo dispositivo.', $nombreUsuario);
+      $stmtNotif = $conn->prepare("
+        INSERT INTO notificaciones (usuario_id, mensaje, fecha, visto, dispositivo_id)
+        VALUES (?, ?, NOW(), 0, ?)
+      ");
+      $stmtNotif->bind_param("isi", $_SESSION['usuario_id'], $mensaje, $id);
+      $stmtNotif->execute();
+  }
 
   /* ========== 7) QR ========== */
   require_once __DIR__ . '/../../config.php';
@@ -241,13 +309,18 @@ if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
   $conn->commit();
 
   /* ========== 8) Notificación por CORREO (HTML con estilo) ========== */
-        $destinatarios = [
-            'notificacionescesiss@gmail.com',
-        ];
+  $destinatarios = [
+      'notificacionescesiss@gmail.com',
+  ];
 
   // URL para ver el dispositivo (usa BASE_URL si existe; si no, link relativo)
   $urlDispositivo = (defined('BASE_URL') ? rtrim(BASE_URL, '/') : '') . '/views/dispositivos/device.php?id=' . $id;
   if (!$urlDispositivo) $urlDispositivo = 'device.php?id=' . $id;
+
+  // Asignamos nombres a mostrar en correo respetando tu HTML original
+  // (si por alguna razón siguen vacíos, caen al legacy leído al inicio)
+  $sucursal_nombre_correo   = $sucursal_nombre_mostrar !== '' ? $sucursal_nombre_mostrar : $sucursal_nombre;
+  $determinante_nom_correo  = $determinante_nom_mostrar !== '' ? $determinante_nom_mostrar : $determinante_nom;
 
   // Estilo 
   $asunto = 'CESISS: Nuevo dispositivo registrado (EQUIPO ' . $equipo_nombre . ')';
@@ -267,8 +340,8 @@ if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Serie</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($serie).'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>MAC</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($mac).'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>IP</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($ip ?? '').'</td></tr>
-          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Sucursal</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($sucursal_nombre).'</td></tr>
-          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Determinante</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($determinante_nom).'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Sucursal</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($sucursal_nombre_correo).'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Determinante</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($determinante_nom_correo).'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Estado</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($estado_nombre).'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Usuario</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($_SESSION['nombre'] ?? 'desconocido').'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Fecha/Hora</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.date('Y-m-d H:i:s').'</td></tr>
@@ -289,7 +362,7 @@ if (($_SESSION['usuario_rol'] ?? '') !== 'Superadmin') {
     </div>
   </div>';
 
-  // Enviar (no bloquear flujo si falla)
+  // Enviar (no bloquea si falla)
   enviarNotificacion($asunto, $htmlCorreo, $destinatarios);
 
   // Redirige a la vista del dispositivo
