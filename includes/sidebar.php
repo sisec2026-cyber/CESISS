@@ -11,16 +11,16 @@
     --side-sep:#16323a;      /* divisores/bordes */
     --side-shadow: 0 12px 24px rgba(0,0,0,.28);
 
-    --topbar-h: 64px;        /* alto de tu topbar (ajústalo si usas otro) */
-    --sidebar-w: 230px;      /* ancho del sidebar */
+    --topbar-h: 64px;        /* alto de tu topbar */
+    --sidebar-w: 300px;      /* ancho del sidebar */
     --item-h: 44px;          /* alto de cada item */
     --radius: 10px;
   }
 
-  /* reset por si Bootstrap pone fondos claros */
+  /* reset */
   nav.sidebar { background: transparent !important; }
 
-  /* Contenedor fijo (desktop), oculto en móviles (usa d-none d-md-block) */
+  /* Contenedor fijo (desktop), oculto en móviles */
   .sidebar{
     position: fixed;
     top: var(--topbar-h);
@@ -30,32 +30,29 @@
     z-index: 1030;
     color: var(--side-fg);
     box-shadow: var(--side-shadow);
-    overflow: hidden; /* efectos quedan dentro */
+    overflow: hidden;
     display: block;
   }
 
-  /* Fondo base oscuro siempre visible */
+  /* Fondo base oscuro */
   .sidebar::after{
     content:"";
     position:absolute; inset:0; z-index:0; pointer-events:none;
     background: linear-gradient(180deg, var(--side-base-1) 0%, var(--side-base-2) 60%, var(--side-base-1) 100%);
   }
 
-  /* Capa animada: variará según data-effect (blob/waves/grid) */
+  /* Animación */
   .sidebar::before{
     content:"";
     position:absolute; inset:0; z-index:0; pointer-events:none;
     opacity: 1;
     transform: translateZ(0);
     will-change: transform, background-position, background-size;
-    /* fallback si falta data-effect: blob */
     background:
       radial-gradient(380px 280px at 120% -10%, rgba(36,163,193,.36) 0%, rgba(36,163,193,0) 70%),
       radial-gradient(340px 260px at -20% 110%, rgba(60,146,166,.42) 0%, rgba(60,146,166,0) 75%);
     animation: sb-blob 18s ease-in-out infinite;
   }
-
-  /* ===== Variantes ===== */
 
   /* blob */
   .sidebar[data-effect="blob"]::before{
@@ -96,12 +93,7 @@
     100% { background-position: 0 220px, 220px 0; }
   }
 
-  /* Respeta preferencias de movimiento */
-  @media (prefers-reduced-motion: reduce){
-    .sidebar::before{ animation: none !important; }
-  }
-
-  /* ===== Contenido ===== */
+  /* Contenido */
   .sidebar .inner{
     position: relative; z-index: 1;
     height: 100%;
@@ -172,16 +164,30 @@
     border-color: rgba(36,163,193,.25);
   }
 
-  /* Espaciado del contenido principal para no quedar debajo del sidebar (opcional) */
-  @media (min-width: 768px){
-    .with-sidebar { margin-left: var(--sidebar-w); }
+  /* ==== Ajuste de separación contenido vs sidebar ==== */
+  @media (min-width: 992px){
+    .content-wrapper{
+      margin-left: var(--sidebar-w) !important;
+      padding-left: 0 !important;
+    }
+    main.main{
+      margin-left: 0 !important;
+      padding-left: 0 !important;
+    }
+    .content-wrapper > .container-fluid,
+    .content-wrapper .container-fluid,
+    main.main > .container-fluid,
+    main.main .container-fluid{
+      padding-left: 0 !important;
+      padding-right: 1rem; /* ajusta si quieres más/menos aire a la derecha */
+    }
   }
 </style>
 
-<nav class="sidebar d-none d-md-block" data-effect="blob">
+<nav class="sidebar d-none d-lg-block" data-effect="blob">
   <div class="inner">
     <div class="brand">
-      <img src="/sisec-ui/public/img/logoCESISS.png" alt="Logo CESISS">
+      <img src="/sisec-ui/public/img/Qr3.png" alt="Logo CESISS">
     </div>
 
     <div class="menu">

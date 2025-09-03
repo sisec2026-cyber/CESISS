@@ -149,7 +149,7 @@
   <!-- Logos en medio -->
   <div class="d-none d-sm-flex align-items-center mx-3">
     <img src="/../sisec-ui/public/img/logo.png" alt="Logo 1" style="height:50px; margin-right:10px;">
-    <img src="/../sisec-ui/public/img/sucursales/default.png" alt="Logo 2" style="height:30px;">
+    <img src="/../sisec-ui/public/img/sucursales/SBlogo.png" alt="Logo 2" style="height:30px;">
   </div>
 
   <!-- Íconos / Notificaciones -->
