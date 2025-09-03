@@ -610,7 +610,7 @@
 <?php endif; ?>
 
 <!-- SCRIPTS -->
-<script src="validacionesregistro.js"></script>
+<script src="validacionesregistro.js?v=3"></script>
 
 <script>
 (() => {
