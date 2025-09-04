@@ -1,125 +1,201 @@
-<?php
-// Página pública: NO requiere login
-$TITLE = '¿Quién es SISEC?';
-?>
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title><?= htmlspecialchars($TITLE) ?></title>
+  <title>Presentación SISEC</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Font Awesome (iconos) -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
-    :root{
-      --brand: #3C92A6;
-      --brand-2:#24a3c1;
+    :root {
+      --brand:#3C92A6;
       --bg-1:#07161a;
       --bg-2:#0a2128;
       --fg:#cfe5ea;
       --muted:#9ab7bf;
-      --card:#0d1e24;
       --card-border:#16323a;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow:0 10px 30px rgba(0,0,0,.35);
     }
-    body{
-      margin:0; background: radial-gradient(1200px 800px at 10% -20%, #0c1b20, transparent),
-                           radial-gradient(1200px 800px at 100% 120%, #0b242c, transparent),
-                           linear-gradient(180deg, var(--bg-1), var(--bg-2));
-      color:var(--fg); font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
-      min-height:100vh; padding-bottom:84px; /* espacio para el footer fijo */
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color: var(--fg);
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
+      line-height: 1.6;
     }
-    .container{ max-width: 980px; margin: 90px auto 40px; padding: 0 16px; }
+    .container {
+      max-width: 980px;
+      margin: 90px auto;
+      padding: 0 16px;
+    }
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid var(--card-border); border-radius:16px; box-shadow: var(--shadow);
-      padding:24px;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 40px;
     }
-    h1{
-      display:flex; gap:.6rem; align-items:center; margin:0 0 8px 0;
-      font-size: clamp(22px, 2.6vw, 28px);
+    h1, h2 {
+      margin: 0 0 16px 0;
+      font-weight: 600;
     }
-    .subtitle{ color:var(--muted); margin-bottom: 18px; }
-    h2{ margin-top: 24px; color:#e7f6fa; font-size: 1.15rem; }
-    p, li{ color:#cfe5ea; line-height:1.6; }
-    .tag{
-      display:inline-flex; align-items:center; gap:.4rem;
-      border:1px solid var(--card-border); background:#0c1b20; color:#aee6f2;
-      font-size:.85rem; padding:.2rem .6rem; border-radius:999px; margin-right:.4rem;
+    h1 {
+      font-size: clamp(24px,2.8vw,32px);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
     }
-    a { color:#7fd3e5; text-decoration:none; }
-    a:hover { color:#a6e9f5; text-decoration:underline; }
-    .list{ padding-left: 1rem; }
+    h2 {
+      font-size: 1.25rem;
+      color: #e7f6fa;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-top: 30px;
+    }
+    p, li {
+      color:#cfe5ea;
+    }
+    .list {
+      padding-left:1.2rem;
+    }
+    .tag {
+      display:inline-flex;
+      align-items:center;
+      gap:.4rem;
+      border:1px solid var(--card-border);
+      background:#0c1b20;
+      color:#aee6f2;
+      font-size:.85rem;
+      padding:.25rem .75rem;
+      border-radius:999px;
+      margin:.2rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size:.9rem;
+      margin-bottom:20px;
+    }
+    .carousel-container {
+      overflow: hidden;
+      width: 100%;
+      margin: 20px auto;
+      position: relative;
+    }
+
+    .carousel-track {
+      display: flex;
+      gap: 40px;
+      animation: scrollBrands 20s linear infinite;
+    }
+    .carousel-track img {
+      height: 180px;        /* Fuerza altura exacta */
+      width: 180px;         /* Opcional: fuerza ancho exacto */
+      object-fit: contain; /* Ajusta dentro del espacio sin deformarse */
+      transition: filter 0.3s;
+    }
+
+    .carousel-track img:hover {
+      filter: none;
+    }
+
+    .certificaciones img {
+      height: 230px;        /* Fuerza altura exacta */
+      width: 180px;         /* Opcional: fuerza ancho exacto */
+    }
+
+    /* Animación infinita de izquierda a derecha */
+    @keyframes scrollBrands {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Historia -->
     <div class="card">
-      <h1><i class="fa-solid fa-shield-halved"></i>¿Qué es SISEC?</h1>
-      <div class="subtitle">Última actualización: <?= date('F Y') ?></div>
-
-      <p>
-        El Ing. Saúl Jiménez Hernández, con el objetivo de minimizar la pérdida de equipo y producto de sus clientes, inició la instalación y mantenimiento de sistemas de alarmas y radiocomunicación, dando origen a una organización especializada que denominó comercialmente Sistemas de Seguridad y Comunicación “SISEC”.
-Actualmente, SISEC se encuentra en un proceso de mejora continua, enfocado en incrementar la satisfacción de sus clientes actuales y futuros. De manera paralela, nuestro equipo se mantiene en capacitación constante, adaptándose a la evolución tecnológica en el ámbito de seguridad electrónica y radiocomunicaciones. Esta dedicación nos ha permitido consolidar relaciones sólidas con nuestros clientes, posicionándonos como una opción confiable para cubrir sus necesidades, requerimientos y expectativas.
-      </p>
-
-      <h2><i class="fa-regular fa-file-lines"></i> ¿Qué datos recopilamos?</h2>
-      <ul class="list">
-        <li>Nombre completo.</li>
-        <li>Correo electrónico.</li>
-        <li>Teléfono de contacto.</li>
-        <li>Usuario y contraseña asignados por la empresa.</li>
-        <li>Historial de consultas en el sistema.</li>
-      </ul>
-
-      <h2><i class="fa-solid fa-bullseye"></i> Finalidades</h2>
-      <p>Los datos personales serán utilizados para las siguientes finalidades:</p>
-      <ul class="list">
-        <li>Permitir el acceso seguro a la plataforma digital</li>
-        <li>Consultar sistemas instalados y servicios de mantenimiento.</li>
-        <li>Mantener un historial de servicios otorgados.</li>
-        <li>Contacto para aclaraciones y soporte técnico</li>
-
-      <h2><i class="fa-solid fa-lock"></i> Transferencia de datos personales</h2>
-      <p>
-       Sus datos personales no serán transferidos a terceros, únicamente para fines de verificación de servicios, 
-       así como los casos previstos por la Ley.
-      </p>
-
-      <h2><i class="fa-solid fa-user-shield"></i> Derechos ARCO</h2>
-      <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse (ARCO) el tratamiento de sus datos personales.</p>
-      <p>
-      Para ejercer estos derechos, podrá enviar una solicitud al correo: soporte@cesiss.com,  
-      indicando su nombre completo, los datos a los que desea acceder, rectificar, cancelar u oponerse, y adjuntando copia de una identificación oficial.
-      </p>
-
-      <h2><i class="fa-solid fa-rotate"></i> Opciones para limitar uso o divulgación de Datos</h2>
-      <p>
-        Usted puede limitar el uso o divulgación de sus datos personales enviando un correo a la dirección señalada en el punto anterior, 
-        o solicitando la cancelación de su usuario en la Plataforma.
-      </p>
-
-      <h2><i class="fa-solid fa-user-shield"></i> Uso de Cookies</h2>
-      <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse (ARCO) el tratamiento de sus datos personales.</p>
-
-      <h2><i class="fa-solid fa-rotate"></i> Cambios al aviso</h2>
-      <p>
-        Este aviso de Privacidad puede sufrir modificaciones o actualizaciones. 
-        Cualquier cambio será publicado en la presente página web, (indicando la fecha de la última actualización).
-      </p>
-
-      <h2><i class="fa-solid fa-building"></i> Información de contacto</h2>
-
-      <p class="subtitle">
-        <span class="tag"><i class="fa-solid fa-building-shield"></i> CESISS</span>
-        <span class="tag"><i class="fa-solid fa-envelope"></i> soportecesiss@gmail.com</span>
+      <div>
+        <h1><i class="fa-solid fa-shield-halved"></i> Historia</h1>
+        <h1></h1>
+      </div>
+      <p>El Ing. Saúl Jiménez Hernández, con el objetivo de minimizar la pérdida de equipo y producto de sus clientes, inició la instalación y mantenimiento de sistemas de alarmas y radiocomunicación, dando origen a una organización especializada que denominó comercialmente Sistemas de Seguridad y Comunicación “SISEC”.
+        Actualmente, SISEC se encuentra en un proceso de mejora continua, enfocado en incrementar la satisfacción de sus clientes actuales y futuros. De manera paralela, nuestro equipo se mantiene en capacitación constante, adaptándose a la evolución tecnológica en el ámbito de seguridad electrónica y radiocomunicaciones. Esta dedicación nos ha permitido consolidar relaciones sólidas con nuestros clientes, posicionándonos como una opción confiable para cubrir sus necesidades, requerimientos y expectativas.
       </p>
     </div>
+    <!-- Misión y Valores -->
+    <div class="card">
+      <h1><i class="fa-solid fa-bullseye"></i> Misión y Valores</h1>
+      <p>En SISEC, nuestra misión es satisfacer de manera eficaz y eficiente las necesidades de nuestros clientes en reparación e instalación de tecnología de seguridad privada y radiocomunicaciones, ofreciendo siempre las mejores condiciones de servicio y venta. Buscamos consolidarnos como empresa líder en nuestra especialidad, promoviendo al mismo tiempo la participación y desarrollo de nuestro personal, así como la apertura de nuevos mercados, asegurando resultados positivos y sostenibles para todos nuestros clientes y colaboradores.
+      </p>
+      <h2><i class="fa-regular fa-star"></i> Valores</h2>
+      <ul class="list">
+        <li>Compromiso</li>
+        <li>Calidad</li>
+        <li>Innovación</li>
+        <li>Trabajo en equipo</li>
+        <li>Orientación al cliente</li>
+      </ul>
+    </div>
+    <!-- Instalaciones -->
+    <div class="card">
+      <h1><i class="fa-solid fa-building"></i> Nuestras Instalaciones</h1>
+      <p>CDMX</p>
+      <div class="carousel-container">
+        <div class="carousel-track">
+          <!-- Inserta aquí tus imágenes de marcas -->
+          <img src="https://via.placeholder.com/150x80?text=Marca+1" alt="cdmx1">
+          <img src="https://via.placeholder.com/150x80?text=Marca+2" alt="cmdx">
+          <img src="https://via.placeholder.com/150x80?text=Marca+3" alt="cdmx3">
+          <img src="https://via.placeholder.com/150x80?text=Marca+4" alt="cdmx4">
+          <img src="https://via.placeholder.com/150x80?text=Marca+5" alt="cdmx5">
+          <img src="https://via.placeholder.com/150x80?text=Marca+6" alt="cdmx6">
+        </div>
+      </div>
+      <p>Puebla</p>
+      <div class="carousel-container">
+        <div class="carousel-track">
+          <!-- Inserta aquí tus imágenes de marcas -->
+          <img src="https://via.placeholder.com/150x80?text=Marca+1" alt="puebla1">
+          <img src="https://via.placeholder.com/150x80?text=Marca+2" alt="puebla2">
+          <img src="https://via.placeholder.com/150x80?text=Marca+3" alt="puebla3">
+          <img src="https://via.placeholder.com/150x80?text=Marca+4" alt="puebla4">
+          <img src="https://via.placeholder.com/150x80?text=Marca+5" alt="puebla5">
+          <img src="https://via.placeholder.com/150x80?text=Marca+6" alt="puebla6">
+        </div>
+      </div>
+    </div>
+    <!-- Certificados -->
+    <div class="card">
+      <div class="certificaciones">
+        <h1><i class="fa-solid fa-briefcase"></i>Nuestras certificaciones</h1>
+        <img src="/../sisec-ui/public/img/certificados/CERT1.png" alt="Cert1">
+        <img src="/../sisec-ui/public/img/certificados/CERT2.png" alt="Cert2">
+        <img src="/../sisec-ui/public/img/certificados/CERT3.png" alt="Cert3">
+        <img src="/../sisec-ui/public/img/certificados/CERT4.png" alt="Cert4">
+        <img src="/../sisec-ui/public/img/certificados/CERT5.jpg" alt="Cert5">
+      </div>
+    </div>
+    <!-- Carrusel de Marcas -->
+    <div class="card">
+      <h1><i class="fa-solid fa-industry"></i>Marcas y Herramientas de Trabajo</h1>
+      <div class="carousel-container">
+        <div class="carousel-track">
+          <!-- Inserta aquí tus imágenes de marcas -->
+          <img src="/../sisec-ui/public/img/marcas/AVI.png" alt="Marca 1">
+          <img src="/../sisec-ui/public/img/marcas/AXIS.png" alt="Marca 2">
+          <img src="/../sisec-ui/public/img/marcas/CISCO.png" alt="Marca 3">
+          <img src="/../sisec-ui/public/img/marcas/DMP.png" alt="Marca 4">
+          <img src="/../sisec-ui/public/img/marcas/HAN.png" alt="Marca 5">
+          <img src="/../sisec-ui/public/img/marcas/HIK.png" alt="Marca 6">
+          <img src="/../sisec-ui/public/img/marcas/INO.png" alt="Marca 7">
+          <img src="/../sisec-ui/public/img/marcas/UNI.png" alt="Marca 8">
+          <img src="/../sisec-ui/public/img/marcas/MILE.png" alt="Marca 9">
+        </div>
+      </div>
+    </div>
   </div>
-
-  <?php
-  // Si tu footer no depende de la sesión/roles, puedes incluirlo tal cual:
-  include __DIR__ . '/../includes/footer.php';
-  ?>
 </body>
 </html>

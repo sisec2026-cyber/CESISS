@@ -201,7 +201,7 @@
         <i class="fas fa-camera"></i> Dispositivos
       </a>
 
-      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Capturista','Técnico','Monitorista'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Capturista','Técnico'])): ?>
         <a href="/sisec-ui/views/dispositivos/registro.php" class="<?= ($activePage ?? '') === 'registro' ? 'active' : '' ?>">
           <i class="fas fa-plus-circle"></i> Registrar dispositivo
         </a>
