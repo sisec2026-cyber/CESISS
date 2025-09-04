@@ -2,6 +2,7 @@
     "require": {
         "dompdf/dompdf": "^3.1",
         "masterminds/html5": "^2.10",
-        "phpmailer/phpmailer": "^6.10"
+        "phpmailer/phpmailer": "^6.10",
+        "vlucas/phpdotenv": "^5.6"
     }
 }
