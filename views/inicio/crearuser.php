@@ -59,20 +59,54 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
     const checkLower  = document.getElementById('checkLower');
     const checkNumber = document.getElementById('checkNumber');
     const checkSpecial= document.getElementById('checkSpecial');
+    const btnGuardar  = document.getElementById('btnGuardar');
+    const passwordMessage = document.getElementById('passwordMessage');
+
     claveInput.addEventListener('input', ()=>{
         const val = claveInput.value;
-        if(val.length >= 8) checkLength.classList.replace('text-danger','text-success'), checkLength.textContent='✔ Al menos 8 caracteres';
-        else checkLength.classList.replace('text-success','text-danger'), checkLength.textContent='Al menos 8 caracteres';
-        if(/[A-Z]/.test(val)) checkUpper.classList.replace('text-danger','text-success'), checkUpper.textContent='✔ Al menos una mayúscula';
-        else checkUpper.classList.replace('text-success','text-danger'), checkUpper.textContent='Al menos una mayúscula';
-        if(/[a-z]/.test(val)) checkLower.classList.replace('text-danger','text-success'), checkLower.textContent='✔ Al menos una minúscula';
-        else checkLower.classList.replace('text-success','text-danger'), checkLower.textContent='Al menos una minúscula';
-        if(/\d/.test(val)) checkNumber.classList.replace('text-danger','text-success'), checkNumber.textContent='✔ Al menos un número';
-        else checkNumber.classList.replace('text-success','text-danger'), checkNumber.textContent='Al menos un número';
-        if(/[!@#$%^&*(),.?":{}|<>]/.test(val)) checkSpecial.classList.replace('text-danger','text-success'), checkSpecial.textContent='✔ Al menos un carácter especial (!@#$%^&*)';
-        else checkSpecial.classList.replace('text-success','text-danger'), checkSpecial.textContent='Al menos un carácter especial (!@#$%^&*)';
+
+        const cumpleLength  = val.length >= 8;
+        const cumpleUpper   = /[A-Z]/.test(val);
+        const cumpleLower   = /[a-z]/.test(val);
+        const cumpleNumber  = /\d/.test(val);
+        const cumpleSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
+
+        actualizarRequisito(checkLength, cumpleLength, 'Al menos 8 caracteres');
+        actualizarRequisito(checkUpper, cumpleUpper, 'Al menos una mayúscula');
+        actualizarRequisito(checkLower, cumpleLower, 'Al menos una minúscula');
+        actualizarRequisito(checkNumber, cumpleNumber, 'Al menos un número');
+        actualizarRequisito(checkSpecial, cumpleSpecial, 'Al menos un carácter especial (!@#$%^&*)');
+
+        // Mensaje de requisitos pendientes
+        let pendientes = [];
+        if (!cumpleLength) pendientes.push("mínimo 8 caracteres");
+        if (!cumpleUpper) pendientes.push("una mayúscula");
+        if (!cumpleLower) pendientes.push("una minúscula");
+        if (!cumpleNumber) pendientes.push("un número");
+        if (!cumpleSpecial) pendientes.push("un carácter especial (!@#$%^&*)");
+
+        if (pendientes.length > 0) {
+            passwordMessage.textContent = "Falta: " + pendientes.join(", ");
+            passwordMessage.classList.replace("text-success", "text-danger");
+            btnGuardar.setAttribute('disabled', true);
+        } else {
+            passwordMessage.textContent = "✔ Contraseña válida";
+            passwordMessage.classList.replace("text-danger", "text-success");
+            btnGuardar.removeAttribute('disabled');
+        }
     });
+
+    function actualizarRequisito(elemento, cumple, texto) {
+        if (cumple) {
+            elemento.classList.replace('text-danger','text-success');
+            elemento.textContent = `✔ ${texto}`;
+        } else {
+            elemento.classList.replace('text-success','text-danger');
+            elemento.textContent = texto;
+        }
+    }
     </script>
+
     <!-- Cargo -->
     <div class="row mb-3">
       <div class="col-md-6">
@@ -155,7 +189,8 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
     </div>
     <!-- Botones -->
     <div class="d-flex justify-content-between flex-wrap gap-2 mt-3">
-      <button type="submit" class="btn btn-primary flex-grow-1" <?= $limiteAlcanzado ? 'disabled' : '' ?>>Guardar usuario</button>
+      <button type="submit" id="btnGuardar" class="btn btn-primary flex-grow-1" <?= $limiteAlcanzado ? 'disabled' : '' ?> disabled>Guardar usuario</button>
+      <div id="passwordMessage" class="text-danger mt-2" style="font-size: 0.9em;"></div>
       <a href="index.php" class="btn btn-danger flex-grow-1">Cancelar</a>
     </div>
   </form>

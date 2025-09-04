@@ -1,9 +1,13 @@
-/* Background login recuperar contraseña y crear usuario */
-
 /* Fondo degradado */
 body {
-  background: linear-gradient(135deg, #3C92A7, #5BC0BE);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin:0;
+  background: radial-gradient(1200px 800px at 10% -20%, #0c1b20, transparent),
+              radial-gradient(1200px 800px at 100% 120%, #0b242c, transparent),
+              linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color:var(--fg);
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
+      min-height:100vh;
+      padding-bottom:84px;
 }
 
 /* Tarjeta centrada */
@@ -14,6 +18,18 @@ body {
   backdrop-filter: blur(10px); /* efecto vidrio */
   animation: fadeIn 0.8s ease-in-out;
 }
+
+:root{
+      --brand: #3C92A6;
+      --brand-2:#24a3c1;
+      --bg-1:#07161a;
+      --bg-2:#0a2128;
+      --fg:#cfe5ea;
+      --muted:#9ab7bf;
+      --card:#0d1e24;
+      --card-border:#16323a;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
 
 /* Título */
 .card h4 {
@@ -51,8 +67,14 @@ body {
 
 /* Animación entrada */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ================= Responsive ================= */

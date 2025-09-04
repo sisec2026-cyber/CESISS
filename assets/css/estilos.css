@@ -41,3 +41,73 @@
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch; /* scroll suave en iOS */
 }
+
+/* CSS REGISTRO USUARIOS
+/* ============================
+   Estilos exclusivos - Usuarios
+   ============================ */
+.usuarios-form {
+  max-width: 700px;
+  margin: auto;
+}
+
+.usuarios-form .card {
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  padding: 2rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.usuarios-form .card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.usuarios-form .form-control, 
+.usuarios-form .form-select {
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  transition: all 0.2s;
+}
+
+.usuarios-form .form-control:focus,
+.usuarios-form .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 6px rgba(13,110,253,0.3);
+}
+
+/* Checklist de contraseña */
+.usuarios-form #passwordChecklist small span {
+  display: inline-block;
+  margin-bottom: 2px;
+  transition: color 0.3s ease-in-out;
+  font-size: 0.9em;
+}
+
+.usuarios-form #passwordChecklist .text-success {
+  font-weight: 500;
+}
+
+/* Mensaje de validación */
+.usuarios-form #passwordMessage {
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+/* Botones */
+.usuarios-form .btn {
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.usuarios-form .btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .usuarios-form .card {
+    padding: 1rem;
+  }
+}
