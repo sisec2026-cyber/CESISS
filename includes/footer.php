@@ -16,7 +16,7 @@
 $cesiss_version = $cesiss_version ?? '';
 $cesiss_env     = $cesiss_env     ?? null;
 $cesiss_base    = $cesiss_base    ?? '/sisec-ui';
-$cesiss_site    = $cesiss_site    ?? 'https://www.cesiss.com';
+$cesiss_site    = $cesiss_site    ?? '/sisec-ui/views/inicio/infosisec.php';
 $cesiss_support = $cesiss_support ?? 'soporte@cesiss.com';
 
 // Logos en el centro:
@@ -24,7 +24,7 @@ $cesiss_logo1      = $cesiss_logo1      ?? '/sisec-ui/public/img/logo.png';
 $cesiss_logo1_alt  = $cesiss_logo1_alt  ?? 'Logo 1';
 $cesiss_logo1_href = $cesiss_logo1_href ?? 'https://www.cesiss.com';
 
-$cesiss_logo2      = $cesiss_logo2      ?? '/sisec-ui/public/img/sucursales/default.png';
+$cesiss_logo2      = $cesiss_logo2      ?? '/sisec-ui/public/img/sucursales/SBlogo.png';
 $cesiss_logo2_alt  = $cesiss_logo2_alt  ?? 'Logo 2';
 $cesiss_logo2_href = $cesiss_logo2_href ?? 'https://www.suburbia.com.mx';
 
@@ -193,7 +193,7 @@ if (!defined('CESISS_FOOTER_JS')) {
         <span class="sep">·</span>
         <a href="<?= htmlspecialchars($cesiss_base) ?>/views/inicio/aviso_privacidad.php">Aviso de privacidad</a>
         <span class="sep">·</span>
-        <a href="<?= htmlspecialchars($cesiss_base) ?>/views/inicio/soporte.php">Soporte</a>
+        <a href="<?= htmlspecialchars($cesiss_base) ?>/views/inicio/soporte.php">Helpdesk</a>
         <span class="sep">·</span>
         <a href="<?= htmlspecialchars($cesiss_site) ?>" target="_blank" rel="noopener">Sitio</a>
       </div>
