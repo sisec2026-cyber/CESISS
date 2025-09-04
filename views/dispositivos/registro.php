@@ -1318,6 +1318,9 @@ window.takePhoto = function() {
 };
 </script>
 
+<?php include __DIR__ . '/../../includes/centro_ayuda_ai.php'; ?>
+
+
 <?php
   $content = ob_get_clean();
   $pageTitle = "Registrar dispositivo";

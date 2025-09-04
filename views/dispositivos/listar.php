@@ -1,4 +1,3 @@
-listar
 <?php 
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion(); // Verifica si hay sesión iniciada
@@ -401,7 +400,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getCurrentListUrl() {
-    const base = window.location.pathname; // e.g. /sisec-ui/views/dispositivos/listar.php
+    const base = window.location.pathname; // e.g. /html-ui/views/dispositivos/listar.php
     const qs = buildParams().toString();
     return qs ? `${base}?${qs}` : base;
   }

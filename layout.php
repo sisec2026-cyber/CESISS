@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>SISEC - <?= htmlspecialchars($pageTitle ?? 'Página') ?></title>
+  <title>CESISS - <?= htmlspecialchars($pageTitle ?? 'Página') ?></title>
+  <link rel="shortcut icon" href="/sisec-ui/public/img/Qr3.png">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Bootstrap CSS y FontAwesome -->
@@ -106,11 +107,11 @@
 
   <!-- Sidebar móvil (offcanvas) -->
   <?php include __DIR__ . '/includes/sidebar_mobile.php'; ?>
+<?php include __DIR__ . '/../sisec-ui/includes/centro_ayuda.php'; ?>
 
   <!-- JS -->
   <script src="/sisec-ui/assets/js/notificaciones.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
   <script>
     // Abre el offcanvas del sidebar móvil si tienes un botón con data-toggle="sidebar"
     document.addEventListener('click', function(e){
