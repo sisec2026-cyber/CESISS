@@ -105,6 +105,10 @@
   @media (max-width: 575.98px) {
     #sugerencia { font-size: .9rem; padding: .5rem .75rem; }
   }
+    .uppercase {
+    text-transform: uppercase;
+    letter-spacing: .02em;
+  }
 </style>
 
 <h2 class="mb-4">Registrar dispositivo</h2>
@@ -1318,7 +1322,146 @@ window.takePhoto = function() {
 };
 </script>
 
-<?php include __DIR__ . '/../../includes/centro_ayuda_ai.php'; ?>
+<script>
+/**
+ * Forzar MAYÚSCULAS en inputs de texto (sin mover el caret)
+ * + Habilitar spellcheck del navegador (lang=es) excepto en campos técnicos.
+ * No rompe tus validaciones existentes (MAC/IP mantienen su lógica).
+ */
+(() => {
+  // Campos que queremos enviar SIEMPRE en MAYÚSCULAS (front)
+  const UPPERCASE_IDS = [
+    // básicos
+    'equipo','marcaManual','modelo','estado','user',
+    // ubicación / tienda
+    'area','rc','Ubicacion_rc',
+    // red
+    'switch','puerto','observaciones',
+    // específicos
+    'servidor','vms','version_vms','version_windows','zona_alarma','tipo_sensor',
+    // creación de nuevas entidades
+    'sucursal_nueva','determinante_nueva',
+    // ocultos de tipo
+    'tipo_alarma','tipo_switch','tipo_cctv'
+  ];
+
+  // Campos DONDE NO querer spellcheck (códigos, modelos, redes…)
+  const NO_SPELLCHECK_IDS = new Set([
+    'macInput','ipInput','modelo','serie','vms','version_vms','switch','puerto',
+    'tag','ip' // los que muestras como disabled
+  ]);
+
+  function enableSpellcheck() {
+    const nodes = document.querySelectorAll('input[type="text"], textarea');
+    nodes.forEach(el => {
+      if (NO_SPELLCHECK_IDS.has(el.id)) return;
+      // Respeta si ya lo forzaste a false en HTML
+      if (el.getAttribute('spellcheck') === 'false') return;
+      el.setAttribute('spellcheck', 'true');
+      el.setAttribute('lang', 'es');
+    });
+  }
+
+  function attachUppercase(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // visual
+    el.classList.add('uppercase');
+    // lógico (valor enviado)
+    const handler = () => {
+      // no tocar contraseñas ni IP/MAC
+      if (el.type === 'password' || el.id === 'ipInput' || el.id === 'macInput') return;
+      const s = el.selectionStart, e = el.selectionEnd;
+      const upper = (el.value || '').toLocaleUpperCase('es-MX');
+      if (el.value !== upper) {
+        el.value = upper;
+        if (typeof s === 'number' && typeof e === 'number') el.setSelectionRange(s, e);
+      }
+    };
+    el.addEventListener('input', handler);
+    // normaliza posibles autocompletados
+    handler();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    enableSpellcheck();
+    UPPERCASE_IDS.forEach(attachUppercase);
+
+    // Última defensa: antes de enviar, volvemos a asegurar mayúsculas y trim
+    const form = document.querySelector('form[action="guardar.php"]');
+    if (form) {
+      form.addEventListener('submit', () => {
+        UPPERCASE_IDS.forEach(id => {
+          const el = document.getElementById(id);
+          if (el && typeof el.value === 'string') {
+            el.value = el.value.toLocaleUpperCase('es-MX').trim();
+          }
+        });
+      });
+    }
+  });
+})();
+</script>
+<script>
+/**
+ * Autocorrección suave en español (acentos y espacios) para campos
+ * de texto NO técnicos. Se ejecuta en blur y antes de enviar.
+ * No toca MAC/IP/MODELO/PASSWORD.
+ */
+(() => {
+  // Campos a autocorregir: evita los técnicos
+  const AUTOCORRECT_IDS = [
+    'equipo','estado','area','observaciones','zona_alarma','tipo_sensor',
+    'sucursal_nueva','determinante_nueva'
+  ];
+
+  // Reglas en MAYÚSCULAS (coinciden con el forzado a mayúsculas)
+  const REPLS = [
+    [/\bCAMARA\b/gu, 'CÁMARA'],
+    [/\bANALOGO\b/gu, 'ANALÓGICO'],
+    [/\bANALOGICO\b/gu, 'ANALÓGICO'],
+    [/\bALAMBRICO\b/gu, 'ALÁMBRICO'],
+    [/\bINALAMBRICO\b/gu, 'INALÁMBRICO']
+  ];
+
+  function autocorrectUpper(str) {
+    let s = (str || '').toString().trim();
+    s = s.replace(/\s{2,}/gu, ' '); // colapsa espacios
+    REPLS.forEach(([re, to]) => { s = s.replace(re, to); });
+    return s;
+  }
+
+  function attach(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // En blur
+    el.addEventListener('blur', () => {
+      if (el.type === 'password') return;
+      el.value = autocorrectUpper(el.value);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    AUTOCORRECT_IDS.forEach(attach);
+
+    // Antes de enviar: última pasada
+    const form = document.querySelector('form[action="guardar.php"]');
+    if (form) {
+      form.addEventListener('submit', () => {
+        AUTOCORRECT_IDS.forEach(id => {
+          const el = document.getElementById(id);
+          if (el && el.type !== 'password') {
+            el.value = autocorrectUpper(el.value);
+          }
+        });
+        // observaciones puede venir largo: sólo limpiar espacios
+        const obs = document.querySelector('[name="observaciones"]');
+        if (obs) obs.value = obs.value.replace(/\s{2,}/gu, ' ').trim();
+      });
+    }
+  });
+})();
+</script>
 
 
 <?php
@@ -1329,4 +1472,3 @@ window.takePhoto = function() {
 
   include __DIR__ . '/../../layout.php';
 ?>
-

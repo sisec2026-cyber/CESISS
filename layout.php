@@ -107,7 +107,7 @@
 
   <!-- Sidebar móvil (offcanvas) -->
   <?php include __DIR__ . '/includes/sidebar_mobile.php'; ?>
-<?php include __DIR__ . '/../sisec-ui/includes/centro_ayuda.php'; ?>
+
 
   <!-- JS -->
   <script src="/sisec-ui/assets/js/notificaciones.js"></script>
