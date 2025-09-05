@@ -22,36 +22,38 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
     <div class="alert alert-danger text-center mb-3 w-100">Se ha alcanzado el límite máximo de 1000 usuarios. No se pueden registrar más.</div>
   <?php endif; ?>
   
-  <form action="/sisec-ui/controllers/UserController.php" method="POST" enctype="multipart/form-data" class="card p-4 shadow-sm w-100" style="max-width: 700px;">
+  <form action="/sisec-ui/controllers/UserController.php" method="POST" enctype="multipart/form-data" class="card p-4 shadow-lg border-0 rounded-4 bg-light w-100" style="max-width: 700px;">
     <input type="hidden" name="accion" value="crear">
     <h4 class="mb-4 text-center">Registrar usuario</h4>
     <!-- Nombre completo -->
     <div class="row mb-3">
       <div class="col-md-6">
-        <label for="nombre" class="form-label">Nombre completo</label>
+        <label for="nombre" class="form-label fw-semibold text-primary">Nombre completo</label>
         <input type="text" class="form-control" id="nombre" name="nombre" required>
       </div>
       <!-- Correo -->
       <div class="col-md-6">
-        <label for="email" class="form-label">Correo</label>
+        <label for="email" class="form-label fw-semibold text-primary">Correo</label>
         <input type="text" class="form-control" id="email" name="email" required>
       </div>
     </div>
     <!-- Clave -->
     <div class="mb-3">
-      <label for="clave" class="form-label">Contraseña</label>
+      <label for="clave" class="form-label fw-semibold text-primary">Contraseña</label>
       <input type="password" class="form-control" id="clave" name="clave" required>
       <div class="mt-2" id="passwordChecklist">
-        <small>
-          <span id="checkLength" class="text-danger">Al menos 8 caracteres</span><br>
-          <span id="checkUpper" class="text-danger">Al menos una mayúscula</span><br>
-          <span id="checkLower" class="text-danger">Al menos una minúscula</span><br>
-          <span id="checkNumber" class="text-danger">Al menos un número</span><br>
-          <span id="checkSpecial" class="text-danger">Al menos un carácter especial (!@#$%^&*)</span>
-        </small>
-      </div>
+  <small>
+    <span id="checkLength" class="badge bg-danger-subtle text-danger border">Al menos 8 caracteres</span><br>
+    <span id="checkUpper" class="badge bg-danger-subtle text-danger border">Al menos una mayúscula</span><br>
+    <span id="checkLower" class="badge bg-danger-subtle text-danger border">Al menos una minúscula</span><br>
+    <span id="checkNumber" class="badge bg-danger-subtle text-danger border">Al menos un número</span><br>
+    <span id="checkSpecial" class="badge bg-danger-subtle text-danger border">Al menos un carácter especial (!@#$%^&*)</span>
+  </small>
+</div>
+
     </div>
-  <!--Script para los carácteres de la contraseña-->
+    <div id="passwordMessage" class="text-danger mt-2" style="font-size: 0.9em;"></div>
+    <!--Script para los carácteres de la contraseña-->
     <script>
     const claveInput = document.getElementById('clave');
     const checkLength = document.getElementById('checkLength');
@@ -97,32 +99,65 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
     });
 
     function actualizarRequisito(elemento, cumple, texto) {
-        if (cumple) {
-            elemento.classList.replace('text-danger','text-success');
-            elemento.textContent = `✔ ${texto}`;
-        } else {
-            elemento.classList.replace('text-success','text-danger');
-            elemento.textContent = texto;
+    if (cumple) {
+        elemento.className = "badge bg-success-subtle text-success border";
+        elemento.textContent = `✔ ${texto}`;
+    } else {
+        elemento.className = "badge bg-danger-subtle text-danger border";
+        elemento.textContent = texto;
+    }
+}
+const confirmarClaveInput = document.getElementById('confirmar_clave');
+const confirmMessage = document.getElementById('confirmMessage');
+
+// Validar confirmación
+confirmarClaveInput.addEventListener('input', ()=>{
+    if (confirmarClaveInput.value !== claveInput.value) {
+        confirmMessage.textContent = "❌ Las contraseñas no coinciden";
+        confirmMessage.className = "text-danger";
+        btnGuardar.setAttribute('disabled', true);
+    } else {
+        confirmMessage.textContent = "✔ Las contraseñas coinciden";
+        confirmMessage.className = "text-success";
+        // Solo habilitar si ya cumple requisitos
+        if(passwordMessage.textContent.includes("válida")){
+            btnGuardar.removeAttribute('disabled');
         }
     }
-    </script>
+});
 
+// Ocultar valor al salir del campo (seguridad visual)
+[claveInput, confirmarClaveInput].forEach(input=>{
+    input.addEventListener('blur', ()=>{
+        if(input.value.trim() !== ""){
+            input.value = "••••••••"; // Mostrar puntos en lugar de texto real
+            setTimeout(()=> input.value = "", 500); // Limpia después de medio segundo
+        }
+    });
+});
+    </script>
+    <!-- Confirmar Clave -->
+    <div class="mb-3">
+      <label for="confirmar_clave" class="form-label fw-semibold text-primary">Confirmar contraseña</label>
+      <input type="password" class="form-control" id="confirmar_clave" name="confirmar_clave" required>
+      <div id="confirmMessage" class="mt-2" style="font-size: 0.9em;"></div>
+    </div>
     <!-- Cargo -->
     <div class="row mb-3">
       <div class="col-md-6">
-        <label for="cargo" class="form-label">Cargo</label>
+        <label for="cargo" class="form-label fw-semibold text-primary">Cargo</label>
         <input type="text" class="form-control" id="cargo" name="cargo" required>
       </div>
       <!-- Empresa -->
       <div class="col-md-6">
-        <label for="empresa" class="form-label">Empresa</label>
+        <label for="empresa" class="form-label fw-semibold text-primary">Empresa</label>
         <input type="text" class="form-control" id="empresa" name="empresa" required>
       </div>
     </div>
     <!-- Rol -->
     <div class="row mb-3">
       <div class="col-md-6">
-        <label for="rol" class="form-label">Rol</label>
+        <label for="rol" class="form-label fw-semibold text-primary">Rol</label>
         <select class="form-select" id="rol" name="rol" required>
           <option value="">Seleccione un rol</option>
           <?php
@@ -144,7 +179,7 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
         </select>
       </div>
       <div class="col-md-6">
-        <label for="foto" class="form-label">Foto de perfil</label>
+        <label for="foto" class="form-label fw-semibold text-primary">Foto de perfil</label>
         <input type="file" class="form-control" id="foto" name="foto" accept="image/*">
       </div>
     </div>
@@ -171,7 +206,7 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
     <!-- Pregunta de seguridad -->
     <div class="row mb-3">
       <div class="col-md-6">
-        <label for="pregunta_seguridad" class="form-label">Pregunta de seguridad</label>
+        <label for="pregunta_seguridad" class="form-label fw-semibold text-primary">Pregunta de seguridad</label>
         <select class="form-select" id="pregunta_seguridad" name="pregunta_seguridad" required>
           <option value="">Seleccione una pregunta</option>
           <option value="¿Cuál es el nombre de tu primera mascota?">¿Cuál es el nombre de tu primera mascota?</option>
@@ -183,14 +218,13 @@ $limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
       </div>
       <!-- Respuesta de seguridad -->
       <div class="col-md-6">
-        <label for="respuesta_seguridad" class="form-label">Respuesta de seguridad</label>
+        <label for="respuesta_seguridad" class="form-label fw-semibold text-primary">Respuesta de seguridad</label>
         <input type="text" class="form-control" id="respuesta_seguridad" name="respuesta_seguridad" required>
       </div>
     </div>
     <!-- Botones -->
     <div class="d-flex justify-content-between flex-wrap gap-2 mt-3">
-      <button type="submit" id="btnGuardar" class="btn btn-primary flex-grow-1" <?= $limiteAlcanzado ? 'disabled' : '' ?> disabled>Guardar usuario</button>
-      <div id="passwordMessage" class="text-danger mt-2" style="font-size: 0.9em;"></div>
+      <button type="submit" id="btnGuardar" class="btn btn-primary flex-grow-1" <?= $limiteAlcanzado ? 'disabled' : '' ?>>Guardar usuario</button>
       <a href="index.php" class="btn btn-danger flex-grow-1">Cancelar</a>
     </div>
   </form>
