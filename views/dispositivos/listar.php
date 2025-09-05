@@ -17,6 +17,7 @@ if ($userId) {
   $filtroCiudad    = !empty($userFilter['ciudad'])    ? (int)$userFilter['ciudad']    : null;
   $filtroMunicipio = !empty($userFilter['municipio']) ? (int)$userFilter['municipio'] : null;
   $filtroSucursal  = !empty($userFilter['sucursal'])  ? (int)$userFilter['sucursal']  : null;
+  $qUser->close();
 }
 
 // Helper para armar WHERE por alcance de usuario
@@ -46,6 +47,7 @@ function buildUserScopeWhere(&$types, &$params, $fRegion, $fCiudad, $fMunicipio,
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 if ($search !== '') {
   // --- BÚSQUEDA con alcance de usuario ---
+  // Usamos LIKE para fecha y casteamos id de forma segura
   $types = "sssssi";
   $params = [];
   $sql = "SELECT d.*, 
@@ -58,34 +60,37 @@ if ($search !== '') {
       es.status_equipo
     FROM dispositivos d
     LEFT JOIN sucursales s ON d.sucursal = s.ID
-    LEFT JOIN determinantes det ON s.id = det.sucursal_id
+    LEFT JOIN determinantes det ON s.ID = det.sucursal_id
     LEFT JOIN municipios m ON s.municipio_id = m.ID
     LEFT JOIN ciudades c ON m.ciudad_id = c.ID
     LEFT JOIN equipos eq ON d.equipo = eq.ID
     LEFT JOIN modelos mo ON d.modelo = mo.ID
     LEFT JOIN status es ON d.estado = es.ID
     WHERE (
-      eq.nom_equipo LIKE ? OR 
-      mo.num_modelos LIKE ? OR 
-      s.nom_sucursal LIKE ? OR 
+      eq.nom_equipo   LIKE ? OR 
+      mo.num_modelos  LIKE ? OR 
+      s.nom_sucursal  LIKE ? OR 
       es.status_equipo LIKE ? OR 
-      d.fecha = ? OR 
-      d.id = ?)";
+      DATE_FORMAT(d.fecha, '%Y-%m-%d') LIKE ? OR 
+      d.id = ?
+    )";
   $extra  = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
   if ($extra) $sql .= " AND " . implode(" AND ", $extra);
   $sql .= " ORDER BY d.id ASC";
   $stmt = $conn->prepare($sql);
+
   $likeSearch = "%$search%";
-  $bindValues = [$likeSearch, $likeSearch, $likeSearch, $likeSearch, $search, $search];
+  $searchId = ctype_digit($search) ? (int)$search : -1; // si no es numérico, no matchea
+  $bindValues = [$likeSearch, $likeSearch, $likeSearch, $likeSearch, $likeSearch, $searchId];
   $paramsFull = array_merge($bindValues, $params);
   $stmt->bind_param($types, ...$paramsFull);
   $stmt->execute();
   $result = $stmt->get_result();
 
 } elseif (isset($_GET['sucursal_id']) && is_numeric($_GET['sucursal_id'])) {
-  // --- Listado por sucursal seleccionada ---
+  // --- Listado por sucursal seleccionada (respetando alcance del usuario) ---
   $sucursalId = intval($_GET['sucursal_id']);
-  $stmt = $conn->prepare("SELECT d.*, 
+  $sql = "SELECT d.*, 
       det.nom_determinante AS determinantes,
       s.nom_sucursal, 
       m.nom_municipio, 
@@ -95,15 +100,21 @@ if ($search !== '') {
       es.status_equipo
     FROM dispositivos d
     LEFT JOIN sucursales s ON d.sucursal = s.ID
-    LEFT JOIN determinantes det ON s.id = det.sucursal_id
+    LEFT JOIN determinantes det ON s.ID = det.sucursal_id
     LEFT JOIN municipios m ON s.municipio_id = m.ID
     LEFT JOIN ciudades c ON m.ciudad_id = c.ID
     LEFT JOIN equipos eq ON d.equipo = eq.ID
     LEFT JOIN modelos mo ON d.modelo = mo.ID
     LEFT JOIN status es ON d.estado = es.ID
-    WHERE d.sucursal = ?
-    ORDER BY d.id ASC");
-  $stmt->bind_param("i", $sucursalId);
+    WHERE d.sucursal = ?";
+  // refuerza alcance (opcional, no rompe si ya coincide):
+  $types = "i";
+  $params = [$sucursalId];
+  $extra = buildUserScopeWhere($types, $params, $filtroRegion, $filtroCiudad, $filtroMunicipio, $filtroSucursal);
+  if ($extra) $sql .= " AND " . implode(" AND ", $extra);
+  $sql .= " ORDER BY d.id ASC";
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param($types, ...$params);
   $stmt->execute();
   $result = $stmt->get_result();
 
@@ -123,7 +134,7 @@ if ($search !== '') {
         es.status_equipo
       FROM dispositivos d
       LEFT JOIN sucursales s ON d.sucursal = s.ID
-      LEFT JOIN determinantes det ON s.id = det.sucursal_id
+      LEFT JOIN determinantes det ON s.ID = det.sucursal_id
       LEFT JOIN municipios m ON s.municipio_id = m.ID
       LEFT JOIN ciudades c ON m.ciudad_id = c.ID
       LEFT JOIN equipos eq ON d.equipo = eq.ID
@@ -177,10 +188,6 @@ ob_start();
   ?>
 <?php endif; ?>
 
-
-
-
-
 <!-- Buscador y botón alineados -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
   <form id="formBusqueda" method="GET" style="display: none; gap: 10px;">
@@ -226,7 +233,7 @@ ob_start();
       // Cargar ciudades según alcance
       $qCiudades = "SELECT ID, nom_ciudad FROM ciudades";
       $w = [];
-      if ($filtroRegion) { $w[] = "region_id = " . (int)$filtroRegion; } // ajusta si tu campo difiere
+      if ($filtroRegion) { $w[] = "region_id = " . (int)$filtroRegion; }
       if ($filtroCiudad) { $w[] = "ID = " . (int)$filtroCiudad; }
       if ($w) $qCiudades .= " WHERE " . implode(" AND ", $w);
       $qCiudades .= " ORDER BY nom_ciudad";
@@ -260,7 +267,7 @@ ob_start();
   @media (max-width: 768px) {
     .btn, .form-control { font-size: 0.9rem; padding: 6px 10px; }
     form { flex-wrap: wrap; }
-    .table td, .table th { font-size: 0.8rem; }
+    .table td, .table th { font-size: 0.8rem; white-space: normal; } /* envolver en móvil */
   }
 </style>
 
@@ -374,6 +381,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const STORAGE_KEY = 'dispositivos:listar:filtros';
 
   // ---------- Helpers ----------
+  function initTooltips(scope=document) {
+    if (!window.bootstrap || !bootstrap.Tooltip) return;
+    const list = [].slice.call(scope.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    list.forEach(el => new bootstrap.Tooltip(el));
+  }
+
   function saveFilters() {
     const data = {
       ciudad:    ciudadSelect.value || '',
@@ -400,7 +413,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getCurrentListUrl() {
-    const base = window.location.pathname; // e.g. /html-ui/views/dispositivos/listar.php
+    const base = window.location.pathname;
     const qs = buildParams().toString();
     return qs ? `${base}?${qs}` : base;
   }
@@ -429,18 +442,19 @@ document.addEventListener("DOMContentLoaded", function () {
     tbody.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Selecciona una sucursal para ver los dispositivos</td></tr>`;
   }
 
-  // Cargas encadenadas (PROMESAS) para evitar “bloqueos”
+   // Cargas encadenadas (PROMESAS)
   function loadMunicipios(ciudadId) {
     municipioSelect.innerHTML = '<option value="">-- Selecciona un municipio --</option>';
     sucursalSelect.innerHTML  = '<option value="">-- Selecciona una sucursal --</option>';
-    sucursalSelect.disabled   = true && !FIXED_SUCURSAL;
+    sucursalSelect.disabled   = true;
 
     if (!ciudadId) {
       municipioSelect.disabled = true;
       return Promise.resolve();
     }
 
-    municipioSelect.disabled = false || !!FIXED_MUNICIPIO;
+    // Habilitamos municipio (si no hay uno fijo por alcance)
+    municipioSelect.disabled = false;
 
     return fetch(`obtener_municipios.php?ciudad_id=${encodeURIComponent(ciudadId)}`)
       .then(r => r.json())
@@ -448,6 +462,8 @@ document.addEventListener("DOMContentLoaded", function () {
         data.forEach(m => {
           municipioSelect.innerHTML += `<option value="${m.ID}">${m.nom_municipio}</option>`;
         });
+
+        // Si el usuario tiene municipio fijo, lo aplicamos y bloqueamos
         if (FIXED_MUNICIPIO) {
           municipioSelect.value = String(FIXED_MUNICIPIO);
           municipioSelect.disabled = true;
@@ -463,7 +479,8 @@ document.addEventListener("DOMContentLoaded", function () {
       return Promise.resolve();
     }
 
-    sucursalSelect.disabled = false || !!FIXED_SUCURSAL;
+    // Habilitamos sucursal (si no hay una fija por alcance)
+    sucursalSelect.disabled = false;
 
     return fetch(`obtener_sucursales.php?municipio_id=${encodeURIComponent(municipioId)}`)
       .then(r => r.json())
@@ -471,6 +488,8 @@ document.addEventListener("DOMContentLoaded", function () {
         data.forEach(s => {
           sucursalSelect.innerHTML += `<option value="${s.ID}">${s.nom_sucursal}</option>`;
         });
+
+        // Si el usuario tiene sucursal fija, la aplicamos y bloqueamos
         if (FIXED_SUCURSAL) {
           sucursalSelect.value = String(FIXED_SUCURSAL);
           sucursalSelect.disabled = true;
@@ -491,29 +510,62 @@ document.addEventListener("DOMContentLoaded", function () {
     const params = buildParams();
     fetch(`buscar_dispositivos.php?${params.toString()}`)
       .then(response => response.text())
-      .then(html => { tbody.innerHTML = html; });
+      .then(html => {
+        tbody.innerHTML = html;
+        // re-init tooltips después del render dinámico
+        if (window.bootstrap && bootstrap.Tooltip) {
+          const list = [].slice.call(tbody.querySelectorAll('[data-bs-toggle="tooltip"]'));
+          list.forEach(el => new bootstrap.Tooltip(el));
+        }
+      });
   }
 
-  // -------- Inicialización: URL > sessionStorage > FIXED_* --------
+  // -------- Inicialización: URL > FIXED_* (simplificado: prioriza lo que venga del index) --------
   (function initFromURLorStorage() {
     const url = new URLSearchParams(window.location.search);
-    const hasURL = url.has('ciudad_id') || url.has('municipio_id') || url.has('sucursal_id') || url.has('search');
 
-    const persisted = hasURL ? null : loadPersisted();
+    let targetCiudad    = url.get('ciudad_id')    || (FIXED_CIUDAD    ? String(FIXED_CIUDAD)    : '');
+    let targetMunicipio = url.get('municipio_id') || (FIXED_MUNICIPIO ? String(FIXED_MUNICIPIO) : '');
+    let targetSucursal  = url.get('sucursal_id')  || (FIXED_SUCURSAL  ? String(FIXED_SUCURSAL)  : '');
+    const targetSearch  = url.get('search')       || '';
 
-    const targetCiudad    = hasURL ? (url.get('ciudad_id') || '')    : (persisted.ciudad    ?? (FIXED_CIUDAD    ? String(FIXED_CIUDAD)    : ''));
-    const targetMunicipio = hasURL ? (url.get('municipio_id') || '') : (persisted.municipio ?? (FIXED_MUNICIPIO ? String(FIXED_MUNICIPIO) : ''));
-    const targetSucursal  = hasURL ? (url.get('sucursal_id') || '')  : (persisted.sucursal  ?? (FIXED_SUCURSAL  ? String(FIXED_SUCURSAL)  : ''));
-    const targetSearch    = hasURL ? (url.get('search') || '')       : (persisted.search    ?? '');
+    // Caso especial: viene SOLO sucursal_id (click directo desde index)
+    const soloSucursal = !!targetSucursal && !targetCiudad && !targetMunicipio;
 
     if (targetCiudad) ciudadSelect.value = String(targetCiudad);
     if (searchInput)  searchInput.value  = targetSearch;
 
-    Promise.resolve()
+    const chain = Promise.resolve()
+      .then(() => {
+        if (soloSucursal) {
+          // Resolver ciudad/municipio para esa sucursal
+          return fetch(`obtener_ruta_sucursal.php?sucursal_id=${encodeURIComponent(targetSucursal)}`)
+            .then(r => r.json())
+            .then(info => {
+              if (info && !info.error) {
+                targetCiudad    = String(info.ciudad_id);
+                targetMunicipio = String(info.municipio_id);
+                ciudadSelect.value = targetCiudad;
+              }
+            })
+            .catch(() => {});
+        }
+      })
       .then(() => targetCiudad    ? loadMunicipios(targetCiudad) : null)
-      .then(() => { if (targetMunicipio) municipioSelect.value = String(targetMunicipio); return targetMunicipio ? loadSucursales(targetMunicipio) : null; })
-      .then(() => { if (targetSucursal)  sucursalSelect.value   = String(targetSucursal); })
+      .then(() => {
+        if (targetMunicipio) {
+          municipioSelect.value = String(targetMunicipio);
+          return loadSucursales(targetMunicipio);
+        }
+      })
+      .then(() => {
+        if (targetSucursal) {
+          sucursalSelect.value = String(targetSucursal);
+        }
+      })
       .then(() => { actualizarTabla(); });
+
+    chain.catch(() => { actualizarTabla(); });
   })();
 
   // -------- Eventos de UI --------
@@ -538,6 +590,10 @@ document.addEventListener("DOMContentLoaded", function () {
   sucursalSelect.addEventListener('change', actualizarTabla);
 
   if (searchInput) {
+    document.getElementById('formBusqueda').addEventListener('submit', function(e){
+      e.preventDefault();
+      actualizarTabla();
+    });
     searchInput.addEventListener('keyup', function() {
       saveFilters();
       const suc = sucursalSelect.value;
@@ -545,7 +601,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const params = buildParams();
       fetch(`buscar_dispositivos.php?${params.toString()}`)
         .then(r => r.text())
-        .then(html => { tbody.innerHTML = html; });
+        .then(html => { 
+          tbody.innerHTML = html; 
+          initTooltips(tbody);
+        });
     });
   }
 
@@ -576,6 +635,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Si el navegador usa BFCache, restaurar visibilidad de UI sin recargar
   window.addEventListener('pageshow', () => toggleUIBySelection());
+
+  // Inicializa tooltips del render inicial
+  initTooltips(document);
 });
 </script>
 <script>
@@ -583,7 +645,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const alerts = document.querySelectorAll('.alert[data-autohide="true"]');
     alerts.forEach(function(el) {
       setTimeout(function() {
-        // Bootstrap 5: cerrar programáticamente
         if (window.bootstrap && bootstrap.Alert) {
           const instance = bootstrap.Alert.getOrCreateInstance(el);
           instance.close();
@@ -594,7 +655,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 </script>
-
 
 <?php
 $content = ob_get_clean();

@@ -83,6 +83,60 @@ try {
   $sucursal_nueva       = trim($_POST['sucursal_nueva'] ?? ''); // texto cuando es nueva
   $determinante_id_post = $_POST['determinante_id'] ?? '';       // puede ser ID o '__NEW_DETERMINANTE__'
   $determinante_nueva   = trim($_POST['determinante_nueva'] ?? '');
+// --- Normalización a MAYÚSCULAS en backend (sin tocar modelo ni pass) ---
+$estado_nombre   = normalize_upper($estado_nombre);
+$observaciones   = normalize_upper($observaciones);
+$serie           = normalize_upper($serie);
+$vms             = normalize_upper($vms);
+$servidor        = normalize_upper($servidor);
+$switch_txt      = normalize_upper($switch_txt);
+$puerto          = normalize_upper($puerto);
+$area            = normalize_upper($area);
+$rc              = normalize_upper($rc);
+$user_txt        = normalize_upper($user_txt);      // si no quieres forzar usuario en mayúsculas, comenta esta línea
+$ubicacion_rc    = normalize_upper($ubicacion_rc);
+$version_vms     = normalize_upper($version_vms);
+$version_windows = normalize_upper($version_windows);
+$zona_alarma     = normalize_upper($zona_alarma);
+$tipo_sensor     = normalize_upper($tipo_sensor);
+
+// Compatibilidad legacy para mostrar en correo (si llegan)
+$sucursal_nombre  = normalize_upper($sucursal_nombre);
+$determinante_nom = normalize_upper($determinante_nom);
+
+// Si crean nuevas entidades desde el formulario, guárdalas en mayúsculas
+$sucursal_nueva     = normalize_upper($sucursal_nueva);
+$determinante_nueva = normalize_upper($determinante_nueva);
+// --- Autocorrección suave (acentos y espacios) en backend ---
+$autoFix = function($s) {
+  $s = preg_replace('/\s{2,}/u', ' ', (string)$s);
+  // Tabla en MAYÚSCULAS (porque ya normalizamos arriba a mayúsculas)
+  $map = [
+    'CAMARA'      => 'CÁMARA',
+    'ANALOGO'     => 'ANALÓGICO',
+    'ANALOGICO'   => 'ANALÓGICO',
+    'ALAMBRICO'   => 'ALÁMBRICO',
+    'INALAMBRICO' => 'INALÁMBRICO',
+  ];
+  foreach ($map as $from => $to) {
+    // límites de palabra para no romper textos largos
+    $s = preg_replace('/\b'.preg_quote($from,'/').'\b/u', $to, $s);
+  }
+  return trim($s);
+};
+
+// Aplica SÓLO a campos de texto no técnicos
+$equipo_nombre       = $autoFix($equipo_nombre);
+$estado_nombre       = $autoFix($estado_nombre);
+$tipo_alarma_nombre  = $autoFix($tipo_alarma_nombre);
+$tipo_switch_nombre  = $autoFix($tipo_switch_nombre);
+$tipo_cctv_nombre    = $autoFix($tipo_cctv_nombre);
+$zona_alarma         = $autoFix($zona_alarma);
+$observaciones       = $autoFix($observaciones);
+
+// Si crean nuevas entidades, también:
+$sucursal_nueva      = $autoFix($sucursal_nueva);
+$determinante_nueva  = $autoFix($determinante_nueva);
 
   // MAC/IP
   list($mac, $macErr) = normalize_mac($_POST['mac'] ?? '');

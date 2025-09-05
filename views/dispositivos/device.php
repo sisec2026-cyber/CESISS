@@ -33,8 +33,8 @@ $stmt = $conn->prepare("
     LEFT JOIN ciudades c   ON m.ciudad_id = c.id
     LEFT JOIN equipos eq   ON d.equipo = eq.id
     LEFT JOIN modelos mo   ON d.modelo = mo.id
-    LEFT JOIN marcas  ma   ON mo.marca_id = ma.id_marcas        -- <<< PK real
-    LEFT JOIN marcas  mad  ON d.marca_id = mad.id_marcas         -- por si la marca viene directo en el dispositivo
+    LEFT JOIN marcas  ma   ON mo.marca_id = ma.id_marcas
+    LEFT JOIN marcas  mad  ON d.marca_id = mad.id_marcas
     LEFT JOIN status  es   ON d.estado = es.id
     LEFT JOIN alarma  a    ON a.id  = d.alarma_id
     LEFT JOIN cctv    cc   ON cc.id = d.cctv_id
@@ -195,7 +195,7 @@ $back = !empty($_GET['return_url'])
     <?php if (!empty($device['imagen'])): ?>
       <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen']) ?>" 
            alt="Imagen principal" 
-           class="img-fluid rounded shadow-sm mb-3" 
+           class="img-fluid rounded shadow-sm mb-3 zoomable" 
            style="max-height: 250px; object-fit: scale-down;">
     <?php else: ?>
       <div class="text-muted">Sin imagen principal</div>
@@ -365,7 +365,8 @@ $back = !empty($_GET['return_url'])
           <td>
             <?php if (!empty($device['imagen2'])): ?>
               <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen2']) ?>" 
-                   class="img-fluid rounded shadow-sm mb-2" 
+                   class="img-fluid rounded shadow-sm mb-2 zoomable" 
+                   alt="Imagen antes"
                    style="max-height: 150px; object-fit: scale-down;">
             <?php else: ?>
               <span class="text-muted">No disponible</span>
@@ -377,7 +378,8 @@ $back = !empty($_GET['return_url'])
           <td>
             <?php if (!empty($device['imagen3'])): ?>
               <img src="/sisec-ui/public/uploads/<?= htmlspecialchars($device['imagen3']) ?>" 
-                   class="img-fluid rounded shadow-sm mb-2" 
+                   class="img-fluid rounded shadow-sm mb-2 zoomable" 
+                   alt="Imagen después"
                    style="max-height: 150px; object-fit: scale-down;">
             <?php else: ?>
               <span class="text-muted">No disponible</span>
@@ -389,7 +391,7 @@ $back = !empty($_GET['return_url'])
           <td>
             <?php if (!empty($device['qr'])): ?>
               <img src="/sisec-ui/public/qrcodes/<?= htmlspecialchars($device['qr']) ?>" 
-                   width="150" alt="Código QR">
+                   width="150" alt="Código QR" class="zoomable">
             <?php else: ?>
               <span class="text-muted">No disponible</span>
             <?php endif; ?>
@@ -434,6 +436,163 @@ $back = !empty($_GET['return_url'])
   </div>
 </div>
 
+<!-- ===== Lightbox simple para zoom (dentro del buffer) ===== -->
+<style>
+  .lb-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.9);
+    display:none; align-items:center; justify-content:center;
+    z-index: 3000;
+  }
+  .lb-overlay.open{ display:flex; }
+
+  .lb-stage{
+    position:relative; width:90vw; height:90vh;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; background:transparent;
+  }
+
+  .lb-img{
+    user-select:none; -webkit-user-drag:none;
+    will-change: transform;
+    transform: translate(var(--tx,0px), var(--ty,0px)) scale(var(--z,1));
+    transition: transform .08s ease-out;
+    max-width: none; max-height: none;
+    cursor: grab;
+  }
+  .lb-img:active{ cursor: grabbing; }
+
+  .lb-controls{
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+    display:flex; gap:.5rem; flex-wrap:wrap; justify-content:center;
+  }
+  .lb-btn{
+    background:#fff; color:#111; border:0; border-radius:8px; padding:.5rem .75rem;
+    font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,.25); cursor:pointer;
+  }
+  .lb-btn:active{ transform: translateY(1px); }
+
+  .lb-close{
+    position:absolute; top:14px; right:14px;
+    background:#fff; color:#111; border:0; width:42px; height:42px;
+    border-radius:999px; font-size:20px; line-height:42px; text-align:center;
+    cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.25);
+  }
+
+  @media (max-width: 576px){
+    .lb-controls{ bottom:12px; }
+    .lb-btn{ padding:.45rem .6rem; }
+  }
+</style>
+
+<div class="lb-overlay" id="lb">
+  <div class="lb-stage" id="lbStage" aria-modal="true" role="dialog">
+    <img id="lbImg" class="lb-img" alt="Vista ampliada">
+    <button class="lb-close" id="lbClose" aria-label="Cerrar">×</button>
+    <div class="lb-controls">
+      <button class="lb-btn" id="lbZoomIn">+</button>
+      <button class="lb-btn" id="lbZoomOut">−</button>
+      <button class="lb-btn" id="lbReset">100%</button>
+      <button class="lb-btn" id="lbFit">Ajustar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const overlay = document.getElementById('lb');
+  const stage   = document.getElementById('lbStage');
+  const imgEl   = document.getElementById('lbImg');
+  const btnIn   = document.getElementById('lbZoomIn');
+  const btnOut  = document.getElementById('lbZoomOut');
+  const btnRes  = document.getElementById('lbReset');
+  const btnFit  = document.getElementById('lbFit');
+  const btnClose= document.getElementById('lbClose');
+
+  let z=1, tx=0, ty=0, isDragging=false, sx=0, sy=0;
+
+  function apply(){
+    imgEl.style.setProperty('--z', z);
+    imgEl.style.setProperty('--tx', tx+'px');
+    imgEl.style.setProperty('--ty', ty+'px');
+  }
+  function reset(){
+    z=1; tx=0; ty=0; apply();
+  }
+  function fitToStage(){
+    const maxW = stage.clientWidth, maxH = stage.clientHeight;
+    const naturalW = imgEl.naturalWidth, naturalH = imgEl.naturalHeight;
+    if(!naturalW || !naturalH){ reset(); return; }
+    const scale = Math.min(maxW/naturalW, maxH/naturalH);
+    z = Math.max(scale, 0.1);
+    tx=0; ty=0; apply();
+  }
+
+  function open(src){
+    imgEl.src = src;
+    overlay.classList.add('open');
+    if(imgEl.complete) { fitToStage(); }
+    else { imgEl.onload = fitToStage; }
+    document.documentElement.style.overflow = 'hidden';
+  }
+  function close(){
+    overlay.classList.remove('open');
+    imgEl.src = '';
+    reset();
+    document.documentElement.style.overflow = '';
+  }
+
+  document.addEventListener('click', (e)=>{
+    const t = e.target;
+    if(t && t.classList && t.classList.contains('zoomable')){
+      e.preventDefault();
+      open(t.getAttribute('src'));
+    }
+  });
+
+  overlay.addEventListener('click', (e)=>{
+    if(e.target === overlay) close();
+  });
+  btnClose.addEventListener('click', close);
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape' && overlay.classList.contains('open')) close();
+  });
+
+  imgEl.addEventListener('mousedown', (e)=>{
+    if(z <= 1) return;
+    isDragging = true; sx = e.clientX; sy = e.clientY;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(!isDragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    sx = e.clientX; sy = e.clientY;
+    tx += dx; ty += dy; apply();
+  });
+  window.addEventListener('mouseup', ()=>{ isDragging=false; });
+
+  stage.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const delta = Math.sign(e.deltaY);
+    const factor = (delta>0) ? 0.9 : 1.1;
+    const prevZ = z;
+    z = Math.min(10, Math.max(0.1, z * factor));
+
+    const rect = imgEl.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width/2;
+    const cy = e.clientY - rect.top  - rect.height/2;
+    tx -= cx * (z/prevZ - 1);
+    ty -= cy * (z/prevZ - 1);
+
+    apply();
+  }, { passive:false });
+
+  btnIn.addEventListener('click', ()=>{ z=Math.min(10, z*1.2); apply(); });
+  btnOut.addEventListener('click', ()=>{ z=Math.max(0.1, z/1.2); apply(); });
+  btnRes.addEventListener('click', reset);
+  btnFit.addEventListener('click', fitToStage);
+})();
+</script>
 <?php
 $content = ob_get_clean();
 $pageTitle = "Ficha dispositivo " . htmlspecialchars($device['nom_sucursal'] ?? '');
