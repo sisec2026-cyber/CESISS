@@ -91,9 +91,9 @@
       animation: scrollBrands 20s linear infinite;
     }
     .carousel-track img {
-      height: 200px;        /* Fuerza altura exacta */
-      width: 200px;         /* Opcional: fuerza ancho exacto */
-      object-fit: contain; /* Ajusta dentro del espacio sin deformarse */
+      height: 200px;
+      width: 200px;
+      object-fit: contain;
       transition: filter 0.3s;
     }
 
@@ -102,13 +102,13 @@
     }
 
     .certificaciones {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 20px;
-  justify-items: center;
-  align-items: center;
-  margin-top: 20px;
-}
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    justify-items: center;
+    align-items: center;
+    margin-top: 20px;
+  }
 
 .certificaciones img {
   width: 180px;
@@ -167,28 +167,22 @@
       <div class="carousel-container">
         <div class="carousel-track">
           <!-- Inserta aquí tus imágenes de marcas -->
-          <img src="/../sisec-ui/public/img/oficinas/CDMX1.png" alt="cdmx1">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX2.png" alt="cdmx2">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX3.png" alt="cdmx3">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX4.png" alt="cdmx4">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX5.png" alt="cdmx5">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX8.png" alt="cdmx8">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX9.png" alt="cdmx9">
-          <img src="/../sisec-ui/public/img/oficinas/CDMX10.png" alt="cdmx10">
+          <img src="/../sisec-ui/public/img/oficinas/CDMX1.jpeg" alt="cdmx1">
+          <img src="/../sisec-ui/public/img/oficinas/CDMX2.jpeg" alt="cdmx2">
+          <img src="/../sisec-ui/public/img/oficinas/CDMX3.jpeg" alt="cdmx3">
+          <img src="/../sisec-ui/public/img/oficinas/CDMX4.jpeg" alt="cdmx4">
+          <img src="/../sisec-ui/public/img/oficinas/CDMX5.jpeg" alt="cdmx5">
         </div>
       </div>
       <p>Puebla</p>
       <div class="carousel-container">
         <div class="carousel-track">
           <!-- Inserta aquí tus imágenes de marcas -->
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA1.jpg" alt="puebla1">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA2.jpg" alt="puebla2">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA3.jpg" alt="puebla3">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA4.jpg" alt="puebla4">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA5.jpg" alt="puebla5">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA6.jpg" alt="puebla6">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA7.jpg" alt="puebla7">
-          <img src="/../sisec-ui/public/img/oficinas/PUEBLA8.jpg" alt="puebla8">
+          <img src="/../sisec-ui/public/img/oficinas/PUEBLA1.jpeg" alt="puebla1">
+          <img src="/../sisec-ui/public/img/oficinas/PUEBLA2.jpeg" alt="puebla2">
+          <img src="/../sisec-ui/public/img/oficinas/PUEBLA3.jpeg" alt="puebla3">
+          <img src="/../sisec-ui/public/img/oficinas/PUEBLA4.jpeg" alt="puebla4">
+          <img src="/../sisec-ui/public/img/oficinas/PUEBLA5.jpeg" alt="puebla5">
         </div>
       </div>
     </div>

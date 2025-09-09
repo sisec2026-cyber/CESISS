@@ -104,7 +104,8 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
       <div class="subtitle">Cuéntanos tu problema o solicitud. Te responderemos al correo proporcionado.</div>
 
       <!-- Deja activa la validación nativa del navegador -->
-      <form method="post" action="<?= htmlspecialchars($BASE . '/actions/enviar_soporte.php') ?>" id="formSoporte" autocomplete="on">
+      <form method="post" action="<?= htmlspecialchars($BASE . '/actions/enviar_soporte.php') ?>" 
+      id="formSoporte" autocomplete="on" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
         <!-- honeypot anti-bots -->
@@ -134,6 +135,11 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
               <option value="Crítica">Crítica</option>
             </select>
           </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label class="icon-label" for="archivo"><i class="fa-solid fa-paperclip"></i> Adjuntar archivo</label>
+            <input type="file" id="archivo" name="archivo[]" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple />
         </div>
 
         <div class="grid-1" style="margin-top:10px;">

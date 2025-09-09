@@ -1,6 +1,6 @@
 <?php
 // Página pública: NO requiere login
-$TITLE = 'Aviso de Privacidad - CESISS';
+$TITLE = 'CESISS - Aviso de Privacidad';
 ?>
 <!doctype html>
 <html lang="es">
@@ -11,48 +11,109 @@ $TITLE = 'Aviso de Privacidad - CESISS';
   <!-- Font Awesome (iconos) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
-    :root{
+    :root {
       --brand: #3C92A6;
-      --brand-2:#24a3c1;
-      --bg-1:#07161a;
-      --bg-2:#0a2128;
-      --fg:#cfe5ea;
-      --muted:#9ab7bf;
-      --card:#0d1e24;
-      --card-border:#16323a;
+      --brand-2: #24a3c1;
+      --bg-1: #07161a;
+      --bg-2: #0a2128;
+      --fg: #cfe5ea;
+      --muted: #9ab7bf;
+      --card: #0d1e24;
+      --card-border: #16323a;
       --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --accent: #38d4f3;
     }
-    body{
-      margin:0; background: radial-gradient(1200px 800px at 10% -20%, #0c1b20, transparent),
-                           radial-gradient(1200px 800px at 100% 120%, #0b242c, transparent),
-                           linear-gradient(180deg, var(--bg-1), var(--bg-2));
-      color:var(--fg); font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
-      min-height:100vh; padding-bottom:84px; /* espacio para el footer fijo */
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 10% -20%, #0c1b20, transparent),
+                  radial-gradient(1200px 800px at 100% 120%, #0b242c, transparent),
+                  linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+      min-height: 100vh;
+      padding-bottom: 84px;
     }
-    .container{ max-width: 980px; margin: 90px auto 40px; padding: 0 16px; position: relative; z-index: 1; }
-    .card{
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .container {
+      max-width: 980px;
+      margin: 90px auto 40px;
+      padding: 0 16px;
+    }
+    .card {
       background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid var(--card-border); border-radius:16px; box-shadow: var(--shadow);
-      padding:24px; position: relative; z-index: 2;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      animation: fadeInUp .8s ease;
     }
-    h1{
-      display:flex; gap:.6rem; align-items:center; margin:0 0 8px 0;
+    h1 {
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      margin: 0 0 8px 0;
       font-size: clamp(22px, 2.6vw, 28px);
+      font-family: "Montserrat", sans-serif;
+      color: #ffffff;
+      padding-bottom: .6rem;
+      border-bottom: 2px solid var(--brand-2);
     }
-    .subtitle{ color:var(--muted); margin-bottom: 18px; }
-    h2{ margin-top: 24px; color:#e7f6fa; font-size: 1.15rem; }
-    p, li{ color:#cfe5ea; line-height:1.6; }
-    .tag{
-      display:inline-flex; align-items:center; gap:.4rem;
-      border:1px solid var(--card-border); background:#0c1b20; color:#aee6f2;
-      font-size:.85rem; padding:.2rem .6rem; border-radius:999px; margin-right:.4rem;
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-style: italic;
+      font-size: 0.9rem;
     }
-    a { color:#7fd3e5; text-decoration:none; }
-    a:hover { color:#a6e9f5; text-decoration:underline; }
-    .list{ padding-left: 1rem; }
-
-    /* Chip ARCO */
-    .hl{
+    h2 {
+      margin: 32px 0 12px;
+      color: #e7f6fa;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-weight: 600;
+      position: relative;
+    }
+    h2::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+      margin-left: .6rem;
+    }
+    p, li {
+      color: #cfe5ea;
+      line-height: 1.65;
+      font-size: 0.95rem;
+    }
+    .list {
+      list-style: none;
+      padding-left: 1.5rem;
+      margin-bottom: 16px;
+      counter-reset: item;
+    }
+    .list li {
+      counter-increment: item;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      transition: background .2s ease;
+      position: relative;
+    }
+    .list li::before {
+      content: counter(item) ".";
+      position: absolute;
+      left: -1.2rem;
+      color: var(--accent);
+      font-weight: bold;
+    }
+    .list li:hover {
+      background: rgba(255,255,255,.03);
+    }
+    .hl {
       display:inline-flex; align-items:center;
       background: linear-gradient(180deg, rgba(127,211,229,.18), rgba(127,211,229,.08));
       border: 1px solid var(--card-border);
@@ -60,66 +121,85 @@ $TITLE = 'Aviso de Privacidad - CESISS';
       padding: 0 .45rem;
       color: #aee6f2 !important;
       text-decoration: none !important;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
-      transition: box-shadow .2s ease, transform .08s ease;
-      white-space: nowrap;
+      font-size: 0.9rem;
+      transition: background .2s ease, transform .08s ease;
       cursor: pointer;
-      position: relative; z-index: 3;
-      pointer-events: auto !important; /* fuerza clic en el propio elemento */
     }
-    .hl:hover, .hl:focus-visible{
-      text-decoration: none;
-      box-shadow: 0 0 0 3px rgba(127,211,229,.25), 0 0 18px rgba(127,211,229,.25);
+    .hl:hover {
+      background: rgba(127,211,229,.25);
       transform: translateY(-1px);
-      outline: none;
     }
-
-    /* Si usas topbar con pseudo-elementos, que no bloqueen clics */
-    header.topbar::before,
-    header.topbar::after { pointer-events: none !important; }
-
-    /* --- DEBUG opcional para ver overlays (quitalo luego) --- */
-    /* * { outline: 1px dashed rgba(255,0,0,.15); } */
+    .back-home {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    text-decoration: none;
+    color: var(--accent);
+    font-size: .9rem;
+    font-weight: 500;
+    transition: color .2s ease;
+  }
+  .back-home:hover {
+    color: #ffffff;
+  }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <h1><i class="fa-solid fa-shield-halved"></i> Aviso de Privacidad</h1>
+      <a href="/sisec-ui/index.php" class="back-home"><i class="fa-solid fa-house"></i> Volver al inicio</a>
+      <br><br>
+      <h1><i class="fa-solid fa-shield-halved"></i> Aviso de Privacidad Integral</h1>
       <div class="subtitle">Última actualización: <?= date('F Y') ?></div>
+        <p>En <strong>CESISS</strong> nos tomamos muy en serio la protección de tus datos personales.</p>
+      <p>Este aviso describe qué datos recopilamos, con qué finalidad y cuáles son tus derechos.</p>
+      <p>Con fundamento en los artículos 15 y 16 de la Ley Federal de Protección de Datos Personales en Posesión de Particulares, hacemos del conocimiento que el presente aviso de privacidad es un documento que tiene como finalidad informar a los usuarios cómo se recopilan, utilizan, almacenan y protegen sus datos personales, así como los derechos que tienen respecto a esa información.</p>
+      <p>El presente es de carácter obligatorio y debe proporcionarse antes de recabar cualquier dato personal.</p>
+      
+      <h2><i class="fa-regular fa-file-lines"></i>Identidad y domicilio del responsable</h2>
+        <p>El responsable del tratamiento de sus datos personales es Saúl Jiménez Hernández en lo sucesivo Sistemas de Seguridad y Comunicación con domicilio en calle 04 de diciembre de 1860 manzana 164 lote 1875 B Colonia Leyes de Reforma 3ra. Sección, Alcaldía Iztapalapa, C.P. 09310, en la Cuidad de México, quien se compromete a resguardar y proteger la información personal recabada a través de la plataforma digital.</p>
+      
+      <h2><i class="fa-solid fa-bullseye"></i>Datos personales que se recaban</h2>
+        <p>Los siguientes datos personales son los que se recaban:</p>
+          <ul class="list">
+            <li>De identificación</li>
+              <p>Nombre, correo electrónico y número telefónico</p>
+            <li>Laborales</li>
+              <p>Puesto, área o empresa a la que pertenece el usuario</p>
+            <li>De contacto</li>
+              <p>Correo institucional o personal, teléfono fijo o celular</p>
+          </ul>
+        <p>No se solicitarán datos personales sensibles, salvo que resulten estrictamente indispensables y con su consentimiento expreso.</p>
+      
+      <h2><i class="fa-solid fa-lock"></i>Finalidades del tratamiento</h2>
+        <p>Se tratará sus datos personales con finalidades:</p>
+        <p><strong>Finalidades primarias (indispensables):</strong></p>
+          <ul class="list">
+            <li>Identificar y registrar usuarios de la plataforma.Identificar y registrar usuarios de la plataforma.</li>
+            <li>Gestionar y administrar inventarios de dispositivos de seguridad.</li>
+            <li>Dar seguimiento, control y actualización de equipos registrados.</li>
+            <li>Proporcionar soporte técnico y atención a usuarios.</li>
+            <li>Generar reportes y análisis internos.</li>
+          </ul>
+        <p><strong>Finalidades secundarias (opcionales):</strong></p>
+        <p>En caso de NO oponerse se podrá tratar sus datos personales para llevar a cabo alguna o todas las finalidades secundarias que se mencionan a continuación, mismas que nos permiten brindarle un mejor servicio:</p>
+          <ul class="list">
+              <li>Enviar información sobre actualizaciones y nuevos servicios.</li>
+              <li>Realizar encuestas de satisfacción.</li>
+              <li>Fines estadísticos y de mejora en la calidad del servicio.</li>
+          </ul>
+        <p>Las anteriores finalidades secundarias tienen como base de legitimación su consentimiento. Lo anterior quiere decir que usted en cualquier momento puede oponerse a cualquiera de ellas, o bien, revocar su consentimiento.</p>
+        <p>En caso de que no desee que sus datos personales sean tratados para alguna o todas las finalidades adicionales, desde este momento usted nos puede comunicar lo anterior al correo <strong>soporte@cesiss.com</strong></p>
 
-      <p>
-        En <strong>CESISS</strong> nos tomamos muy en serio la protección de tus datos personales.
-        Este aviso describe qué datos recopilamos, con qué finalidad y cuáles son tus derechos.
-      </p>
+        <h2><i class="fa-solid fa-lock"></i>Transferencias de datos personales</h2>
+          <p>Sus datos personales no serán compartidos con terceros sin su consentimiento, salvo en los casos legalmente previstos por la Ley Federal de Protección de Datos Personales en Posesión de los Particulares, como:</p>
+            <ul class="list">
+              <li>Autoridades competentes en cumplimiento de obligaciones legales.</li>
+              <li>Proveedores de servicios tecnológicos o de almacenamiento de datos con cláusulas de confidencialidad y seguridad.</li>
+            </ul>
 
-      <h2><i class="fa-regular fa-file-lines"></i> ¿Qué datos recopilamos?</h2>
-      <ul class="list">
-        <li>Nombre completo.</li>
-        <li>Correo electrónico.</li>
-        <li>Teléfono de contacto.</li>
-        <li>Usuario y contraseña asignados por la empresa.</li>
-        <li>Historial de consultas en el sistema.</li>
-      </ul>
-
-      <h2><i class="fa-solid fa-bullseye"></i> Finalidades</h2>
-      <p>Los datos personales serán utilizados para las siguientes finalidades:</p>
-      <ul class="list">
-        <li>Permitir el acceso seguro a la plataforma digital</li>
-        <li>Consultar sistemas instalados y servicios de mantenimiento.</li>
-        <li>Mantener un historial de servicios otorgados.</li>
-        <li>Contacto para aclaraciones y soporte técnico</li>
-      </ul>
-
-      <h2><i class="fa-solid fa-lock"></i> Transferencia de datos personales</h2>
-      <p>
-       Sus datos personales no serán transferidos a terceros, únicamente para fines de verificación de servicios, 
-       así como los casos previstos por la Ley.
-      </p>
-
-      <h2><i class="fa-solid fa-user-shield"></i> Derechos ARCO</h2>
-      <p>
-        Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse 
+      <h2><i class="fa-solid fa-user-shield"></i>Los derechos de Acceso, Rectificación, Caqncelación u Oposición "Derechos ARCO"</h2>
+        <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse 
         <!-- 1) ENLACE normal -->
         (<a id="arco-link" class="hl" href="arco.php" aria-label="Conoce tus derechos ARCO">ARCO</a>)
         <!-- 2) WRAPPER con onClick por si algún CSS anula el <a> -->
@@ -128,16 +208,8 @@ $TITLE = 'Aviso de Privacidad - CESISS';
               tabindex="0"
               style="margin-left:.35rem; display:inline-block; font-size:.9rem; opacity:.85; cursor:pointer;"
               onclick="window.location.href='arco.php';"
-              onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); this.click(); }">
-          (clic alternativo)
-        </span>
-        al tratamiento de sus datos personales.
-      </p>
-
-      <p>
-        Para ejercer estos derechos, podrá enviar una solicitud al correo: soporte@cesiss.com,  
-        indicando su nombre completo, los datos a los que desea acceder, rectificar, cancelar u oponerse, y adjuntando copia de una identificación oficial.
-      </p>
+              onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); this.click(); }">(da clic para conocer qué es ARCO) 
+        </span> al tratamiento de sus datos personales.</p>
 
       <h2><i class="fa-solid fa-rotate"></i> Opciones para limitar uso o divulgación de Datos</h2>
       <p>
@@ -145,20 +217,37 @@ $TITLE = 'Aviso de Privacidad - CESISS';
         o solicitando la cancelación de su usuario en la Plataforma.
       </p>
 
-      <h2><i class="fa-solid fa-user-shield"></i> Uso de Cookies</h2>
-      <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse (ARCO) el tratamiento de sus datos personales.</p>
+      <h2>Uso de cookies</h2>
+        <p>El sitio web utiliza cookies y tecnologías similares para recordar su sesión y mejorar la experiencia del usuario. Usted puede deshabilitar las cookies desde su navegador, aunque ello podría afectar el funcionamiento de la plataforma. </p>
 
-      <h2><i class="fa-solid fa-rotate"></i> Cambios al aviso</h2>
-      <p>
-        Este aviso de Privacidad puede sufrir modificaciones o actualizaciones. 
-        Cualquier cambio será publicado en la presente página web, (indicando la fecha de la última actualización).
-      </p>
+      <h2>Medidas de seguridad</h2>
+        <p>El responsable adoptará medidas técnicas y administrativas necesarias para proteger sus datos personales contra daño, pérdida, alteración, destrucción o uso indebido.</p>
 
-      <h2><i class="fa-solid fa-building"></i> Información de contacto</h2>
-      <p class="subtitle">
-        <span class="tag"><i class="fa-solid fa-building-shield"></i> CESISS</span>
-        <span class="tag"><i class="fa-solid fa-envelope"></i> soportecesiss@gmail.com</span>
-      </p>
+      <h2>Medidas técnicas</h2>
+        <ul class="list">
+          <li>Uso de firewalls y sistemas de detección de intrusos</li>
+          <li>Antivirus y antimalware actualizados</li>
+          <li>Cifrado de la información almacenada y transmitida (SSL/TLS)</li>
+          <li>Control de accesos lógicos mediante contraseñas robustas, doble autenticación y perfiles de usuario</li>
+          <li>Respaldos periódicos de la base de datos en servidores seguros</li>
+          <li>Registro y monitoreo de actividades en la plataforma (logs)</li>
+      </ul>
+
+    <h2>Medidas administrativas</h2>
+      <ul class="list">
+          <li>Designación de un responsable de datos personales</li>
+          <li>Políticas internas de confidencialidad y acuerdos de no divulgación (NDA).</li>
+          <li>Capacitación continua del personal en protección de datos</li>
+          <li>Procedimientos claros para atender solicitudes de derechos ARCO</li>
+          <li>Protocolos de respuesta ante incidentes de seguridad</li>
+          <li>Revisión periódica de la conformidad legal</li>
+      </ul>
+
+      <h2><i class="fa-solid fa-rotate"></i>Cambios al aviso de privacidad</h2>
+      <p>Este aviso podrá ser modificado en cualquier momento para cumplir con actualizaciones legales o de la plataforma. Las modificaciones estarán disponibles en www.cesiss.com</p>
+
+      <h2>Consentimiento</h2>
+        <p>Al proporcionar sus datos personales a través de esta plataforma, usted manifiesta su consentimiento para que sean tratados conforme al presente Aviso.</p>
     </div>
   </div>
 
