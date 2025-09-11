@@ -150,7 +150,6 @@ $TITLE = 'CESISS - Aviso de Privacidad';
       <a href="/sisec-ui/index.php" class="back-home"><i class="fa-solid fa-house"></i> Volver al inicio</a>
       <br><br>
       <h1><i class="fa-solid fa-shield-halved"></i> Aviso de Privacidad Integral</h1>
-      <div class="subtitle">Última actualización: <?= date('F Y') ?></div>
         <p>En <strong>CESISS</strong> nos tomamos muy en serio la protección de tus datos personales.</p>
       <p>Este aviso describe qué datos recopilamos, con qué finalidad y cuáles son tus derechos.</p>
       <p>Con fundamento en los artículos 15 y 16 de la Ley Federal de Protección de Datos Personales en Posesión de Particulares, hacemos del conocimiento que el presente aviso de privacidad es un documento que tiene como finalidad informar a los usuarios cómo se recopilan, utilizan, almacenan y protegen sus datos personales, así como los derechos que tienen respecto a esa información.</p>
@@ -248,7 +247,8 @@ $TITLE = 'CESISS - Aviso de Privacidad';
 
       <h2>Consentimiento</h2>
         <p>Al proporcionar sus datos personales a través de esta plataforma, usted manifiesta su consentimiento para que sean tratados conforme al presente Aviso.</p>
-    </div>
+      <div class="subtitle">Última actualización: <?php setlocale(LC_TIME, 'es_ES.UTF-8', 'es_ES', 'spanish'); echo strftime('%B %Y'); ?></div>
+      </div>
   </div>
 
   <?php include __DIR__ . '/../../includes/footer.php'; ?>

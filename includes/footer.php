@@ -22,7 +22,7 @@ $cesiss_support = $cesiss_support ?? 'soporte@cesiss.com';
 // Logos en el centro:
 $cesiss_logo1      = $cesiss_logo1      ?? '/sisec-ui/public/img/logo.png';
 $cesiss_logo1_alt  = $cesiss_logo1_alt  ?? 'Logo 1';
-$cesiss_logo1_href = $cesiss_logo1_href ?? 'https://www.cesiss.com';
+$cesiss_logo1_href = $cesiss_logo1_href ?? '/sisec-ui/views/inicio/infosisec.php';
 
 $cesiss_logo2      = $cesiss_logo2      ?? '/sisec-ui/public/img/sucursales/SBlogo.png';
 $cesiss_logo2_alt  = $cesiss_logo2_alt  ?? 'Logo 2';

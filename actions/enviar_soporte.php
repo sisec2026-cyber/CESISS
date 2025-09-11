@@ -41,7 +41,7 @@ if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
 }
 
 // Construcción del contenido
-$to = 'soportecesiss@gmail.com';
+$to = 'soporte@cesiss.com';
 $subject = "[CESISS Soporte] {$asunto}";
 $body_text = "Nueva solicitud de soporte\n\n"
 . "Nombre: {$nombre}\n"
@@ -81,22 +81,6 @@ try {
     $mail->isHTML(true);
     $mail->Body = $body_html;
     $mail->AltBody = $body_text;
-    // Justo antes de $mail->send() si PHPMailer existe, agrega esto para adjuntar archivo
-    if (!empty($_FILES['archivo']['name'])) {
-    // Maneja múltiples archivos aunque tu input sea uno solo
-    $files = is_array($_FILES['archivo']['name']) ? $_FILES['archivo'] : [
-        'name' => [$_FILES['archivo']['name']],
-        'type' => [$_FILES['archivo']['type']],
-        'tmp_name' => [$_FILES['archivo']['tmp_name']],
-        'error' => [$_FILES['archivo']['error']],
-        'size' => [$_FILES['archivo']['size']]
-    ];
-      foreach ($files['name'] as $i => $file_name) {
-          if ($files['error'][$i] === UPLOAD_ERR_OK && is_uploaded_file($files['tmp_name'][$i])) {
-              $mail->addAttachment($files['tmp_name'][$i], $file_name);
-          }
-      }
-    }
 
     $mail->send();
     $sent = true;

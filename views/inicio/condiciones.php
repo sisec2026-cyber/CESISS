@@ -140,50 +140,59 @@ $TITLE = 'CESISS - Términos y condiciones de uso';
     <div class="card">
       <a href="/sisec-ui/index.php" class="back-home"><i class="fa-solid fa-house"></i> Volver al inicio</a>
       <br><br>
-      <h1><i class="fa-solid fa-scale-balanced"></i> Términos y Condiciones de Uso</h1>
-      <div class="subtitle">Última actualización: <?= date('F Y') ?></div>
+      <h1><i class="fa-solid fa-scale-balanced"></i>Términos y Condiciones de Uso</h1>
+      <p><em>Los presentes Términos y Condiciones regulan el acceso y uso de la aplicación web CESISS desarrollada con el fin de brindar a los usuarios información relacionada con los sistemas instalados de CCTV y 
+        alarma y los mantenimientos realizados a los equipos instalados, de forma gratuita en su etapa inicial.</em></p>
 
-      <h2><i class="fa-solid fa-user-lock"></i> Acceso y uso de la plataforma</h2>
+      <h2><i class="fa-solid fa-user-lock"></i>Acceso y uso de la aplicación web</h2>
       <ul class="list">
-        <li>El acceso a la Plataforma se otorga únicamente a usuarios autorizados.</li>
-        <li>El usuario se compromete a utilizar la Plataforma únicamente para consultar la información relacionada con los sistemas instalados y servicios de vigilancia proporcionados.</li>
+        <li>El acceso a la aplicación web se otorga únicamente a usuarios autorizados.</li>
+        <li>El usuario se compromete a utilizar la aplicación web únicamente para consultar la información relacionada con los sistemas instalados de CCTV y alarma y los mantenimientos realizados a los equipos instalados.</li>
         <li>El usuario es responsable de mantener la confidencialidad de su usuario y contraseña, así como de todas las actividades realizadas con estos.</li>
       </ul>
 
-      <h2><i class="fa-solid fa-lightbulb"></i> Propiedad intelectual</h2>
+      <h2><i class="fa-solid fa-user-shield"></i>Responsabilidad del usuario</h2>
       <ul class="list">
-        <li>Todos los contenidos de la Plataforma, incluyendo textos, gráficos, logotipos, imágenes y software, son propiedad de Saúl Jiménez Hernández en lo sucesivo Sistemas de Seguridad y Comunicación, o cuenten con autorización para su uso.</li>
+        <li>El usuario se compromete a no utilizar la aplicación web para fines ilícitos, contrarios al orden público o que puedan afectar la seguridad de los servicios de vigilancia.</li>
+        <li>Queda prohibido intentar acceder a secciones restringidas, dañar, alterar o modificar el contenido de la aplicación web.</li>
+      </ul>
+
+      <h2><i class="fa-solid fa-lightbulb"></i>Carácter no lucrativo inicial</h2>
+      <p>Actualmente, la aplicación se ofrece sin fines de lucro. El uso de todas las funciones disponibles en esta etapa no genera costo alguno para el usuario.</p>
+
+      <h2><i class="fa-solid fa-shield-halved"></i>Limitación de responsabilidad</h2>
+      <ul class="list">
+        <li>Saúl Jiménez Hernández en lo sucesivo Sistemas de Seguridad y Comunicación no se hace responsable por fallas técnicas, interrupciones del servicio o uso indebido de la información por parte de terceros.</li>
+        <li>La información disponible en la aplicación web es únicamente de carácter informativo respecto a los servicios contratados.</li>
+      </ul>
+
+      <h2><i class="fa-solid fa-copyright"></i>Propiedad intelectual</h2>
+      <ul class="list">
+        <li>Todos los contenidos de la aplicación web, incluyendo textos, gráficos, logotipos, imágenes y software, son propiedad de Saúl Jiménez Hernández en lo sucesivo Sistemas de Seguridad y Comunicación, o cuenten con autorización para su uso.</li>
         <li>Queda prohibida la reproducción, distribución, modificación o uso no autorizado de dichos contenidos.</li>
       </ul>
 
-      <h2><i class="fa-solid fa-user-shield"></i> Responsabilidad del usuario</h2>
-      <ul class="list">
-        <li>El usuario se compromete a no utilizar la Plataforma para fines ilícitos, contrarios al orden público o que puedan afectar la seguridad de los servicios de vigilancia.</li>
-        <li>Queda prohibido intentar acceder a secciones restringidas, dañar, alterar o modificar el contenido de la Plataforma.</li>
-      </ul>
-
-      <h2><i class="fa-solid fa-triangle-exclamation"></i> Limitación de responsabilidad</h2>
-      <ul class="list">
-        <li>Saúl Jiménez Hernández en lo sucesivo Sistemas de Seguridad y Comunicación no se hace responsable por fallas técnicas, interrupciones del servicio o uso indebido de la información por parte de terceros.</li>
-        <li>La información disponible en la Plataforma es únicamente de carácter informativo respecto a los servicios contratados.</li>
-      </ul>
-
-      <h2><i class="fa-solid fa-pen-ruler"></i> Modificaciones</h2>
+      <h2><i class="fa-solid fa-pen-ruler"></i>Modificaciones</h2>
       <ul class="list">
         <li>Saúl Jiménez Hernández en lo sucesivo Sistemas de Seguridad y Comunicación se reserva el derecho de modificar los presentes Términos y Condiciones en cualquier momento.</li>
-        <li>Los cambios serán publicados en este mismo sitio web, con la fecha de última actualización.</li>
+        <li>El usuario reconoce y acepta que, en un plazo aproximado de dos años a partir de la fecha de publicación de los presentes Términos y Condiciones, la aplicación podrá implementar un modelo de cobro por el uso de sus servicios o por el acceso a determinadas funciones.</li>
+      </ul>
+      <p>En tal caso:</p>
+      <ul class="list">
+        <li>Se notificará a los usuarios con anticipación razonable sobre los nuevos esquemas de cobro.</li>
+        <li>La continuidad en el uso de la aplicación después de dichas modificaciones implicará la aceptación de los nuevos Términos y Condiciones.</li>
+        <li>Las modificaciones serán publicadas dentro de la misma aplicación web y entrarán en vigor desde su aplicación.</li>
       </ul>
 
       <h2><i class="fa-solid fa-gavel"></i> Legislación aplicable</h2>
       <p>Estos Términos y Condiciones se rigen por las leyes mexicanas, y cualquier controversia será resuelta por los tribunales competentes en la Ciudad de México.</p>
-      <p>La presente plataforma ha sido desarrollada con el único fin de servir como herramienta de apoyo operativo. La misma no persigue fines de lucro, por lo que su utilización es de carácter gratuito, no implicando contraprestación económica alguna.</p>
+      <div class="subtitle">Última actualización: <?php setlocale(LC_TIME, 'es_ES.UTF-8', 'es_ES', 'spanish'); echo strftime('%B %Y'); ?></div>
     </div>
 
     <p class="highlight">
       <i class="fa-solid fa-circle-exclamation"></i> Importante: El incumplimiento de estos términos puede resultar en la suspensión inmediata del acceso.
     </p>
   </div>
-
   <?php include __DIR__ . '/../../includes/footer.php'; ?>
 </body>
 </html>

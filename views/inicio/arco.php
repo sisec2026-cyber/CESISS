@@ -69,20 +69,19 @@ $TITLE = '¿Qué es ARCO? - CESISS';
       text-align:center; padding:16px; font-size:.85rem; color:var(--muted);
       border-top:1px solid var(--card-border); margin-top:40px;
     }
-.link-soporte {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    text-decoration: none;
-    color: var(--accent);
-    font-size: .9rem;
-    font-weight: 500;
-    transition: color .2s ease;
-  }
-  .link-soporte:hover {
-    color: #ffffff;
-  }
-
+    .link-soporte {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        text-decoration: none;
+        color: var(--accent);
+        font-size: .9rem;
+        font-weight: 500;
+        transition: color .2s ease;
+      }
+      .link-soporte:hover {
+        color: #ffffff;
+      }
   </style>
 </head>
 <body>
@@ -152,10 +151,6 @@ $TITLE = '¿Qué es ARCO? - CESISS';
         </a>
     </div>
   </div>
-
-  <!-- <?php
-  // Si tu footer no depende de la sesión/roles, puedes incluirlo tal cual:
-  include __DIR__ . '/../includes/footer.php';
-  ?> -->
+  <?php include __DIR__ . '/../../includes/footer.php'; ?>
 </body>
 </html>
