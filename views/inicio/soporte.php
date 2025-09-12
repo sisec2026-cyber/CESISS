@@ -1,8 +1,5 @@
 <?php
-// Página pública: NO requiere login
-session_start(); // para CSRF/flash
-
-// Config mínima de rutas (ajusta si ya tienes config global)
+session_start();
 $BASE = '/sisec-ui';
 
 if (empty($_SESSION['csrf_token'])) {
@@ -10,12 +7,12 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 $TITLE = 'Soporte - CESISS';
-
 // Flash messages (se limpian tras leerse)
 $flash_ok  = $_SESSION['flash_ok']  ?? null;
 $flash_err = $_SESSION['flash_err'] ?? null;
 unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
 ?>
+
 <!doctype html>
 <html lang="es">
 <head>
@@ -87,6 +84,85 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
 
     /* Honeypot accesible */
     .hp{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+    /* Asegurar que inputs no se salgan */
+    input, textarea, select {
+      width: 100%;
+      box-sizing: border-box; /* 🔥 clave */
+    }
+
+    /* Input file oculto */
+    input[type="file"] {
+      display: none;
+    }
+
+    /* Botón personalizado para subir archivos */
+    .file-label {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: var(--brand);
+      color: #fff;
+      padding: .6rem 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+      transition: .3s;
+    }
+    .file-label:hover {
+      background: var(--brand-2);
+      transform: scale(1.05);
+    }
+    .file-label i {
+      font-size: 1rem;
+    }
+
+    /* Contenedor de previsualización */
+    .preview {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .preview-item {
+      background: #0c1b20;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 6px;
+      max-width: 120px;
+      text-align: center;
+      font-size: .8rem;
+      color: var(--muted);
+      overflow: hidden;
+    }
+    .preview-item img {
+      max-width: 100px;
+      max-height: 80px;
+      border-radius: 6px;
+      display: block;
+      margin: 0 auto 4px;
+    }
+    .preview-item {
+      position: relative;
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(255, 0, 0, 0.8);
+      border: none;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .remove-btn:hover {
+      background: red;
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body>
@@ -100,15 +176,13 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
 
   <div class="container">
     <div class="card">
-      <h1><i class="fa-solid fa-life-ring"></i> Soporte CESISS</h1>
+      <h1><i class="fa-solid fa-life-ring"></i>Soporte CESISS</h1>
       <div class="subtitle">Cuéntanos tu problema o solicitud. Te responderemos al correo proporcionado.</div>
 
-      <!-- Deja activa la validación nativa del navegador -->
       <form method="post" action="<?= htmlspecialchars($BASE . '/actions/enviar_soporte.php') ?>" 
       id="formSoporte" autocomplete="on" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-        <!-- honeypot anti-bots -->
         <div class="hp" aria-hidden="true">
           <label for="hp_field">No llenar</label>
           <input type="text" id="hp_field" name="hp_field" value="" tabindex="-1" autocomplete="off">
@@ -116,19 +190,19 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
 
         <div class="grid">
           <div>
-            <label class="icon-label" for="asunto"><i class="fa-regular fa-rectangle-list"></i> Asunto <span class="req">*</span></label>
+            <label class="icon-label" for="asunto"><i class="fa-regular fa-rectangle-list"></i>Asunto <span class="req">*</span></label>
             <input type="text" id="asunto" name="asunto" maxlength="120" required placeholder="Ej. Falla en registro de dispositivo" autocomplete="off" inputmode="text">
           </div>
           <div>
-            <label class="icon-label" for="nombre"><i class="fa-regular fa-user"></i> Nombre <span class="req">*</span></label>
+            <label class="icon-label" for="nombre"><i class="fa-regular fa-user"></i>Nombre <span class="req">*</span></label>
             <input type="text" id="nombre" name="nombre" maxlength="80" required placeholder="Tu nombre completo" autocomplete="name" inputmode="text">
           </div>
           <div>
-            <label class="icon-label" for="correo"><i class="fa-regular fa-envelope"></i> Correo <span class="req">*</span></label>
+            <label class="icon-label" for="correo"><i class="fa-regular fa-envelope"></i>Correo <span class="req">*</span></label>
             <input type="email" id="correo" name="correo" maxlength="120" required placeholder="tucorreo@dominio.com" autocomplete="email" inputmode="email">
           </div>
           <div>
-            <label class="icon-label" for="prioridad"><i class="fa-solid fa-bolt"></i> Prioridad</label>
+            <label class="icon-label" for="prioridad"><i class="fa-solid fa-bolt"></i>Prioridad</label>
             <select id="prioridad" name="prioridad">
               <option value="Normal" selected>Normal</option>
               <option value="Alta">Alta</option>
@@ -138,67 +212,107 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_err']);
         </div>
 
         <div style="margin-top:10px;">
-          <label class="icon-label" for="archivo"><i class="fa-solid fa-paperclip"></i> Adjuntar archivo</label>
-            <input type="file" id="archivo" name="archivo[]" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple />
+          <label class="icon-label"><i class="fa-solid fa-paperclip"></i>Adjuntar archivo</label>
+          <label for="archivo" class="file-label"><i class="fa-solid fa-upload"></i>Seleccionar archivos</label>
+          <input type="file" id="archivo" name="archivo[]" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple>
+          <div id="preview" class="preview"></div>
         </div>
 
         <div class="grid-1" style="margin-top:10px;">
           <div>
-            <label class="icon-label" for="mensaje"><i class="fa-regular fa-message"></i> Mensaje <span class="req">*</span></label>
+            <label class="icon-label" for="mensaje"><i class="fa-regular fa-message"></i>Mensaje <span class="req">*</span></label>
             <textarea id="mensaje" name="mensaje" required maxlength="10000" placeholder="Describe el problema, pasos para reproducirlo, capturas si aplica (puedes pegarlas en tu correo de respuesta)."></textarea>
             <div class="foot-msg">
-              <span class="tag"><i class="fa-solid fa-paper-plane"></i> Se enviará a: soporte@cesiss.com</span>
+              <span class="tag"><i class="fa-solid fa-paper-plane"></i>Se enviará a: soporte@cesiss.com</span>
             </div>
           </div>
         </div>
 
         <div class="actions">
-          <a class="btn btn-secondary" href="<?= htmlspecialchars($BASE . '/views/inicio/index.php') ?>"><i class="fa-solid fa-arrow-left"></i> Volver</a>
-          <button class="btn" id="btnEnviar" type="submit"><i class="fa-solid fa-paper-plane"></i> Enviar</button>
+          <a class="btn btn-secondary" href="<?= htmlspecialchars($BASE . '/views/inicio/index.php') ?>"><i class="fa-solid fa-arrow-left"></i>Volver</a>
+          <button class="btn" id="btnEnviar" type="submit"><i class="fa-solid fa-paper-plane"></i>Enviar</button>
         </div>
       </form>
     </div>
   </div>
 
   <script>
-    // Validación ligera + evita envíos dobles
     (function(){
       const form = document.getElementById('formSoporte');
       const btn = document.getElementById('btnEnviar');
 
       form.addEventListener('submit', function(e){
-        // deja que el navegador valide primero
         if (!form.checkValidity()){
-          // Dispara UI nativa de validación
           e.preventDefault();
           form.reportValidity();
           return;
         }
-
-        // Validación extra del correo (por si el navegador no lo hace bien)
-        const correo = document.getElementById('correo');
-        if (correo && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.value.trim())){
-          e.preventDefault();
-          alert('Por favor ingresa un correo válido.');
-          correo.focus();
-          return;
-        }
-
-        // Evitar dobles envíos
-        btn.disabled = true;
-        btn.textContent = 'Enviando...';
+      const correo = document.getElementById('correo');
+      if (correo && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.value.trim())){
+        e.preventDefault();
+        alert('Por favor ingresa un correo válido.');
+        correo.focus();
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
       });
     })();
   </script>
 
-  <?php
-    // Incluye el footer sin romper si cambias ruta
-    $footer_paths = [
-      __DIR__ . '/../includes/footer.php',
-    ];
-    foreach ($footer_paths as $fp) {
-      if (file_exists($fp)) { include $fp; break; }
+  <script>
+    const inputArchivo = document.getElementById('archivo');
+    const preview = document.getElementById('preview');
+    let archivosSeleccionados = [];
+
+    inputArchivo.addEventListener('change', () => {
+      archivosSeleccionados = [...archivosSeleccionados, ...Array.from(inputArchivo.files)];
+      renderPreview();
+      inputArchivo.value = '';
+    });
+
+    function renderPreview() {
+      preview.innerHTML = '';
+
+      archivosSeleccionados.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.classList.add('preview-item');
+
+        const removeBtn = document.createElement('button');
+        removeBtn.classList.add('remove-btn');
+        removeBtn.innerHTML = '×';
+        removeBtn.onclick = () => {
+          archivosSeleccionados.splice(index, 1);
+          renderPreview();
+        };
+        item.appendChild(removeBtn);
+
+        if (file.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          item.appendChild(img);
+        } else {
+          const icon = document.createElement('i');
+          icon.className = 'fa-solid fa-file';
+          item.appendChild(icon);
+        }
+
+        const name = document.createElement('div');
+        name.textContent = file.name;
+        item.appendChild(name);
+
+        preview.appendChild(item);
+      });
     }
+  </script>
+
+  <?php
+  $footer_paths = [
+    __DIR__ . '/../includes/footer.php',
+  ];
+  foreach ($footer_paths as $fp) {
+    if (file_exists($fp)) { include $fp; break; }
+  }
   ?>
 </body>
 </html>

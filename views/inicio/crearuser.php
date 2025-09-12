@@ -10,8 +10,8 @@ $error = $_GET['error'] ?? null;
 <title>Registro de usuario</title>
 <?php
 $stmt = $conexion->query("SELECT COUNT(*) as total FROM usuarios");
-$totalUsuarios = $stmt->fetch_assoc()['total'] ?? 0; // Contar usuarios existentes
-$limiteAlcanzado = $totalUsuarios >= 1000; // Variable para controlar límite
+$totalUsuarios = $stmt->fetch_assoc()['total'] ?? 0;
+$limiteAlcanzado = $totalUsuarios >= 1000;
 ?>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="../../public/css/style.css">
@@ -130,8 +130,8 @@ confirmarClaveInput.addEventListener('input', ()=>{
 [claveInput, confirmarClaveInput].forEach(input=>{
     input.addEventListener('blur', ()=>{
         if(input.value.trim() !== ""){
-            input.value = "••••••••"; // Mostrar puntos en lugar de texto real
-            setTimeout(()=> input.value = "", 500); // Limpia después de medio segundo
+            input.value = "••••••••";
+            setTimeout(()=> input.value = "", 500);
         }
     });
 });

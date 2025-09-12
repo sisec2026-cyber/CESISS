@@ -1,5 +1,4 @@
 <?php
-// Página pública: NO requiere login
 $TITLE = '¿Qué es ARCO? - CESISS';
 ?>
 <!doctype html>
@@ -140,13 +139,11 @@ $TITLE = '¿Qué es ARCO? - CESISS';
       <h2>Formatos de Solicitud</h2>
         <p>También puedes descargar los formatos oficiales en Word para ejercer tus derechos:</p>
 
-        <a href="/sisec-ui/views/inicio/SOLICITUD_REVOCACIÓN_CONSENTIMIENTO.docx" 
-          class="btn" download>
+        <a href="/sisec-ui/views/inicio/descarga.php?file=SOLICITUD_REVOCACION_CONSENTIMIENTO.docx" class="btn">
           <i class="fas fa-file-word"></i> Solicitud de Revocación del Consentimiento
         </a>
         <p></p>
-        <a href="/sisec-ui/views/inicio/FORMATO_SOLICITUD_EJERCER_DERECHOS_ARCO.docx" 
-          class="btn" download>
+        <a href="/sisec-ui/views/inicio/descarga.php?file=FORMATO_SOLICITUD_ EJERCER_DERECHOS_ARCO.docx" class="btn">
           <i class="fas fa-file-word"></i> Formato de solicitud para ejercer derechos ARCO
         </a>
     </div>

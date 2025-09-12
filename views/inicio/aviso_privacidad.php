@@ -1,5 +1,4 @@
 <?php
-// Página pública: NO requiere login
 $TITLE = 'CESISS - Aviso de Privacidad';
 ?>
 <!doctype html>
@@ -8,7 +7,6 @@ $TITLE = 'CESISS - Aviso de Privacidad';
   <meta charset="utf-8">
   <title><?= htmlspecialchars($TITLE) ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Font Awesome (iconos) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
     :root {
@@ -199,9 +197,7 @@ $TITLE = 'CESISS - Aviso de Privacidad';
 
       <h2><i class="fa-solid fa-user-shield"></i>Los derechos de Acceso, Rectificación, Caqncelación u Oposición "Derechos ARCO"</h2>
         <p>Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse 
-        <!-- 1) ENLACE normal -->
         (<a id="arco-link" class="hl" href="arco.php" aria-label="Conoce tus derechos ARCO">ARCO</a>)
-        <!-- 2) WRAPPER con onClick por si algún CSS anula el <a> -->
         <span id="arco-fallback"
               role="link"
               tabindex="0"
@@ -252,17 +248,11 @@ $TITLE = 'CESISS - Aviso de Privacidad';
   </div>
 
   <?php include __DIR__ . '/../../includes/footer.php'; ?>
-
-  <!-- 3) DIAGNÓSTICO: resalta el elemento que está arriba del link (quítalo luego) -->
   <script>
     (function () {
       const link = document.getElementById('arco-link');
       if (!link) return;
-
-      // Si el click llega al <a>, lo sabremos en consola.
       link.addEventListener('click', () => console.log('[ARCO] click en el <a> OK'));
-
-      // Detecta qué elemento está por encima del centro del enlace:
       requestAnimationFrame(() => {
         const r = link.getBoundingClientRect();
         const x = Math.round(r.left + r.width / 2);
@@ -272,7 +262,6 @@ $TITLE = 'CESISS - Aviso de Privacidad';
         if (topEl && topEl !== link) {
           console.warn('[ARCO] Hay un overlay encima del enlace:', topEl);
           try { topEl.style.outline = '3px dashed red'; } catch(e){}
-          // Intenta permitir que el enlace reciba clics:
           try { topEl.style.pointerEvents = 'none'; console.warn('[ARCO] Se puso pointer-events:none al overlay detectado.'); } catch(e){}
         }
       });
