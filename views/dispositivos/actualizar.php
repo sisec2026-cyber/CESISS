@@ -43,16 +43,23 @@ $serie          = trim($_POST['serie'] ?? '');
 $mac            = trim($_POST['mac'] ?? '');
 $servidor       = trim($_POST['servidor'] ?? '');
 $vms            = trim($_POST['vms'] ?? '');
-$vms_otro       = trim($_POST['vms_otro'] ?? '');
+$vms_otro       = trim($_POST['vms_otro'] ?? ''); // por si lo usas en el form
 $switchTxt      = trim($_POST['switch'] ?? '');
 $puerto         = trim($_POST['puerto'] ?? '');
-$sucursal       = isset($_POST['sucursal']) ? (int)$_POST['sucursal'] : 0; // FK int
+// $sucursal     (no se permite editar desde este flujo)
 $area           = trim($_POST['area'] ?? '');
 $estado         = isset($_POST['estado']) ? (int)$_POST['estado'] : 1;
 $fecha          = $_POST['fecha'] ?? date('Y-m-d');
 $observaciones  = trim($_POST['observaciones'] ?? '');
 $usuarioDis     = trim($_POST['usuario'] ?? '');
 $contrasenaDis  = trim($_POST['contrasena'] ?? '');
+
+/* === Nuevos campos === */
+$marca_id       = (isset($_POST['marca_id']) && $_POST['marca_id'] !== '') ? (int)$_POST['marca_id'] : null; // FK → marcas.id_marcas (nullable)
+$alarma_id      = (isset($_POST['alarma_id']) && $_POST['alarma_id'] !== '') ? (int)$_POST['alarma_id'] : null; // FK → alarma.id (nullable)
+$zona_alarma    = trim($_POST['zona_alarma'] ?? '');
+$tipo_sensor    = trim($_POST['tipo_sensor'] ?? '');
+$cctv_id        = (isset($_POST['cctv_id']) && $_POST['cctv_id'] !== '') ? (int)$_POST['cctv_id'] : null; // FK → cctv.id (nullable)
 
 if (strcasecmp($vms, 'Otro') === 0 && $vms_otro !== '') {
     $vms = $vms_otro;
@@ -109,20 +116,20 @@ try {
     /* 2) Modelo: si se edita nombre, crear/reutilizar sin tocar equipo */
     if ($modelo_edit_mode && $modelo_nombre_edit !== '') {
         $modeloBaseId = $modelo > 0 ? $modelo : (int)($actual['modelo_actual'] ?? 0);
-        $marcaId = null;
+        $marcaIdInferida = null;
 
         if ($modeloBaseId > 0) {
             $q = $conn->prepare("SELECT marca_id FROM modelos WHERE id = ? LIMIT 1");
             $q->bind_param("i", $modeloBaseId);
             $q->execute();
             $row = $q->get_result()->fetch_assoc();
-            $marcaId = $row['marca_id'] ?? null;
+            $marcaIdInferida = $row['marca_id'] ?? null;
             $q->close();
         }
 
-        if ($marcaId) {
+        if ($marcaIdInferida) {
             $q = $conn->prepare("SELECT id FROM modelos WHERE marca_id = ? AND UPPER(num_modelos) = UPPER(?) LIMIT 1");
-            $q->bind_param("is", $marcaId, $modelo_nombre_edit);
+            $q->bind_param("is", $marcaIdInferida, $modelo_nombre_edit);
             $q->execute();
             $ex = $q->get_result()->fetch_assoc();
             $q->close();
@@ -131,7 +138,7 @@ try {
                 $modelo = (int)$ex['id'];
             } else {
                 $ins = $conn->prepare("INSERT INTO modelos (num_modelos, marca_id) VALUES (?, ?)");
-                $ins->bind_param("si", $modelo_nombre_edit, $marcaId);
+                $ins->bind_param("si", $modelo_nombre_edit, $marcaIdInferida);
                 $ins->execute();
                 $modelo = $ins->insert_id;
                 $ins->close();
@@ -147,14 +154,13 @@ try {
         $modelo = (int)($actual['modelo_actual'] ?? 0);
     }
 
-    /* 4) Validaciones */
+    /* 4) Validaciones (sucursal ya no se valida aquí) */
     if ($id <= 0)       throw new Exception('ID inválido.');
     if ($equipo <= 0)   throw new Exception('Selecciona un equipo válido.');
     if ($modelo <= 0)   throw new Exception('Selecciona o crea un modelo válido.');
-    if ($sucursal <= 0) throw new Exception('Selecciona una sucursal válida.');
     if (!$fecha)        throw new Exception('La fecha es requerida.');
 
-    /* 5) UPDATE */
+    /* 5) UPDATE (sin sucursal) + marca y alarma/cctv */
     $sql = "
         UPDATE dispositivos SET 
             equipo = ?, 
@@ -165,7 +171,6 @@ try {
             vms = ?, 
             `switch` = ?, 
             puerto = ?, 
-            sucursal = ?, 
             area = ?, 
             estado = ?, 
             fecha = ?, 
@@ -175,33 +180,67 @@ try {
             imagen3 = ?, 
             qr = ?, 
             `user` = ?, 
-            `pass` = ?
+            `pass` = ?,
+            marca_id = ?, 
+            alarma_id = ?, 
+            zona_alarma = ?, 
+            tipo_sensor = ?, 
+            cctv_id = ?
         WHERE id = ?
     ";
     $up = $conn->prepare($sql);
-    // 20 parámetros → 20 letras
+    /* Tipos (24 parámetros):
+       1:i equipo
+       2:i modelo
+       3:s serie
+       4:s mac
+       5:s servidor
+       6:s vms
+       7:s switch
+       8:s puerto
+       9:s area
+      10:i estado
+      11:s fecha
+      12:s observaciones
+      13:s imagen
+      14:s imagen2
+      15:s imagen3
+      16:s qr
+      17:s user
+      18:s pass
+      19:i marca_id
+      20:i alarma_id
+      21:s zona_alarma
+      22:s tipo_sensor
+      23:i cctv_id
+      24:i id
+    */
     $up->bind_param(
-        "iissssssisissssssssi",
-        $equipo,        // i 1
-        $modelo,        // i 2
-        $serie,         // s 3
-        $mac,           // s 4
-        $servidor,      // s 5
-        $vms,           // s 6
-        $switchTxt,     // s 7
-        $puerto,        // s 8
-        $sucursal,      // i 9
-        $area,          // s 10
-        $estado,        // i 11
-        $fecha,         // s 12
-        $observaciones, // s 13
-        $imagen,        // s 14
-        $imagen2,       // s 15
-        $imagen3,       // s 16
-        $qr,            // s 17
-        $usuarioDis,    // s 18
-        $contrasenaDis, // s 19
-        $id             // i 20
+        "iisssssssissssssssiissii",
+        $equipo,        // 1
+        $modelo,        // 2
+        $serie,         // 3
+        $mac,           // 4
+        $servidor,      // 5
+        $vms,           // 6
+        $switchTxt,     // 7
+        $puerto,        // 8
+        $area,          // 9
+        $estado,        // 10
+        $fecha,         // 11
+        $observaciones, // 12
+        $imagen,        // 13
+        $imagen2,       // 14
+        $imagen3,       // 15
+        $qr,            // 16
+        $usuarioDis,    // 17
+        $contrasenaDis, // 18
+        $marca_id,      // 19
+        $alarma_id,     // 20
+        $zona_alarma,   // 21
+        $tipo_sensor,   // 22
+        $cctv_id,       // 23
+        $id             // 24
     );
     $up->execute();
     $up->close();

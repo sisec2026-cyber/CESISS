@@ -420,7 +420,8 @@ $determinante_nueva  = $autoFix($determinante_nueva);
   enviarNotificacion($asunto, $htmlCorreo, $destinatarios);
 
   // Redirige a la vista del dispositivo
-  header("Location: device.php?id=" . $id);
+  // header(header: "Location: device.php?id=" . $id);
+  header('Location: /sisec-ui/views/dispositivos/registro.php?saved=1&last_id='); // ajusta el nombre del archivo si cambia
   exit;
 
 } catch (Throwable $e) {

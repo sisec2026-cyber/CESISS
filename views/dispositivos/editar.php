@@ -11,7 +11,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-// Dispositivo
+/* ========== Dispositivo ========== */
 $stmt = $conn->prepare("SELECT * FROM dispositivos WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
@@ -19,14 +19,11 @@ $device = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$device) die('Dispositivo no encontrado.');
 
-// Equipos
+/* ========== Catálogos: Equipos/Modelos ========== */
 $equipos = $conn->query("SELECT id, nom_equipo FROM equipos ORDER BY nom_equipo ASC");
-
-// Equipo/Modelo actuales
 $equipoActual = (int)($device['equipo'] ?? 0);
 $modeloActual = (int)($device['modelo'] ?? 0);
 
-// Modelos del equipo actual
 $modelosRes = null;
 if ($equipoActual > 0) {
   $sqlModelos = "
@@ -43,10 +40,12 @@ if ($equipoActual > 0) {
   $st->close();
 }
 
-// Sucursales
-$sucursales = $conn->query("SELECT id, nom_sucursal FROM sucursales ORDER BY nom_sucursal ASC");
+/* ========== Catálogos: Sucursales / Tipos Alarma / Tipos CCTV ========== */
+$sucursales  = $conn->query("SELECT id, nom_sucursal FROM sucursales ORDER BY nom_sucursal ASC");
+$tiposAlarma = $conn->query("SELECT id, tipo_alarma FROM alarma ORDER BY id ASC");
+$tiposCctv   = $conn->query("SELECT id, tipo_cctv FROM cctv ORDER BY id ASC");
 
-// Nombre del modelo actual (por si no aparece en la lista)
+/* ========== Nombre del modelo actual (por si no aparece en la lista) ========== */
 $modeloNombreActual = null;
 if ($modeloActual > 0) {
   $q = $conn->prepare("SELECT num_modelos FROM modelos WHERE id = ? LIMIT 1");
@@ -154,28 +153,32 @@ $back = !empty($_GET['return_url'])
     </div>
   </div>
 
+  <!-- SERIE (General) -->
   <div class="col-md-6">
     <label class="form-label">Serie</label>
     <input type="text" name="serie" class="form-control" value="<?= htmlspecialchars($device['serie'] ?? '') ?>">
   </div>
 
-  <div class="col-md-6">
+  <!-- MAC (CCTV/SWITCH) -->
+  <div id="group-mac" class="col-md-6 grupo-cctv grupo-switch grupo-monitor-hide">
     <label class="form-label">Dirección MAC</label>
     <input type="text" name="mac" class="form-control" value="<?= htmlspecialchars($device['mac'] ?? '') ?>">
   </div>
 
-  <div class="col-md-6">
+  <!-- No. Servidor (CCTV) -->
+  <div id="group-servidor" class="col-md-6 grupo-cctv grupo-switch-hide grupo-alarma-hide grupo-monitor-hide">
     <label class="form-label">No. de Servidor</label>
     <input type="text" name="servidor" class="form-control" value="<?= htmlspecialchars($device['servidor'] ?? '') ?>">
   </div>
 
-  <div class="col-md-6">
+  <!-- VMS (CCTV) -->
+  <div id="group-vms" class="col-md-6 grupo-cctv grupo-switch-hide grupo-alarma-hide grupo-monitor-hide">
     <label class="form-label">VMS</label>
-    <input type="text" name="vms" class="form-control" value="<?= htmlspecialchars($device['vms'] ?? '') ?>" required>
+    <input type="text" name="vms" id="vms" class="form-control" value="<?= htmlspecialchars($device['vms'] ?? '') ?>" required>
   </div>
 
-  <!-- Usuario / Contraseña -->
-  <div class="col-md-6">
+  <!-- Credenciales (NO en ALARMA/SWITCH/MONITOR) -->
+  <div id="group-user" class="col-md-6 grupo-credenciales">
     <label class="form-label">Usuario</label>
     <div class="input-group">
       <input
@@ -192,7 +195,7 @@ $back = !empty($_GET['return_url'])
     <small class="text-muted">Credencial del dispositivo.</small>
   </div>
 
-  <div class="col-md-6">
+  <div id="group-pass" class="col-md-6 grupo-credenciales">
     <label class="form-label">Contraseña</label>
     <div class="input-group">
       <input
@@ -209,28 +212,57 @@ $back = !empty($_GET['return_url'])
     <small class="text-muted">Se guarda tal cual en BD.</small>
   </div>
 
-  <div class="col-md-6">
+  <!-- Switch / Puerto (CCTV / SWITCH) -->
+  <div id="group-switch" class="col-md-6 grupo-cctv grupo-switch grupo-alarma-hide grupo-monitor-hide">
     <label class="form-label">Switch</label>
     <input type="text" name="switch" class="form-control" value="<?= htmlspecialchars($device['switch'] ?? '') ?>">
   </div>
 
-  <div class="col-md-6">
+  <div id="group-puerto" class="col-md-6 grupo-cctv grupo-switch grupo-alarma-hide grupo-monitor-hide">
     <label class="form-label">Puerto</label>
     <input type="text" name="puerto" class="form-control" value="<?= htmlspecialchars($device['puerto'] ?? '') ?>">
   </div>
 
-  <!-- Sucursal (ID) -->
-  <div class="col-md-6">
-    <label class="form-label">Sucursal</label>
-    <select name="sucursal" class="form-select" required>
-      <option value="" disabled <?= empty($device['sucursal']) ? 'selected' : '' ?>>-- Selecciona sucursal --</option>
-      <?php while ($s = $sucursales->fetch_assoc()): ?>
-        <?php $idSuc = (int)$s['id']; ?>
-        <option value="<?= $idSuc ?>" <?= ($idSuc === (int)$device['sucursal']) ? 'selected' : '' ?>>
-          <?= htmlspecialchars((string)$s['nom_sucursal']) ?>
-        </option>
-      <?php endwhile; ?>
+  <!-- ========== BLOQUE CCTV ESPECÍFICO: tipo CCTV ========== -->
+  <div id="group-cctv-tipo" class="col-md-6 grupo-cctv">
+    <label class="form-label">Tipo de CCTV</label>
+    <select name="cctv_id" id="cctv_id" class="form-select">
+      <option value="" <?= empty($device['cctv_id']) ? 'selected' : '' ?>>-- Selecciona tipo --</option>
+      <?php if ($tiposCctv && $tiposCctv->num_rows): ?>
+        <?php while($tc = $tiposCctv->fetch_assoc()): ?>
+          <?php $idTc = (int)$tc['id']; ?>
+          <option value="<?= $idTc ?>" <?= ($idTc === (int)$device['cctv_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($tc['tipo_cctv']) ?>
+          </option>
+        <?php endwhile; ?>
+      <?php endif; ?>
     </select>
+  </div>
+
+  <!-- ========== BLOQUE ALARMA ESPECÍFICO ========== -->
+  <div id="group-alarma-tipo" class="col-md-6 grupo-alarma">
+    <label class="form-label">Conexión de alarma</label>
+    <select name="alarma_id" id="alarma_id" class="form-select">
+      <option value="" <?= empty($device['alarma_id']) ? 'selected' : '' ?>>-- Selecciona tipo --</option>
+      <?php if ($tiposAlarma && $tiposAlarma->num_rows): ?>
+        <?php while($ta = $tiposAlarma->fetch_assoc()): ?>
+          <?php $idTa = (int)$ta['id']; ?>
+          <option value="<?= $idTa ?>" <?= ($idTa === (int)$device['alarma_id']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($ta['tipo_alarma']) ?>
+          </option>
+        <?php endwhile; ?>
+      <?php endif; ?>
+    </select>
+  </div>
+
+  <div id="group-zona-alarma" class="col-md-6 grupo-alarma">
+    <label class="form-label">Zona de alarma</label>
+    <input type="text" name="zona_alarma" class="form-control" value="<?= htmlspecialchars($device['zona_alarma'] ?? '') ?>">
+  </div>
+
+  <div id="group-tipo-sensor" class="col-md-6 grupo-alarma">
+    <label class="form-label">Tipo de sensor</label>
+    <input type="text" name="tipo_sensor" class="form-control" value="<?= htmlspecialchars($device['tipo_sensor'] ?? '') ?>">
   </div>
 
   <!-- Área (texto libre) -->
@@ -239,6 +271,7 @@ $back = !empty($_GET['return_url'])
     <input type="text" name="area" class="form-control" value="<?= htmlspecialchars($device['area'] ?? '') ?>">
   </div>
 
+  <!-- Estado -->
   <div class="col-md-6">
     <label class="form-label">Estado</label>
     <select name="estado" class="form-select" required>
@@ -248,11 +281,13 @@ $back = !empty($_GET['return_url'])
     </select>
   </div>
 
+  <!-- Fecha -->
   <div class="col-md-6">
     <label class="form-label">Fecha</label>
     <input type="date" name="fecha" class="form-control" value="<?= htmlspecialchars($device['fecha'] ?? '') ?>" required>
   </div>
 
+  <!-- Observaciones -->
   <div class="col-12">
     <label class="form-label">Observaciones</label>
     <textarea name="observaciones" class="form-control" rows="3"><?= htmlspecialchars($device['observaciones'] ?? '') ?></textarea>
@@ -300,7 +335,12 @@ $back = !empty($_GET['return_url'])
   </div>
 </form>
 
-<!-- ================= JS ================= -->
+<!-- ================= ESTILOS/JS ================= -->
+<style>
+  /* utilitario */
+  .d-none{ display:none !important; }
+</style>
+
 <script>
 // util: texto del option seleccionado
 function selectedText(sel) {
@@ -416,6 +456,9 @@ btnModeloEditar.addEventListener('click', () => {
         modeloNombreEdit.value = selectedText(modeloSel);
       }
 
+      // Actualiza visibilidad por si el cambio de equipo cambió la categoría
+      updateVisibilityFromEquipo();
+
     } catch (e) {
       console.error(e);
       modeloSel.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
@@ -438,6 +481,109 @@ if (togglePassBtn && passInput) {
   togglePassBtn.addEventListener('click', () => {
     passInput.type = passInput.type === 'password' ? 'text' : 'password';
   });
+}
+
+/* ============================
+   VISIBILIDAD POR CATEGORÍA
+   ============================ */
+function _normU(s){
+  s = (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  s = s.toUpperCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+  return s;
+}
+
+function catDesdeEquipoText(txt){
+  const v = _normU(txt);
+
+  if (v.includes('CAMARA') || v.includes('CCTV')) return 'camara';
+  if (v.includes('NVR')) return 'nvr';
+  if (v.includes('DVR')) return 'dvr';
+  if (v.includes('SERVIDOR') || v.includes('SERVER')) return 'servidor';
+  if (v.includes('SWITCH')) return 'switch';
+  if (v.includes('MONITOR') || v.includes('DISPLAY')) return 'monitor';
+  if (v.includes('ESTACION TRABAJO') || v.includes('WORKSTATION') || v === 'PC' || v.includes('COMPUTADORA')) return 'estacion_trabajo';
+
+  const alarmaKeys = [
+    "ALARMA","TRANSMISOR","SENSOR","DETECTOR","HUMO","OVER HEAD","OVERHEAD","ZONA",
+    "BOTON","PANICO","ESTACION","PULL STATION","PULL","PANEL","CABLEADO","SIRENA",
+    "RECEPTOR","EMISOR","LLAVIN","TECLADO","ESTROBO","CRISTAL","RUPTURA","REPETIDOR",
+    "REPETIDORA","DH","PIR","CM","BTN","OH","DRC","REP"
+  ];
+  for (const k of alarmaKeys){
+    if (v.includes(_normU(k))) return 'alarma';
+  }
+  return 'otro';
+}
+
+function _showAll(list){ list.forEach(el=>el.classList.remove('d-none')); }
+function _hideAll(list){ list.forEach(el=>el.classList.add('d-none')); }
+
+function applyVisibilityByCategory(cat){
+  const cctvEls        = document.querySelectorAll('.grupo-cctv');
+  const switchEls      = document.querySelectorAll('.grupo-switch');
+  const credEls        = document.querySelectorAll('.grupo-credenciales');
+  const alarmaEls      = document.querySelectorAll('.grupo-alarma');
+
+  const alarmaHideEls  = document.querySelectorAll('.grupo-alarma-hide');
+  const switchHideEls  = document.querySelectorAll('.grupo-switch-hide');
+  const monitorHideEls = document.querySelectorAll('.grupo-monitor-hide');
+
+  // Estado base: oculta específicos
+  _hideAll(cctvEls);
+  _hideAll(switchEls);
+  _hideAll(credEls);
+  _hideAll(alarmaEls);
+
+  // Limpia hides
+  _hideAll(alarmaHideEls);
+  _hideAll(switchHideEls);
+  _hideAll(monitorHideEls);
+
+  // Campo VMS requerido solo en CCTV-like
+  const vms = document.getElementById('vms');
+  if (vms) vms.removeAttribute('required');
+
+  // Reglas por categoría
+  if (cat === 'camara' || cat === 'nvr' || cat === 'dvr' || cat === 'servidor'){
+    _showAll(cctvEls);
+    _showAll(credEls);
+    _showAll(switchHideEls);
+    _showAll(monitorHideEls);
+    if (vms) vms.setAttribute('required','required');
+  }
+  else if (cat === 'alarma'){
+    _showAll(alarmaEls);
+    // lo marcado como alarma-hide permanece oculto (ya hecho)
+  }
+  else if (cat === 'switch'){
+    _showAll(switchEls);
+    _showAll(alarmaHideEls);
+    _hideAll(switchHideEls);
+  }
+  else if (cat === 'monitor'){
+    _hideAll(monitorHideEls);
+  }
+  else {
+    // Otros → deja credenciales visibles
+    _showAll(credEls);
+  }
+}
+
+function getEquipoText(){
+  const sel = document.getElementById('equipo');
+  if(!sel) return '';
+  const opt = sel.options[sel.selectedIndex];
+  return opt ? opt.textContent.trim() : '';
+}
+
+function updateVisibilityFromEquipo(){
+  const cat = catDesdeEquipoText(getEquipoText());
+  applyVisibilityByCategory(cat);
+}
+
+document.addEventListener('DOMContentLoaded', updateVisibilityFromEquipo);
+if (equipoSel) {
+  equipoSel.addEventListener('change', updateVisibilityFromEquipo);
 }
 </script>
 

@@ -13,103 +13,212 @@
   $ciudades = $conn->query("SELECT ID, nom_ciudad FROM ciudades ORDER BY nom_ciudad ASC");
 
   $equipo = $_GET['equipo'] ?? 'camara'; // Valor por defecto
+  $lastDeviceId = (isset($_GET['last_id']) && ctype_digit($_GET['last_id'])) ? (int)$_GET['last_id'] : null;
 
   ob_start();
 ?>
 
 <!-- ESTILOS COMUNES -->
 <style>
-  .dropzone {
-    cursor: pointer;
-    transition: border 0.3s ease, background-color 0.3s ease;
-  }
-  .dropzone:hover {
-    border: 2px dashed #007bff;
-    background-color: #f8f9fa;
-  }
-  .preview {
-    max-width: 100%;
-    max-height: 200px;
-    object-fit: contain;
-  }
-  #sugerencia {
-    margin-bottom: 1rem;
-    background-color: #f0f8ff;
-    padding: 10px;
-    border-left: 5px solid #2196F3;
-    transition: opacity 1s ease;
-  }
-  #camaraIP.activo,
-  #camaraAnalogica.activo {
-    background-color: #007bff;
-    color: white;
-  }
-  #tipoAlarmaContainer .activo,
-  #tipoSwitchContainer .activo {
-    background-color: #007bff;
-    color: white;
+  /* =======================
+     CESISS – Theme Claro
+  ======================== */
+  :root{
+    --brand:#3C92A6;      /* primario */
+    --brand-2:#24A3C1;    /* acento */
+    --ink:#10343b;        /* texto principal */
+    --muted:#486973;      /* texto secundario */
+    --bg:#F7FBFD;         /* fondo app */
+    --surface:#FFFFFF;    /* tarjetas/superficies */
+    --border:#DDEEF3;     /* bordes suaves */
+    --border-strong:#BFE2EB;
+    --chip:#EAF7FB;       /* fondo de las etiquetas */
+    --ring:0 0 0 .22rem rgba(36,163,193,.25);
+    --ring-strong:0 0 0 .28rem rgba(36,163,193,.33);
+    --shadow-sm:0 6px 18px rgba(20,78,90,.08);
+    --shadow-md:0 10px 28px rgba(20,78,90,.12);
+    --radius-xl:1rem;
+    --radius-2xl:1.25rem;
   }
 
-  /* Cámara / UI */
-  .camera-live { width: 100%; background: #000; aspect-ratio: 16/9; border-radius: .5rem; }
+  body{ background: var(--bg); color: var(--ink); }
+
+  /* ---------- Título ---------- */
+  h2{
+    font-weight:800; letter-spacing:.2px; color:var(--ink);
+    margin-bottom:.75rem!important;
+  }
+  h2::after{
+    content:""; display:block; width:78px; height:4px; border-radius:99px;
+    margin-top:.5rem; background:linear-gradient(90deg,var(--brand),var(--brand-2));
+  }
+
+  /* ---------- Secciones (aplicadas con script: .section-card) ---------- */
+  .section-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-2xl);
+    padding:1rem 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ---------- Aviso / sugerencia ---------- */
+  #sugerencia{
+    margin-bottom:1rem;
+    background:linear-gradient(90deg, rgba(36,163,193,.08), rgba(60,146,166,.06));
+    padding:12px 14px; border-left:6px solid var(--brand);
+    border-radius:.9rem; color:#134954;
+  }
+
+  /* ---------- Labels tipo “chip” ---------- */
+  .form-label{
+    display:inline-flex; align-items:center; gap:.5rem;
+    font-weight:700; color:var(--ink);
+    margin-bottom:.35rem;
+    position:relative;
+    padding:.2rem .6rem; border-radius:999px;
+    background: var(--chip); border:1px solid var(--border);
+  }
+  .form-label::before{
+    content:""; width:.55rem; height:.55rem; border-radius:50%;
+    background:linear-gradient(90deg,var(--brand),var(--brand-2));
+  }
+
+  /* ---------- Inputs / Selects ---------- */
+  .form-control, .form-select{
+    background:#fff; color:var(--ink);
+    border:2px solid var(--border);
+    border-radius: .9rem;
+    padding:.7rem .95rem;
+    box-shadow:none; transition: border-color .15s, box-shadow .15s, background .2s;
+  }
+  .form-control:hover, .form-select:hover{ border-color: var(--border-strong); }
+  .form-control:focus, .form-select:focus{
+    border-color:var(--brand);
+    box-shadow: var(--ring);
+    background:#fff;
+  }
+  .form-control::placeholder{ color:#6f97a1; opacity:.9; font-weight:500; }
+
+  /* Resalta sutilmente campos requeridos y su label */
+  .form-control:required, .form-select:required{
+    background-image: linear-gradient(0deg, #F0FAFD, #FFFFFF 55%);
+  }
+  .form-control:required:focus, .form-select:required:focus{
+    box-shadow: 0 0 0 .25rem rgba(36,163,193,.28);
+  }
+  label + .form-control:required,
+  label + .form-select:required{
+    border-color: #BFE2EB;
+  }
+  /* Badge “OBLIGATORIO” automático en labels si el siguiente control es required */
+  .form-label + .form-control:required,
+  .form-label + .form-select:required{
+    --has-required: "OBLIGATORIO";
+  }
+  .form-label + .form-control:required::before,
+  .form-label + .form-select:required::before{
+    content: var(--has-required);
+    margin-right:.5rem;
+    font-size:.72rem;
+    font-weight:800;
+    color:#0f3c45;
+    background:#EAF7FB;
+    border:1px solid #DDEEF3;
+    border-radius:999px;
+    padding:.1rem .5rem;
+  }
+
+  /* ---------- Botones ---------- */
+  .btn-brand, .btn-secondary{
+    background: linear-gradient(90deg, var(--brand), var(--brand-2));
+    border:none; color:#fff; font-weight:800;
+    padding:.8rem 1.6rem; border-radius:999px;
+    box-shadow: 0 10px 20px rgba(36,163,193,.25);
+  }
+  .btn-brand:hover, .btn-secondary:hover{ filter:brightness(.98); transform:translateY(-1px); }
+  .btn-brand:active, .btn-secondary:active{ transform:translateY(0); }
+
+  .btn-outline-primary{
+    --bs-btn-color: var(--ink);
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-hover-color:#fff;
+    --bs-btn-hover-bg:var(--brand);
+    --bs-btn-hover-border-color:var(--brand);
+    --bs-btn-active-bg:var(--brand);
+    --bs-btn-active-border-color:var(--brand);
+    border-width:2px; border-radius:999px; font-weight:800;
+  }
+
+  /* ---------- Pills de tipo activos ---------- */
+  #camaraIP.activo, #camaraAnalogica.activo,
+  #tipoAlarmaContainer .activo, #tipoSwitchContainer .activo{
+    background:var(--brand)!important; color:#fff!important; border-color:var(--brand)!important;
+    box-shadow: var(--ring-strong);
+  }
+
+  /* ---------- Dropzones (claro y llamativo) ---------- */
+  .dropzone{
+    border:2px dashed var(--border-strong);
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(36,163,193,.06), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(60,146,166,.05), transparent 60%),
+      #fff;
+    cursor:pointer; border-radius:1.1rem;
+    transition: border-color .15s, box-shadow .15s, transform .12s;
+    position:relative; overflow:hidden;
+  }
+  .dropzone:hover{ border-color:var(--brand); box-shadow: var(--ring); }
+  .dropzone:focus-within{ border-color:var(--brand); box-shadow: var(--ring-strong); }
 
   /* Alineación/altura igual de tarjetas de imagen */
-  .dz-card { height: 100%; display: flex; flex-direction: column; }
-  .dz-body { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  .dz-card{ height:100%; display:flex; flex-direction:column; }
+  .dz-body{ flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; padding:1.25rem!important; }
 
-  /* Input file "fantasma": oculto sin usar display:none (iOS friendly) */
-  .input-ghost {
-    position: fixed !important;
-    left: -100vw !important;
-    width: 1px !important;
-    height: 1px !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+  /* Preview con cuadriculado sutil */
+  .preview{
+    max-width:100%; max-height:220px; object-fit:contain; border-radius:.9rem;
+    background:
+      linear-gradient(45deg,#f9fdff 25%,transparent 25% 75%,#f9fdff 75%),
+      linear-gradient(45deg,#f9fdff 25%,transparent 25% 75%,#f9fdff 75%) 10px 10px;
+    background-size:20px 20px; border:1px solid var(--border);
+  }
+  .remove-btn{ border-radius:999px; }
+
+  /* ---------- MAC/IP “chips” deshabilitados ---------- */
+  #tag, #ip{
+    background:#f7fcfe; border:1px dashed var(--border-strong);
+    color:var(--muted); font-weight:600;
   }
 
-  /* ===== Responsivo: ajustes suaves para móvil y tablet ===== */
-
-  /* Reduce paddings de dropzones en pantallas chicas */
-  @media (max-width: 575.98px) {
-    .dz-body { padding: 1rem !important; }
-    .preview { max-height: 160px; }
-    .camera-live { aspect-ratio: 4/3; } /* más alto en móvil */
+  /* ---------- Cámara ---------- */
+  .camera-live{
+    width:100%; background:#000; aspect-ratio:16/9;
+    border-radius:1rem; box-shadow:var(--shadow-sm);
   }
 
-  /* De sm a md: 2 columnas en rejillas de imágenes */
-  @media (min-width: 576px) and (max-width: 991.98px) {
-    .preview { max-height: 180px; }
-  }
-
-  /* Botoneras “Tipo …” apiladas en móvil */
-  @media (max-width: 575.98px) {
-    #tipoAlarmaContainer .btn,
-    #tipoSwitchContainer .btn,
-    #tipoCamaraContainer .btn {
-      width: 100%;
-      margin-bottom: .5rem;
+  /* ---------- Responsive ---------- */
+  @media (max-width: 575.98px){
+    .section-card{ padding:.9rem .85rem; }
+    .dz-body{ padding:1rem!important; }
+    .preview{ max-height:180px; }
+    .camera-live{ aspect-ratio:4/3; }
+    #tipoAlarmaContainer .btn, #tipoSwitchContainer .btn, #tipoCamaraContainer .btn{
+      width:100%; margin-bottom:.5rem;
     }
+    #sugerencia{ font-size:.92rem; padding:.6rem .8rem; }
   }
 
-  /* Input-group de Marca: permitir “salto de línea” sin romper layout */
-  .input-group.flex-wrap { flex-wrap: wrap; gap: .5rem; }
-  .input-group.flex-wrap > .form-control { min-width: 12rem; }
-  .input-group.flex-wrap > .btn { white-space: nowrap; }
-
-  /* Texto “Pegar aquí” del pin: ocúltalo en xs para no saturar */
-  @media (max-width: 575.98px) {
-    .paste-pin span { display: none !important; }
+  /* Input file “fantasma” (iOS friendly) */
+  .input-ghost{
+    position:fixed!important; left:-100vw!important; width:1px!important; height:1px!important;
+    opacity:0!important; pointer-events:none!important;
   }
 
-  /* Aviso/sugerencia más compacto en móvil */
-  @media (max-width: 575.98px) {
-    #sugerencia { font-size: .9rem; padding: .5rem .75rem; }
-  }
-    .uppercase {
-    text-transform: uppercase;
-    letter-spacing: .02em;
-  }
+  .uppercase{ text-transform:uppercase; letter-spacing:.02em; }
 </style>
+
+
 
 <h2 class="mb-4">Registrar dispositivo</h2>
 
@@ -177,11 +286,13 @@
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Determinante</label>
-        <select name="determinante" id="determinante" class="form-select" required>
-          <option value="">-- Selecciona determinante --</option>
-        </select>
+      <label class="form-label">Determinante</label>
+      <select id="determinante" class="form-select" disabled>
+     <option value="">-- Determinante --</option>
+    </select>
+      <input type="hidden" name="determinante" id="determinante_hidden_tecnico">
       </div>
+
 
       <!-- Imágenes con cámara -->
       <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4 mt-3 align-items-stretch">
@@ -326,20 +437,38 @@
       } catch(e){ alert('No se pudieron cargar las sucursales'); }
     });
 
-    sucSel.addEventListener('change', async () => {
-      clearAndPH(detSel, '-- Selecciona determinante --');
-      if (!sucSel.value) return;
-      try {
-        const data = await jget(`../ubicacion/api_determinantes.php?sucursal_id=${encodeURIComponent(sucSel.value)}`);
-        data.forEach(d => {
-          const o = document.createElement('option');
-          o.value = d.id;
-          o.textContent = (d.nom_determinante ?? d.determinante ?? '').trim();
-          if (o.textContent) detSel.appendChild(o);
-        });
-      } catch(e){ alert('No se pudieron cargar las determinantes'); }
+    //cambio de determininate
+sucSel.addEventListener('change', async () => {
+  clearAndPH(detSel, '-- Selecciona determinante --');
+
+  // Siempre bloqueado y sin "nueva determinante" en modo técnico
+  detSel.disabled = true;
+  const detHidden = document.getElementById('determinante_hidden_tecnico');
+  if (detHidden) detHidden.value = '';
+
+  if (!sucSel.value) return;
+
+  try {
+    const data = await jget(`../ubicacion/api_determinantes.php?sucursal_id=${encodeURIComponent(sucSel.value)}`);
+
+    // Pinta opciones solo para mostrar (aunque esté disabled)
+    data.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = (d.nom_determinante ?? d.determinante ?? '').trim();
+      if (o.textContent) detSel.appendChild(o);
     });
-  })();
+
+    // Auto-seleccionar la 1.ª determinante disponible y setear el hidden
+    if (data.length > 0) {
+      detSel.value = data[0].id;
+      if (detHidden) detHidden.value = data[0].id;
+    }
+  } catch (e) {
+    alert('No se pudieron cargar las determinantes');
+  }
+});
+
   </script>
 
 <?php else: ?>
@@ -433,18 +562,18 @@
           <datalist id="sugerencias-modelo"></datalist>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Estado</label>
+          <label class="form-label">Status</label>
           <input type="text" name="estado" class="form-control" placeholder="Escribe el status" required>
-        </div>
+        </div>  
 
         <div class="col-md-3 campo-user">
-          <label class="form-label">Usuario</label>
-          <input type="text" name="user" class="form-control" placeholder="Nombre de usuario" required>
+          <label class="form-label">IDE</label>
+          <input type="text" name="user" class="form-control" placeholder="IDE" required>
         </div>
 
         <div class="col-md-3 campo-pass">
-          <label class="form-label">Contraseña</label>
-          <input type="password" name="pass" class="form-control" placeholder="Contraseña de usuario" required>
+          <label class="form-label">IDE Password</label>
+          <input type="password" name="pass" class="form-control" placeholder="IDE Password" required>
         </div>
       </div>
 
@@ -481,20 +610,30 @@
           <div class="form-text">Elige una sucursal existente o crea una nueva.</div>
         </div>
 
-        <!-- Determinante (select dependiente o input si aplica) -->
-        <div class="col-md-3">
-          <label class="form-label">Determinante</label>
+<!-- Determinante (auto y bloqueada en sucursal existente) -->
+<div class="col-md-3">
+  <label class="form-label">Determinante</label>
 
-          <!-- Select determinante (para sucursal existente) -->
-          <select name="determinante_id" id="determinante" class="form-select">
-            <option value="">-- Selecciona una sucursal --</option>
-          </select>
+  <!-- Select de solo visualización (bloqueado). No se envía. -->
+  <select id="determinante" class="form-select" disabled>
+    <option value="">Determinante</option>
+  </select>
 
-          <!-- Campo para NUEVA determinante -->
-          <input type="text" name="determinante_nueva" id="determinante_nueva" class="form-control mt-2 d-none" placeholder="Escribe la nueva determinante">
-          <div class="form-text" id="ayudaDeterminante">Si creas una sucursal nueva, escribe aquí la determinante.</div>
-        </div>
-      </div>
+  <!-- Valor real que SÍ se envía -->
+  <input type="hidden" name="determinante_id" id="determinante_hidden">
+
+  <!-- Campo para NUEVA determinante (solo cuando elijan "Nueva sucursal…") -->
+  <input type="text"
+         name="determinante_nueva"
+         id="determinante_nueva"
+         class="form-control mt-2 d-none"
+         placeholder="Escribe la nueva determinante">
+
+  <div class="form-text" id="ayudaDeterminante">
+    Si creas una sucursal nueva, escribe aquí la determinante.
+  </div>
+</div>
+
 
       <!-- BLOQUE 3: Red y configuración -->
       <div class="row g-4 mt-3">
@@ -571,7 +710,7 @@
         </div>
 
         <div class="col-md-4">
-          <label class="form-label">Tipo de sensor</label>
+          <label class="form-label">Tipo (Sensor, Alimentacion)</label>
           <input type="text" name="tipo_sensor" class="form-control" placeholder="Ej: PIR, Humo, etc.">
         </div>
       </div>
@@ -607,14 +746,223 @@
           </button>
         </div>
       </div>
-
     </div>
   </form>
 
 <?php endif; ?>
 
+<div class="modal fade" id="registrarOtroModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Registro guardado</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="m-0">¿Registrar otro dispositivo <strong>con la misma ubicación</strong>?</p>
+      </div>
+<div class="modal-footer">
+  <button type="button" id="btnNoRegistrarOtro" class="btn btn-light" data-bs-dismiss="modal">No</button>
+  <button type="button" id="btnSiRegistrarOtro" class="btn btn-secondary">Sí</button>
+
+<?php if (!empty($lastDeviceId)): ?>
+  <a
+    href="/sisec-ui/views/dispositivos/device.php?id=<?= (int)$lastDeviceId ?>"
+    class="btn btn-outline-primary"
+    id="btnVerDispositivo"
+    target="_blank" rel="noopener"
+  >
+    Ver dispositivo
+  </a>
+<?php endif; ?>
+
+
+</div>
+    </div>
+  </div>
+</div>
+
 <!-- SCRIPTS -->
 <script src="validacionesregistro.js?v=3"></script>
+
+<script>
+(() => {
+  // Detecta si estás en Modo Técnico (tiene #determinante_hidden_tecnico)
+  const isTecnico = !!document.querySelector('form[action="guardar.php"] input#determinante_hidden_tecnico');
+
+  // Selects compartidos
+  const selCiudad   = document.getElementById('ciudad');
+  const selMpio     = document.getElementById('municipio');
+  const selSucursal = document.getElementById('sucursal');     // mismo id en ambos modos
+  const selDet      = document.getElementById('determinante'); // visual (disabled)
+  const detHidden   = document.getElementById(isTecnico ? 'determinante_hidden_tecnico' : 'determinante_hidden');
+
+  const form = document.querySelector('form[action="guardar.php"]');
+
+  // --- util fetch
+  async function jget(url) {
+    const r = await fetch(url, { credentials:'same-origin' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  // --- carga en cascada (usa tus endpoints existentes)
+  async function loadMunicipios(ciudadId) {
+    const data = await jget(`../ubicacion/api_municipios.php?ciudad_id=${encodeURIComponent(ciudadId)}`);
+    selMpio.innerHTML = '<option value="">-- Selecciona un municipio --</option>';
+    for (const m of data) {
+      const o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.nom_municipio ?? m.nombre ?? '';
+      if (o.textContent) selMpio.appendChild(o);
+    }
+  }
+
+  async function loadSucursales(municipioId) {
+    // Algunas de tus rutas piden también ciudad_id. Lo incluimos si existe.
+    const ciudadId = selCiudad?.value || '';
+    const q = ciudadId
+      ? `ciudad_id=${encodeURIComponent(ciudadId)}&municipio_id=${encodeURIComponent(municipioId)}`
+      : `municipio_id=${encodeURIComponent(municipioId)}`;
+    const data = await jget(`../ubicacion/api_sucursales.php?${q}`);
+    selSucursal.innerHTML = '<option value="">-- Selecciona una sucursal --</option>';
+    for (const s of data) {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.nom_sucursal ?? s.nombre ?? '';
+      if (o.textContent) selSucursal.appendChild(o);
+    }
+  }
+
+  async function loadDeterminantes(sucursalId) {
+    const data = await jget(`../ubicacion/api_determinantes.php?sucursal_id=${encodeURIComponent(sucursalId)}`);
+    selDet.innerHTML = '<option value="">-- Determinante --</option>';
+    let first = '';
+    for (const d of data) {
+      const name = (d.nom_determinante ?? d.determinante ?? '').trim();
+      if (!name) continue;
+      const o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = name;
+      selDet.appendChild(o);
+      if (!first) first = d.id;
+    }
+    // selDet (display) está disabled; el real es detHidden
+    if (first && !detHidden.value) {
+      selDet.value = first;
+      detHidden.value = first;
+    }
+  }
+
+  // Quitar ?saved=1 del URL para que no reabra el modal al refrescar
+  function removeSavedParam() {
+    const url = new URL(location.href);
+    url.searchParams.delete('saved');
+    history.replaceState(null, '', url);
+  }
+
+
+
+  // --- 1) Antes de enviar, guarda la ubicación elegida
+  if (form) {
+    form.addEventListener('submit', () => {
+      const ubic = {
+        ciudad:      selCiudad?.value || '',
+        municipio:   selMpio?.value   || '',
+        sucursal:    selSucursal?.value || '',
+        determinante:detHidden?.value || ''   // valor real que envía el form
+      };
+      sessionStorage.setItem('CESISS_REG_LAST_UBIC', JSON.stringify(ubic));
+    });
+  }
+
+  // --- Limpia campos NO relacionados con ubicación (para capturar otro rápido)
+  function resetCamposNoUbicacion() {
+    // Reset del form
+    form?.reset?.();
+
+    // Fecha hoy (si habitual en tu flujo)
+    const hoy = new Date().toISOString().slice(0,10);
+    const fecha = form?.querySelector('input[name="fecha"]');
+    if (fecha && !fecha.value) fecha.value = hoy;
+
+    // Limpia previews / elimina botones
+    document.querySelectorAll('.preview').forEach(img => {
+      img.src = '#'; img.classList.add('d-none');
+    });
+    document.querySelectorAll('.remove-btn').forEach(b => b.classList.add('d-none'));
+
+    // Quita "N/A" si existe
+    const chkNA = document.getElementById('chkNAImg1');
+    if (chkNA) chkNA.checked = false;
+
+    // Enfocar primer campo útil
+    const eq = document.getElementById('equipo');
+    if (eq) eq.focus();
+  }
+
+  // --- 2) Si venimos de guardar: mostrar modal y rehidratar si eligen “Sí”
+  const saved = new URLSearchParams(location.search).get('saved');
+  if (saved === '1') {
+    const modalEl = document.getElementById('registrarOtroModal');
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+      removeSavedParam(); // ← limpia ?saved=1 del URL
+
+      // No: limpiar borrador
+      document.getElementById('btnNoRegistrarOtro')?.addEventListener('click', () => {
+        sessionStorage.removeItem('CESISS_REG_LAST_UBIC');
+      });
+
+      // Sí: reset + rehidratar selectores
+      document.getElementById('btnSiRegistrarOtro')?.addEventListener('click', async () => {
+        const raw = sessionStorage.getItem('CESISS_REG_LAST_UBIC');
+        if (!raw) { modal.hide(); return; }
+        const { ciudad, municipio, sucursal, determinante } = JSON.parse(raw);
+
+        try {
+          resetCamposNoUbicacion();
+
+          // 1) ciudad
+          if (ciudad && selCiudad) {
+            selCiudad.value = ciudad;
+            await loadMunicipios(ciudad);
+          }
+
+          // 2) municipio
+          if (municipio && selMpio) {
+            selMpio.value = municipio;
+            await loadSucursales(municipio);
+          }
+
+          // 3) sucursal
+          if (sucursal && selSucursal) {
+            selSucursal.value = sucursal;
+            // Si confías en tu listener 'change' para cargar determinantes:
+            // selSucursal.dispatchEvent(new Event('change'));
+            await loadDeterminantes(sucursal);
+          }
+
+          // 4) determinante (real + display)
+          if (determinante && detHidden) {
+            detHidden.value = determinante;
+            if (selDet) selDet.value = determinante;
+          }
+
+          modal.hide(); // listo para capturar otro
+
+        } catch (e) {
+          console.error('Rehidratación de ubicación falló:', e);
+          alert('No se pudo restaurar la ubicación. Inténtalo de nuevo.');
+          modal.hide();
+        }
+      });
+    }
+  }
+})();
+</script>
+
 
 <script>
 (() => {
@@ -715,81 +1063,89 @@
       alert('No se pudieron cargar las sucursales.');
     }
   });
+  
+//YA FUE EDITADO ESTO
+// ===== SUCURSAL -> DETERMINANTES o INPUT =====
+selSucursal?.addEventListener('change', async () => {
+  const val = selSucursal.value;
 
-  // ===== SUCURSAL -> DETERMINANTES o INPUT =====
-  selSucursal?.addEventListener('change', async () => {
-    const val = selSucursal.value;
+  const detHidden = document.getElementById('determinante_hidden');
+  if (detHidden) detHidden.value = '';
 
-    clearSelect(selDet, '-- Selecciona una determinante --');
-    toggle(inpDetNueva, false);
+  clearSelect(selDet, '-- Selecciona una determinante --');
+  toggle(inpDetNueva, false);
 
-    if (val === OPTION_NUEVA_SUCURSAL) {
-      toggle(inpSucNueva, true);
-      clearSelect(selDet, '-- Determinante por nueva sucursal --');
-      toggle(inpDetNueva, true);
+  // bloquea siempre el select (solo display)
+  selDet.disabled = true;
 
-      if (ayudaDet) ayudaDet.textContent = 'Nueva sucursal: escribe aquí la determinante.';
-      selDet.required        = false;
-      if (inpDetNueva) inpDetNueva.required   = true;
-      return;
-    }
+  if (val === OPTION_NUEVA_SUCURSAL) {
+    // Nueva sucursal: el usuario escribe sucursal y determinante manualmente
+    toggle(inpSucNueva, true);
+    clearSelect(selDet, '-- Determinante por nueva sucursal --');
+    toggle(inpDetNueva, true);
 
-    if (!val) {
-      toggle(inpSucNueva, false);
-      toggle(inpDetNueva, false);
-      clearSelect(selDet, '-- Selecciona una sucursal --');
-      return;
-    }
+    if (ayudaDet) ayudaDet.textContent = 'Nueva sucursal: escribe aquí la determinante.';
 
-    // Sucursal existente → determinantes
+    // En este caso NO seteamos determinante_id hidden; viajará "determinante_nueva"
+    if (detHidden) detHidden.value = '';
+    return;
+  }
+
+  if (!val) {
     toggle(inpSucNueva, false);
-    if (ayudaDet) ayudaDet.textContent = 'Elige una determinante o crea una nueva.';
-    selDet.required      = true;
-    if (inpDetNueva) inpDetNueva.required = false;
+    toggle(inpDetNueva, false);
+    clearSelect(selDet, '-- Selecciona una sucursal --');
+    if (detHidden) detHidden.value = '';
+    return;
+  }
 
-    try {
-      const url  = `../ubicacion/api_determinantes.php?sucursal_id=${encodeURIComponent(val)}`;
-      const data = await fetchJSON(url);
+  // Sucursal existente → determinantes auto y bloqueado
+  toggle(inpSucNueva, false);
+  if (ayudaDet) ayudaDet.textContent = 'Determinante seleccionada automáticamente.';
+  if (inpDetNueva) {
+    inpDetNueva.required = false;
+    toggle(inpDetNueva, false);
+  }
 
-      clearSelect(selDet, '-- Selecciona una determinante --');
+  try {
+    const url  = `../ubicacion/api_determinantes.php?sucursal_id=${encodeURIComponent(val)}`;
+    const data = await fetchJSON(url);
 
-      let count = 0;
-      data.forEach(d => {
-        const name = (d.determinante ?? d.nom_determinante ?? '').trim();
-        if (!name) return;
-        const o = document.createElement('option');
-        o.value = d.id;
-        o.textContent = name;
-        selDet.appendChild(o);
-        count++;
-      });
+    clearSelect(selDet, '-- Determinante --');
 
-      // Opción NUEVA determinante
-      const on = document.createElement('option');
-      on.value = OPTION_NUEVA_DETERMINANTE;
-      on.textContent = '➕ Nueva determinante…';
-      selDet.appendChild(on);
+    let primeraId = '';
+    data.forEach(d => {
+      const name = (d.determinante ?? d.nom_determinante ?? '').trim();
+      if (!name) return;
+      const o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = name;
+      selDet.appendChild(o);
+      if (!primeraId) primeraId = d.id;
+    });
 
-      if (count === 0) {
-        console.warn('[Determinantes] Vacío para sucursal', val);
-      }
-    } catch (e) {
-      console.error('[Determinantes] Error', e);
-      alert('No se pudieron cargar las determinantes.');
-    }
-  });
-
-  // ===== DETERMINANTE: mostrar input si eligen "Nueva" =====
-  selDet?.addEventListener('change', () => {
-    if (!selDet) return;
-    if (selDet.value === OPTION_NUEVA_DETERMINANTE) {
-      toggle(inpDetNueva, true);
-      if (inpDetNueva) inpDetNueva.required = true;
+    // Sin opción "➕ Nueva determinante…": el select queda fijo (disabled)
+    if (primeraId) {
+      selDet.value = primeraId;           // para que se vea
+      if (detHidden) detHidden.value = primeraId; // para que viaje al backend
     } else {
-      toggle(inpDetNueva, false);
-      if (inpDetNueva) inpDetNueva.required = false;
+      // Si la sucursal no tiene determinantes, mostramos placeholder
+      clearSelect(selDet, '-- Sin determinantes registradas --');
+      if (detHidden) detHidden.value = '';
     }
-  });
+  } catch (e) {
+    console.error('[Determinantes] Error', e);
+    alert('No se pudieron cargar las determinantes.');
+  }
+});
+
+
+// ===== DETERMINANTE: sin "nueva", solo sincroniza hidden (defensa)
+selDet?.addEventListener('change', () => {
+  const detHidden = document.getElementById('determinante_hidden');
+  if (detHidden) detHidden.value = selDet.value || '';
+});
+
 
   // ===== Validación al enviar =====
   const form = document.querySelector('form[action="guardar.php"]');
@@ -1398,10 +1754,17 @@ window.takePhoto = function() {
           }
         });
       });
+      // Sincroniza determinante_id hidden por si acaso
+const detHidden = document.getElementById('determinante_hidden');
+if (detHidden && selDet) {
+  detHidden.value = selDet.value || detHidden.value || '';
+}
+
     }
   });
 })();
 </script>
+
 <script>
 /**
  * Autocorrección suave en español (acentos y espacios) para campos

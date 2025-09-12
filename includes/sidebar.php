@@ -1,47 +1,55 @@
+<?php
+// views/includes/sidebar.php
+?>
 <!-- ===== SIDEBAR CESISS (animado: blob / waves / grid) ===== -->
 <style>
   :root{
     --brand:#3C92A6;
     --brand-2:#24a3c1;
 
-    --side-base-1:#07161a;   /* base oscura 1 */
-    --side-base-2:#0a2128;   /* base oscura 2 */
-    --side-fg:#e6f2f4;       /* texto */
-    --side-muted:#9ab7bf;    /* texto secundario */
-    --side-sep:#16323a;      /* divisores/bordes */
+    --side-base-1:#07161a;
+    --side-base-2:#0a2128;
+    --side-fg:#e6f2f4;
+    --side-muted:#9ab7bf;
+    --side-sep:#16323a;
     --side-shadow: 0 12px 24px rgba(0,0,0,.28);
 
-    --topbar-h: 64px;        /* alto de tu topbar */
-    --sidebar-w: 300px;      /* ancho del sidebar */
-    --item-h: 44px;          /* alto de cada item */
+    /* Alturas del topbar (las usa el JS del topbar) */
+    --tb-height: 64px;
+    --tb-height-scrolled: 52px;
+
+    --sidebar-w: 300px;
+    --item-h: 44px;
     --radius: 10px;
+
+    --safe-top: env(safe-area-inset-top, 0px);
   }
 
-  /* reset */
   nav.sidebar { background: transparent !important; }
 
-  /* Contenedor fijo (desktop), oculto en móviles */
   .sidebar{
     position: fixed;
-    top: var(--topbar-h);
+    top: var(--tb-height, 64px); /* seguirá al topbar */
     left: 0;
     bottom: 0;
     width: var(--sidebar-w);
     z-index: 1030;
     color: var(--side-fg);
     box-shadow: var(--side-shadow);
-    overflow: hidden;
+    overflow: clip; /* evita recortes del footer sticky; usa 'visible' si tu navegador no soporta clip */
     display: block;
+    transition: top .35s ease;
+    will-change: top;
+  }
+  body.has-scrolled .sidebar{
+    top: var(--tb-height-scrolled, 52px);
   }
 
-  /* Fondo base oscuro */
   .sidebar::after{
     content:"";
     position:absolute; inset:0; z-index:0; pointer-events:none;
     background: linear-gradient(180deg, var(--side-base-1) 0%, var(--side-base-2) 60%, var(--side-base-1) 100%);
   }
-
-  /* Animación */
   .sidebar::before{
     content:"";
     position:absolute; inset:0; z-index:0; pointer-events:none;
@@ -53,8 +61,6 @@
       radial-gradient(340px 260px at -20% 110%, rgba(60,146,166,.42) 0%, rgba(60,146,166,0) 75%);
     animation: sb-blob 18s ease-in-out infinite;
   }
-
-  /* blob */
   .sidebar[data-effect="blob"]::before{
     background:
       radial-gradient(380px 280px at 120% -10%, rgba(36,163,193,.36) 0%, rgba(36,163,193,0) 70%),
@@ -66,8 +72,6 @@
     0%,100% { transform: translate3d(0,0,0) scale(1); }
     50%     { transform: translate3d(0,-10px,0) scale(1.02); }
   }
-
-  /* waves */
   .sidebar[data-effect="waves"]::before{
     background:
       radial-gradient(800px 600px at 50% 120%, rgba(36,163,193,.25), rgba(36,163,193,0) 70%),
@@ -79,8 +83,6 @@
     50%  { transform: translate3d(0,-18px,0) scale(1.02); }
     100% { transform: translate3d(0,0,0) scale(1); }
   }
-
-  /* grid */
   .sidebar[data-effect="grid"]::before{
     background:
       repeating-linear-gradient(0deg,  rgba(60,146,166,.22) 0 2px, transparent 2px 70px),
@@ -93,23 +95,32 @@
     100% { background-position: 0 220px, 220px 0; }
   }
 
-  /* Contenido */
   .sidebar .inner{
     position: relative; z-index: 1;
     height: 100%;
-    display: flex; flex-direction: column;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* permite scroll interno */
   }
 
   .sidebar .brand {
     text-align: center; padding: 18px 12px 10px;
   }
-  .sidebar .brand img { max-height: 120px; width:auto; filter: drop-shadow(0 6px 14px rgba(36,163,193,.28)); }
+  .sidebar .brand img {
+    max-height: 120px; width:auto;
+    filter: drop-shadow(0 6px 14px rgba(36,163,193,.28));
+  }
 
+  /* El menú es el que scrollea para que el footer siempre se vea */
   .sidebar .menu{
-    padding: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto; overflow-x: hidden;
+    padding: 8px;
+    padding-bottom: 72px; /* aire final */
     scrollbar-width: thin;
     scrollbar-color: rgba(36,163,193,.45) transparent;
+    scroll-behavior: smooth;
   }
   .sidebar .menu::-webkit-scrollbar{ width: 8px; }
   .sidebar .menu::-webkit-scrollbar-thumb{ background: rgba(36,163,193,.45); border-radius: 8px; }
@@ -133,9 +144,12 @@
   .sidebar a:hover{
     background: rgba(36,163,193,.12);
     border-color: rgba(36,163,193,.25);
+    transform: translateX(1px);
   }
-
-  /* Activo */
+  .sidebar a:focus-visible{
+    outline: 2px solid var(--brand-2);
+    outline-offset: 2px;
+  }
   .sidebar a.active{
     background: rgba(36,163,193,.18);
     border-color: rgba(36,163,193,.45);
@@ -148,23 +162,34 @@
     border-radius: 4px;
   }
 
-  /* Footer (logout) */
+  /* Footer: sticky para que SIEMPRE se vea */
   .sidebar .footer{
-    margin-top: auto; padding: 8px;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: auto;
+    padding: 8px;
     border-top: 1px solid var(--side-sep);
+    background: linear-gradient(180deg, rgba(7,22,26,.85), rgba(10,33,40,.85));
+    backdrop-filter: blur(6px);
   }
   .sidebar .footer a{
+    display: flex; align-items: center; gap: 8px;
+    height: 44px; line-height: 44px;
     margin: 6px 8px;
+    padding: 0 14px;
     color: var(--side-fg);
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: var(--radius);
+    transition: background .15s ease, border-color .2s ease, transform .08s ease;
   }
   .sidebar .footer a:hover{
-    background: rgba(36,163,193,.12);
-    border-color: rgba(36,163,193,.25);
+    background: rgba(36,163,193,.15);
+    border-color: rgba(36,163,193,.35);
+    transform: translateY(-1px);
   }
 
-  /* ==== Ajuste de separación contenido vs sidebar ==== */
   @media (min-width: 992px){
     .content-wrapper{
       margin-left: var(--sidebar-w) !important;
@@ -179,8 +204,12 @@
     main.main > .container-fluid,
     main.main .container-fluid{
       padding-left: 0 !important;
-      padding-right: 1rem; /* ajusta si quieres más/menos aire a la derecha */
+      padding-right: 1rem;
     }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .sidebar *, .sidebar::before { transition: none !important; animation: none !important; }
   }
 </style>
 
@@ -191,7 +220,7 @@
     </div>
 
     <div class="menu">
-      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Distrital'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Distrital'])): ?>
         <a href="/sisec-ui/views/inicio/index.php" class="<?= ($activePage ?? '') === 'inicio' ? 'active' : '' ?>">
           <i class="fas fa-home"></i> Inicio
         </a>
@@ -201,13 +230,13 @@
         <i class="fas fa-camera"></i> Dispositivos
       </a>
 
-      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador', 'Capturista','Técnico'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador', 'Capturista','Técnico'])): ?>
         <a href="/sisec-ui/views/dispositivos/registro.php" class="<?= ($activePage ?? '') === 'registro' ? 'active' : '' ?>">
           <i class="fas fa-plus-circle"></i> Registrar dispositivo
         </a>
       <?php endif; ?>
 
-      <?php if (in_array($_SESSION['usuario_rol'], ['Superadmin','Administrador'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador'])): ?>
         <a href="/sisec-ui/views/usuarios/index.php" class="<?= ($activePage ?? '') === 'usuarios' ? 'active' : '' ?>">
           <i class="fa-solid fa-users"></i> Usuarios
         </a>
@@ -220,7 +249,8 @@
     <?php if (isset($_SESSION['usuario_id'])): ?>
       <div class="footer">
         <a href="/sisec-ui/logout.php" class="px-3 d-block">
-          <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Cerrar sesión</span>
         </a>
       </div>
     <?php endif; ?>
