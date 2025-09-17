@@ -411,9 +411,9 @@ $back = !empty($_GET['return_url'])
           }
       }
       ?>
-      <a href="<?= htmlspecialchars($returnUrl) ?>" class="btn btn-secondary">
+      <!-- <a href="<?= htmlspecialchars($returnUrl) ?>" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Volver al listado
-      </a>
+      </a> -->
       <a href="exportar_pdf.php?id=<?= (int)$device['id'] ?>" class="btn btn-danger" target="_blank">
         <i class="fas fa-file-pdf"></i> Exportar PDF
       </a>

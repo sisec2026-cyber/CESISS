@@ -1,124 +1,250 @@
 <?php
+// /sisec-ui/controllers/UserController.php
 include __DIR__ . '/../includes/conexion.php';
 
 $accion = $_REQUEST['accion'] ?? '';
 
+/* ========= Helpers ========= */
+function validar_password_servidor(string $pwd): array {
+    $errores = [];
+    if (strlen($pwd) < 8)               $errores[] = "mínimo 8 caracteres";
+    if (!preg_match('/[A-Z]/', $pwd))   $errores[] = "una mayúscula";
+    if (!preg_match('/[a-z]/', $pwd))   $errores[] = "una minúscula";
+    if (!preg_match('/\d/', $pwd))      $errores[] = "un número";
+    if (!preg_match('/[!@#$%^&*(),.?\":{}|<>]/', $pwd)) $errores[] = "un carácter especial";
+    return $errores;
+}
+
+function subir_foto_usuario(?array $file): ?string {
+    if (!$file || !isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    $permitidas = ['jpg','jpeg','png','gif','webp'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $permitidas, true)) {
+        return null;
+    }
+    $dir = __DIR__ . '/../uploads/usuarios';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    $nombre = uniqid('usr_', true) . '.' . $ext;
+    $dest = $dir . '/' . $nombre;
+    if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        return null;
+    }
+    return $nombre;
+}
+
+/* ========= Router ========= */
 switch ($accion) {
-    // CREAR o ACTUALIZAR USUARIO
     case 'crear':
     case 'actualizar':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id       = intval($_POST['id'] ?? 0); // 0 si es crear
-            $nombre   = $conexion->real_escape_string($_POST['nombre']);
-            $email    = $conexion->real_escape_string($_POST['email'] ?? '');
-            $cargo    = $conexion->real_escape_string($_POST['cargo'] ?? '');
-            $empresa  = $conexion->real_escape_string($_POST['empresa'] ?? '');
-            $rol      = $conexion->real_escape_string($_POST['rol']);
-            $region   = ($_POST['region'] ?? '') !== '' ? intval($_POST['region']) : null;
-            $ciudad   = ($_POST['ciudad'] ?? '') !== '' ? intval($_POST['ciudad']) : null;
-            $municipio= ($_POST['municipio'] ?? '') !== '' ? intval($_POST['municipio']) : null;
-            $sucursal = ($_POST['sucursal'] ?? '') !== '' ? intval($_POST['sucursal']) : null;
-            $clave    = trim($_POST['clave'] ?? '');
-            $pregunta_seguridad = $conexion->real_escape_string($_POST['pregunta_seguridad'] ?? '');
+            // Campos base
+            $id        = intval($_POST['id'] ?? 0);
+            $nombre    = trim($_POST['nombre'] ?? '');
+            $email     = trim($_POST['email'] ?? '');
+            $cargo     = trim($_POST['cargo'] ?? '');
+            $empresa   = trim($_POST['empresa'] ?? '');
+            $rol_post  = trim($_POST['rol'] ?? ''); // se usa sólo en actualizar
+
+            // Jerarquía opcional
+            $region     = ($_POST['region'] ?? '') !== '' ? intval($_POST['region']) : null;
+            $ciudad     = ($_POST['ciudad'] ?? '') !== '' ? intval($_POST['ciudad']) : null;
+            $municipio  = ($_POST['municipio'] ?? '') !== '' ? intval($_POST['municipio']) : null;
+            $sucursal   = ($_POST['sucursal'] ?? '') !== '' ? intval($_POST['sucursal']) : null;
+
+            // Credenciales y seguridad
+            $clave = trim($_POST['clave'] ?? '');
+            $pregunta_seguridad  = trim($_POST['pregunta_seguridad'] ?? '');
             $respuesta_seguridad = trim($_POST['respuesta_seguridad'] ?? '');
             $respuesta_hash = $respuesta_seguridad !== '' ? password_hash($respuesta_seguridad, PASSWORD_DEFAULT) : null;
 
-            // Manejo de foto
+            // Foto
+            $fotoNueva = subir_foto_usuario($_FILES['foto'] ?? null);
             $fotoNombre = null;
-            if ($id > 0) {
-                $res = $conexion->query("SELECT foto FROM usuarios WHERE id = $id");
-                $usuario = $res->fetch_assoc();
-                $fotoNombre = $usuario['foto'] ?? null;
-            }
-            if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-                $ext = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
-                $fotoNombre = uniqid('usr_') . '.' . $ext;
-                $rutaDestino = __DIR__ . '/../uploads/usuarios/' . $fotoNombre;
+            $fotoAnterior = null;
 
-                if (!empty($usuario['foto']) && file_exists(__DIR__ . '/../uploads/usuarios/' . $usuario['foto'])) {
-                    unlink(__DIR__ . '/../uploads/usuarios/' . $usuario['foto']);
+            if ($accion === 'actualizar' && $id > 0) {
+                $resU = $conexion->prepare("SELECT foto FROM usuarios WHERE id = ?");
+                $resU->bind_param('i', $id);
+                $resU->execute();
+                $rowU = $resU->get_result()->fetch_assoc();
+                $fotoAnterior = $rowU['foto'] ?? null;
+                $fotoNombre = $fotoAnterior;
+                if ($fotoNueva) {
+                    if (!empty($fotoAnterior)) {
+                        $rutaAnterior = __DIR__ . '/../uploads/usuarios/' . $fotoAnterior;
+                        if (is_file($rutaAnterior)) @unlink($rutaAnterior);
+                    }
+                    $fotoNombre = $fotoNueva;
                 }
-                if (!move_uploaded_file($_FILES['foto']['tmp_name'], $rutaDestino)) {
-                    die("Error al subir la foto.");
-                }
+            } else {
+                if ($fotoNueva) $fotoNombre = $fotoNueva;
             }
 
-            // CREAR
+            /* ------------------ CREAR ------------------ */
             if ($accion === 'crear') {
-                if (empty($clave)) die("La contraseña es obligatoria.");
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    header("Location: ../views/usuarios/crearuser.php?error=Correo inválido");
+                    exit;
+                }
+                if ($nombre === '' || $cargo === '' || $empresa === '') {
+                    header("Location: ../views/usuarios/crearuser.php?error=Faltan campos obligatorios");
+                    exit;
+                }
+                if ($clave === '') {
+                    header("Location: ../views/usuarios/crearuser.php?error=La contraseña es obligatoria");
+                    exit;
+                }
+                $erroresPwd = validar_password_servidor($clave);
+                if (!empty($erroresPwd)) {
+                    $msg = "Contraseña no válida: " . implode(", ", $erroresPwd);
+                    header("Location: ../views/usuarios/crearuser.php?error=" . urlencode($msg));
+                    exit;
+                }
+
+                // ¿Correo ya existe?
+                $stmt = $conexion->prepare("SELECT id FROM usuarios WHERE email = ?");
+                $stmt->bind_param('s', $email);
+                $stmt->execute();
+                $existe = $stmt->get_result()->fetch_assoc();
+                if ($existe) {
+                    header("Location: ../views/usuarios/crearuser.php?error=El correo ya está registrado");
+                    exit;
+                }
+
+                // Hash de password
                 $claveHash = password_hash($clave, PASSWORD_DEFAULT);
 
-                $sql = "INSERT INTO usuarios 
-                    (nombre, email, cargo, empresa, clave, rol, pregunta_seguridad, respuesta_seguridad_hash, foto, region, ciudad, municipio, sucursal) 
-                    VALUES (
-                        '$nombre', 
-                        '$email', 
-                        '$cargo', 
-                        '$empresa', 
-                        '$claveHash', 
-                        '$rol', 
-                        " . ($pregunta_seguridad ? "'$pregunta_seguridad'" : "NULL") . ", 
-                        " . ($respuesta_hash ? "'$respuesta_hash'" : "NULL") . ", 
-                        " . ($fotoNombre ? "'$fotoNombre'" : "NULL") . ", 
-                        " . ($region ?? "NULL") . ", 
-                        " . ($ciudad ?? "NULL") . ", 
-                        " . ($municipio ?? "NULL") . ", 
-                        " . ($sucursal ?? "NULL") . "
-                    )";
+                // Forzar flujo de aprobación
+                $rolFinal = 'Pendiente';
+                $estaAprobado = 0;
 
-                if ($conexion->query($sql)) {
-                    header("Location: ../views/usuarios/index.php?msg=Usuario creado correctamente");
+                // *** FIX: variables para bind (nada de expresiones) ***
+                $pregSegVar  = ($pregunta_seguridad !== '') ? $pregunta_seguridad : null;
+                $respHashVar = $respuesta_hash ?: null;
+                $fotoVar     = $fotoNombre ?: null;
+
+                // INSERT
+                $sql = "INSERT INTO usuarios
+                        (nombre, email, cargo, empresa, clave, rol, pregunta_seguridad, respuesta_seguridad_hash, foto,
+                         region, ciudad, municipio, sucursal, esta_aprobado, creado_el)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, NOW())";
+                $stmt = $conexion->prepare($sql);
+                if (!$stmt) {
+                    die("Error en prepare (crear): " . $conexion->error);
+                }
+
+                // 14 placeholders -> 14 tipos (9 's' + 5 'i')
+                $types = 'sssssssssiiiii';
+                $stmt->bind_param(
+                    $types,
+                    $nombre,
+                    $email,
+                    $cargo,
+                    $empresa,
+                    $claveHash,
+                    $rolFinal,
+                    $pregSegVar,
+                    $respHashVar,
+                    $fotoVar,
+                    $region,
+                    $ciudad,
+                    $municipio,
+                    $sucursal,
+                    $estaAprobado
+                );
+
+                if (!$stmt->execute()) {
+                    die("Error al crear usuario: " . $stmt->error);
+                }
+
+                header("Location: ../login.php?msg=" . urlencode("Solicitud enviada. Un administrador debe aprobar tu acceso."));
+                exit;
+            }
+
+            /* ------------------ ACTUALIZAR ------------------ */
+            else {
+                if ($id <= 0) {
+                    die("ID inválido para actualización.");
+                }
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    header("Location: ../views/usuarios/index.php?error=Correo inválido");
                     exit;
-                } else die("Error al crear usuario: " . $conexion->error);
+                }
 
-            } else {
-                // ACTUALIZAR
+                // Email duplicado en otro usuario
+                $chk = $conexion->prepare("SELECT id FROM usuarios WHERE email = ? AND id <> ?");
+                $chk->bind_param('si', $email, $id);
+                $chk->execute();
+                if ($chk->get_result()->fetch_assoc()) {
+                    header("Location: ../views/usuarios/index.php?error=" . urlencode("El correo ya está en uso por otro usuario"));
+                    exit;
+                }
+
+                // Construcción dinámica de SET
                 $campos = [];
                 $params = [];
                 $tipos  = '';
 
-                $campos[] = "nombre = ?";    $params[] = $nombre;   $tipos .= 's';
-                $campos[] = "email = ?";     $params[] = $email;    $tipos .= 's';
-                $campos[] = "cargo = ?";     $params[] = $cargo;    $tipos .= 's';
-                $campos[] = "empresa = ?";   $params[] = $empresa;  $tipos .= 's';
-                $campos[] = "rol = ?";       $params[] = $rol;      $tipos .= 's';
+                $campos[] = "nombre = ?";   $params[] = $nombre;  $tipos .= 's';
+                $campos[] = "email = ?";    $params[] = $email;   $tipos .= 's';
+                $campos[] = "cargo = ?";    $params[] = $cargo;   $tipos .= 's';
+                $campos[] = "empresa = ?";  $params[] = $empresa; $tipos .= 's';
 
-                // Campos numéricos con NULL permitido
+                $campos[] = "rol = ?";      $params[] = $rol_post; $tipos .= 's';
+
+                // numéricos (NULL permitido)
                 $campos[] = "region = ?";     $params[] = $region;    $tipos .= 'i';
                 $campos[] = "ciudad = ?";     $params[] = $ciudad;    $tipos .= 'i';
                 $campos[] = "municipio = ?";  $params[] = $municipio; $tipos .= 'i';
                 $campos[] = "sucursal = ?";   $params[] = $sucursal;  $tipos .= 'i';
 
                 if (!empty($clave)) {
+                    $erroresPwd = validar_password_servidor($clave);
+                    if (!empty($erroresPwd)) {
+                        $msg = "Contraseña no válida: " . implode(", ", $erroresPwd);
+                        header("Location: ../views/usuarios/index.php?error=" . urlencode($msg));
+                        exit;
+                    }
                     $campos[] = "clave = ?";
                     $params[] = password_hash($clave, PASSWORD_DEFAULT);
                     $tipos .= 's';
                 }
+
                 if ($pregunta_seguridad !== '') {
                     $campos[] = "pregunta_seguridad = ?";
                     $params[] = $pregunta_seguridad;
                     $tipos .= 's';
                 }
+
                 if ($respuesta_hash) {
                     $campos[] = "respuesta_seguridad_hash = ?";
                     $params[] = $respuesta_hash;
                     $tipos .= 's';
                 }
+
                 if ($fotoNombre) {
                     $campos[] = "foto = ?";
                     $params[] = $fotoNombre;
                     $tipos .= 's';
                 }
 
+                $sql = "UPDATE usuarios SET " . implode(', ', $campos) . ", actualizado_el = NOW() WHERE id = ?";
                 $params[] = $id;
-                $tipos .= 'i';
+                $tipos   .= 'i';
 
-                $sql = "UPDATE usuarios SET " . implode(',', $campos) . " WHERE id = ?";
                 $stmt = $conexion->prepare($sql);
-                if (!$stmt) die("Error en prepare: " . $conexion->error);
+                if (!$stmt) {
+                    die("Error en prepare (actualizar): " . $conexion->error);
+                }
 
                 $stmt->bind_param($tipos, ...$params);
-                $stmt->execute();
+                if (!$stmt->execute()) {
+                    die("Error al actualizar usuario: " . $stmt->error);
+                }
 
                 header("Location: ../views/usuarios/index.php?msg=Usuario actualizado");
                 exit;
@@ -126,62 +252,60 @@ switch ($accion) {
         }
         break;
 
-    // ELIMINAR USUARIO
     case 'eliminar':
         $id = intval($_GET['id'] ?? 0);
         if ($id > 0) {
-            $res = $conexion->query("SELECT foto FROM usuarios WHERE id = $id");
-            if ($res && $res->num_rows > 0) {
-                $usuario = $res->fetch_assoc();
-                if (!empty($usuario['foto'])) {
-                    $rutaFoto = __DIR__ . '/../uploads/usuarios/' . $usuario['foto'];
-                    if (file_exists($rutaFoto)) unlink($rutaFoto);
-                }
+            $res = $conexion->prepare("SELECT foto FROM usuarios WHERE id = ?");
+            $res->bind_param('i', $id);
+            $res->execute();
+            $usuario = $res->get_result()->fetch_assoc();
+            if ($usuario && !empty($usuario['foto'])) {
+                $rutaFoto = __DIR__ . '/../uploads/usuarios/' . $usuario['foto'];
+                if (is_file($rutaFoto)) @unlink($rutaFoto);
             }
-            $conexion->query("DELETE FROM usuarios WHERE id = $id");
+            $del = $conexion->prepare("DELETE FROM usuarios WHERE id = ?");
+            $del->bind_param('i', $id);
+            $del->execute();
             header("Location: ../views/usuarios/index.php?msg=Usuario eliminado");
             exit;
         }
         break;
 
-    // REGIONES
+    /* ===== Endpoints JSON ===== */
     case 'regiones':
         $res = $conexion->query("SELECT id, nom_region AS nombre FROM regiones WHERE id IN (1,3,6)");
-        $data = $res->fetch_all(MYSQLI_ASSOC);
+        $data = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
         header('Content-Type: application/json');
         echo json_encode($data);
         exit;
 
-    // CIUDADES
     case 'ciudades':
         if (isset($_GET['region'])) {
             $regionId = (int)$_GET['region'];
             $res = $conexion->query("SELECT id, nom_ciudad AS nombre FROM ciudades WHERE region_id = $regionId");
-            $data = $res->fetch_all(MYSQLI_ASSOC);
+            $data = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
             header('Content-Type: application/json');
             echo json_encode($data);
             exit;
         }
         break;
 
-    // MUNICIPIOS
     case 'municipios':
         if (isset($_GET['ciudad'])) {
             $ciudadId = (int)$_GET['ciudad'];
             $res = $conexion->query("SELECT id, nom_municipio AS nombre FROM municipios WHERE ciudad_id = $ciudadId");
-            $data = $res->fetch_all(MYSQLI_ASSOC);
+            $data = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
             header('Content-Type: application/json');
             echo json_encode($data);
             exit;
         }
         break;
 
-    // SUCURSALES
     case 'sucursales':
         if (isset($_GET['municipio'])) {
             $municipioId = (int)$_GET['municipio'];
             $res = $conexion->query("SELECT id, nom_sucursal AS nombre FROM sucursales WHERE municipio_id = $municipioId");
-            $data = $res->fetch_all(MYSQLI_ASSOC);
+            $data = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
             header('Content-Type: application/json');
             echo json_encode($data);
             exit;

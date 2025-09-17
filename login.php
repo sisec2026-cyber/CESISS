@@ -76,8 +76,8 @@ $redirect = $_GET['redirect'] ?? null;
 
     <form action="controllers/login_procesar.php" method="POST" autocomplete="on" novalidate>
       <div class="form-floating mb-3 position-relative">
-        <input type="text" class="form-control" id="usuario" name="nombre" placeholder="Usuario" required autofocus>
-        <label for="usuario">Usuario</label>
+        <input type="text" class="form-control" id="usuario" name="nombre" placeholder="tu@correo.com o usuario" required autofocus>
+        <label for="usuario">Correo o nombre de usuario</label>
       </div>
 
       <div class="form-floating mb-3 position-relative">
