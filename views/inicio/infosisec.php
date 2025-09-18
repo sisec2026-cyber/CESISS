@@ -13,7 +13,7 @@
       --fg:#cfe5ea;
       --muted:#9ab7bf;
       --card-border:#16323a;
-      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --shadow:0 10px 30px rgba(62, 184, 201, 0.35);
     }
     body {
       margin: 0;
@@ -21,14 +21,20 @@
       color: var(--fg);
       font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
       line-height: 1.6;
+      /* añadido para burbujas */
+      position: relative;
+      overflow-x: hidden;
     }
     .container {
       max-width: 1100px;
       margin: 90px auto;
       padding: 0 16px;
+      /* asegurar que quede encima de las burbujas */
+      position: relative;
+      z-index: 2;
     }
     .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      background: linear-gradient(180deg, rgba(56, 204, 197, 0.03), rgba(58, 194, 176, 0.01));
       border: 1px solid var(--card-border);
       border-radius: 16px;
       box-shadow: var(--shadow);
@@ -98,7 +104,7 @@
       height: 120px;
       width: auto;
       object-fit: contain;
-      background: rgba(255,255,255,0);
+      background: rgba(54, 170, 185, 0);
       border-radius: 12px;
       padding: 5px;
       box-shadow: var(--shadow);
@@ -132,42 +138,42 @@
     }
     /* Certificaciones */
     .certificaciones {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 25px;
-    margin-top: 30px;
-  }
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 25px;
+      margin-top: 30px;
+    }
 
-  .certificaciones .cert-card {
-    background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border: 1px solid var(--card-border);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
-    padding: 20px;
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    cursor: pointer;
-  }
+    .certificaciones .cert-card {
+      background: linear-gradient(145deg, rgba(56, 204, 197, 0.05), rgba(58, 194, 176, 0.02));
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
 
-  .certificaciones .cert-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 15px 35px rgba(0,0,0,.6);
-  }
+    .certificaciones .cert-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 35px rgba(0,0,0,.6);
+    }
 
-  .certificaciones img {
-    width: 100%;
-    max-width: 200px;
-    height: auto;
-    object-fit: contain;
-    border-radius: 12px;
-    background: #fff;
-    padding: 10px;
-    transition: transform 0.3s ease;
-  }
+    .certificaciones img {
+      width: 100%;
+      max-width: 200px;
+      height: auto;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+      transition: transform 0.3s ease;
+    }
 
-  .certificaciones img:hover {
-    transform: scale(1.08);
-  }
+    .certificaciones img:hover {
+      transform: scale(1.08);
+    }
 
     /* Overlay */
     .overlay {
@@ -193,21 +199,62 @@
       box-shadow: 0 0 20px rgba(0,0,0,.7);
     }
     .back-home {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    text-decoration: none;
-    color: var(--accent);
-    font-size: .9rem;
-    font-weight: 500;
-    transition: color .2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      text-decoration: none;
+      color: var(--accent);
+      font-size: .9rem;
+      font-weight: 500;
+      transition: color .2s ease;
     }
     .back-home:hover {
       color: #ffffffff;
     }
+
+    /* ===== Fondo de burbujas (añadido) ===== */
+    .bubbles {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none; /* no interfiere con clics */
+      z-index: 1;           /* debajo del contenido */
+    }
+    .bubble {
+      position: absolute;
+      bottom: -120px;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at 30% 30%,
+        rgba(49, 184, 161, 0.25) 0%,
+        rgba(56, 204, 197, 0.12) 35%,
+        rgba(58, 194, 176, 0.06) 60%,
+        rgba(255,255,255,0.0) 100%
+      );
+      box-shadow:
+        0 0 18px rgba(255, 255, 255, 0.08),
+        inset 0 0 12px rgba(255, 255, 255, 0.06);
+      animation: rise linear infinite;
+      will-change: transform, opacity;
+      filter: blur(var(--blur, 0px));
+      outline: 1px solid rgba(36, 163, 193, 0.15); /* toque de marca */
+    }
+    @keyframes rise {
+      0%   { transform: translateY(0) translateX(0) scale(var(--scale,1)); opacity: 0; }
+      10%  { opacity: .9; }
+      90%  { opacity: .9; }
+      100% { transform: translateY(-115vh) translateX(var(--drift, 0px)) scale(var(--scale,1)); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bubble { animation-duration: 0s !important; opacity: .15 !important; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- capa de burbujas (añadido) -->
+  <div class="bubbles" id="bubbles"></div>
+
   <div class="container">
     <!-- Historia -->
     <div class="card">
@@ -352,6 +399,67 @@
       }
     });
   </script>
+
+  <!-- Script de burbujas (añadido, no interfiere con lo existente) -->
+  <script>
+    (function(){
+      const wrap = document.getElementById('bubbles');
+      if (!wrap) return;
+
+      const MAX_AT_ONCE = 18;      // burbujas simultáneas
+      const SPAWN_MS_MIN = 400;    // intervalo spawn mín
+      const SPAWN_MS_MAX = 1200;   // intervalo spawn máx
+      const SIZE_MIN = 14;         // px
+      const SIZE_MAX = 70;         // px
+      const DUR_MIN = 12;          // s
+      const DUR_MAX = 26;          // s
+      const DRIFT_MAX = 90;        // px
+      const BLUR_MAX = 2.5;        // px
+
+      let active = 0;
+      const prfReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function rand(a,b){ return Math.random() * (b - a) + a; }
+      function spawn(){
+        if (active >= MAX_AT_ONCE) return schedule();
+        const b = document.createElement('div');
+        b.className = 'bubble';
+
+        const size  = rand(SIZE_MIN, SIZE_MAX);
+        const left  = rand(0, 100);                    // porcentaje
+        const dur   = prfReduce ? 0 : rand(DUR_MIN, DUR_MAX); // respeta reduce
+        const delay = prfReduce ? 0 : rand(0, 6);
+        const blur  = rand(0, BLUR_MAX);
+        const drift = rand(-DRIFT_MAX, DRIFT_MAX);
+        const scale = rand(0.9, 1.4);
+
+        b.style.width  = size + 'px';
+        b.style.height = size + 'px';
+        b.style.left   = left + '%';
+        if (dur) b.style.animationDuration = dur + 's';
+        if (delay) b.style.animationDelay  = delay + 's';
+        b.style.setProperty('--drift', drift + 'px');
+        b.style.setProperty('--scale', scale);
+        b.style.setProperty('--blur', blur + 'px');
+
+        active++;
+        b.addEventListener('animationend', () => {
+          active--;
+          b.remove();
+        });
+
+        wrap.appendChild(b);
+        schedule();
+      }
+      function schedule(){
+        const t = rand(SPAWN_MS_MIN, SPAWN_MS_MAX);
+        setTimeout(spawn, t);
+      }
+      // Semilla inicial
+      for (let i=0; i<MAX_AT_ONCE/2; i++) spawn();
+    })();
+  </script>
+
   <?php include __DIR__ . '/../../includes/footer.php'; ?>
 </body>
 </html>
