@@ -1,6 +1,33 @@
 <?php
-// views/includes/sidebar.php
+// Asegura sesión viva
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
+// Carga conexión si hace falta
+if (!isset($pdo) && !isset($conexion)) {
+  $connPath = __DIR__ . '/../../includes/conexion.php'; // desde views/includes/
+  if (is_file($connPath)) require_once $connPath;
+}
+
+// Carga conteo inicial solo para Admin/Superadmin
+$pendCount = 0;
+$rolSB = $_SESSION['usuario_rol'] ?? '';
+if (in_array($rolSB, ['Superadmin','Administrador'])) {
+  try {
+    if (isset($pdo)) {
+      $st = $pdo->query("SELECT COUNT(*) AS c FROM usuarios WHERE esta_aprobado = 0");
+      $pendCount = (int)($st->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+    } elseif (isset($conexion)) {
+      $rs = $conexion->query("SELECT COUNT(*) AS c FROM usuarios WHERE esta_aprobado = 0");
+      $pendCount = (int)(($rs && $rs->num_rows) ? $rs->fetch_assoc()['c'] : 0);
+    }
+  } catch (Throwable $e) {
+    // puedes loguear si quieres: error_log($e->getMessage());
+    $pendCount = 0;
+  }
+}
 ?>
+
+
 <!-- ===== SIDEBAR CESISS (animado: blob / waves / grid) ===== -->
 <style>
   :root{
@@ -174,6 +201,23 @@
     background: linear-gradient(180deg, var(--brand), var(--brand-2));
     border-radius: 4px;
   }
+  /* Badge de notificaciones */
+.sidebar a .sb-badge{
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  min-width: 22px; height: 22px; line-height: 22px; padding: 0 6px;
+  background: #d9534f; color: #fff; border-radius: 999px;
+  font-size: 12px; font-weight: 700; text-align: center;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.12);
+}
+.sb-badge.pulse{
+  animation: sb-badge-pulse 1.8s ease-in-out infinite;
+}
+@keyframes sb-badge-pulse{
+  0%{ box-shadow: 0 0 0 0 rgba(217,83,79,.6); }
+  70%{ box-shadow: 0 0 0 10px rgba(217,83,79,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(217,83,79,0); }
+}
+
 
   /* Footer sticky */
   .sidebar .footer{
@@ -229,39 +273,110 @@
     body.sb-collapsed main.main{ margin-left: 0 !important; }
   }
 
-  /* ===== BOTÓN TOGGLE SÚPER ANIMADO ===== */
+  /* ===== HOTSPOT de REVELADO cuando está oculto ===== */
+  .sb-reveal-zone{
+    position: fixed;
+    top: calc(var(--tb-height, 64px) + 10px);
+    left: 0;
+    width: 8px;                 /* banda delgada */
+    height: calc(100vh - var(--tb-height, 64px) - 20px);
+    z-index: 1039;
+    display: none;               /* visible solo en colapsado (ver media below) */
+    opacity: 0;                  /* no distrae; aparece levemente al hover */
+    transition: opacity .18s ease;
+  }
+  body.has-scrolled .sb-reveal-zone{
+    top: calc(var(--tb-height-scrolled, 52px) + 8px);
+    height: calc(100vh - var(--tb-height-scrolled, 52px) - 16px);
+  }
+  .sb-reveal-zone:hover{ opacity: .35; cursor: ew-resize; }
+  .sb-reveal-zone:focus{ outline: none; }
+
+  @media (min-width: 992px){
+    body.sb-collapsed .sb-reveal-zone{
+      display: block;            /* solo mostrar en colapsado */
+    }
+  }
+
+  /* ===== BOTÓN TOGGLE DOCKEADO (edge-tab) ===== */
   .sb-toggle{
     position: fixed;
-    top: calc(var(--tb-height, 64px) + 12px);
-    left: calc(var(--sidebar-w) - 16px);
+    top: calc(var(--tb-height, 64px) + 14px);
+    left: var(--sidebar-w);                 /* en el borde derecho del sidebar */
     z-index: 1040;
-    width: 42px; height: 42px;
+    width: 40px; height: 46px;
     display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 12px;
+    border-radius: 12px 0 0 12px;
     border: 1px solid var(--sb-border);
     background:
       linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
       linear-gradient(180deg, var(--sb-glass-bg), rgba(10,33,40,.55));
     backdrop-filter: blur(10px);
-    box-shadow:
-      0 10px 26px rgba(0,0,0,.35),
-      0 0 0 1px rgba(255,255,255,.06) inset;
+    box-shadow: 0 10px 26px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.06) inset;
     color: var(--side-fg);
     cursor: pointer;
-    transition: left .25s ease, transform .08s ease, box-shadow .2s ease, background .3s ease;
+    transform: translateX(-70%);
+    transition: left .25s ease, transform .2s ease, opacity .2s ease, box-shadow .2s ease;
     overflow: hidden;
-  }
-  .sb-toggle:hover{
-    transform: translateY(-1px);
-    box-shadow:
-      0 12px 30px rgba(0,0,0,.38),
-      0 0 24px rgba(36,163,193,.25);
   }
   body.has-scrolled .sb-toggle{
     top: calc(var(--tb-height-scrolled, 52px) + 12px);
   }
+
+  /* Estado “idle”: se atenúa hasta que el usuario se mueve */
+  .sb-toggle.is-idle{
+    opacity: .35;
+    box-shadow: 0 6px 18px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.05) inset;
+  }
+  .sb-toggle:hover,
+  .sb-toggle:focus-visible{
+    opacity: 1;
+    transform: translateX(-70%); /* resetea en expandido */
+  }
+
+  /* ===== CUANDO ESTÁ COLAPSADO: botón fuera y solo aparece si pasas por la banda ===== */
   @media (min-width: 992px){
-    body.sb-collapsed .sb-toggle{ left: 14px; }
+    body.sb-collapsed .sb-toggle{
+      left: 0;                     /* pegado al borde */
+      opacity: 0;                  /* oculto */
+      pointer-events: none;        /* no estorba */
+      transform: translateX(-90%); /* fuera de vista */
+      border-radius: 0 12px 12px 0;/* pestaña invertida */
+    }
+    /* Al pasar el mouse por la zona de revelado, muestra el botón */
+    body.sb-collapsed .sb-reveal-zone:hover + .sb-toggle,
+    body.sb-collapsed .sb-reveal-zone:focus-within + .sb-toggle{
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(8px);  /* asoma un poco */
+    }
+  }
+
+  /* Tooltip simple para indicar “Sidebar” */
+  .sb-toggle::after{
+    content: attr(data-label);
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    left: 48px;
+    padding: 4px 8px;
+    font-size: .78rem;
+    color: #e9fbff;
+    background: rgba(0,0,0,.5);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .sb-toggle:hover::after,
+  .sb-toggle:focus-visible::after{
+    opacity: 1;
+    transform: translateY(-50%) translateX(2px);
+  }
+  @media (min-width: 992px){
+    body.sb-collapsed .sb-toggle::after{ left: 52px; }
   }
 
   /* Neon border animado */
@@ -335,8 +450,15 @@
     width: var(--sidebar-w);
     bottom: 0;
     filter: url(#gooey);
+    transition: opacity .2s ease;
   }
   body.has-scrolled .sb-bubbles{ top: var(--tb-height-scrolled, 52px); }
+
+  /* Oculta las burbujas cuando el sidebar está colapsado */
+  body.sb-collapsed .sb-bubbles{
+    opacity: 0;
+    display: none;
+  }
 
   .sb-bubbles .bubble{
     position: absolute;
@@ -365,6 +487,71 @@
       transition: none !important;
     }
   }
+
+  /* ==== Usuarios pendientes - estilos mejorados ==== */
+.sidebar a.sb-item-attn{ position: relative; padding-right: 74px; }
+.sidebar a.sb-item-attn.has-alert{
+  background: rgba(217,83,79,.10);
+  border-color: rgba(217,83,79,.35);
+  box-shadow: inset 0 0 0 1px rgba(217,83,79,.18);
+}
+.sidebar a.sb-item-attn.has-alert:hover{
+  background: rgba(217,83,79,.14);
+  border-color: rgba(217,83,79,.5);
+}
+
+.sidebar a.sb-item-attn .sb-meta{
+  position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+
+/* Pill con gradiente y brillo sutil */
+.sb-badge-attn{
+  min-width: 26px; height: 22px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 800; letter-spacing: .2px;
+  color: #fff;
+  background: linear-gradient(180deg, #e35d59, #bf3f3b);
+  box-shadow:
+     0 2px 10px rgba(227,93,89,.35),
+     inset 0 0 0 1px rgba(255,255,255,.25);
+  transform-origin: center;
+}
+.sb-badge-attn.is-zero{
+  opacity: .0; transform: scale(.8); pointer-events: none; /* oculta cuando es 0 */
+}
+.sb-badge-attn.has-count{ animation: sb-badge-pop .42s cubic-bezier(.2,.8,.2,1) 1; }
+@keyframes sb-badge-pop{
+  0%{ transform: scale(.85); }
+  60%{ transform: scale(1.08); }
+  100%{ transform: scale(1); }
+}
+
+/* Anillo/ping a la derecha cuando hay pendientes */
+.sb-ring{
+  width: 8px; height: 8px; border-radius: 999px;
+  background: #e35d59;
+  box-shadow: 0 0 0 0 rgba(227,93,89,.72);
+}
+.sb-item-attn.has-alert .sb-ring{
+  animation: sb-ping 1.8s cubic-bezier(0,0,.2,1) infinite;
+}
+@keyframes sb-ping{
+  0%   { box-shadow: 0 0 0 0 rgba(227,93,89,.65); transform: scale(1); }
+  70%  { box-shadow: 0 0 0 12px rgba(227,93,89,0); transform: scale(1.05); }
+  100% { box-shadow: 0 0 0 0 rgba(227,93,89,0); transform: scale(1); }
+}
+
+/* Micro “bump” cuando cambia el número via JS */
+.sb-badge-attn.bump{ animation: sb-bump .5s cubic-bezier(.22,1,.36,1); }
+@keyframes sb-bump{
+  0%{ transform: translateY(0) scale(1); }
+  30%{ transform: translateY(-2px) scale(1.06); }
+  100%{ transform: translateY(0) scale(1); }
+}
+
 </style>
 
 
@@ -400,11 +587,28 @@
         </a>
       <?php endif; ?>
 
-      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Administrador'])): ?>
-        <a href="/sisec-ui/views/usuarios/pendientes.php" class="<?= ($activePage ?? '') === 'pendiente' ? 'active' : '' ?>">
-          <i class="fas fa-users"></i> Usuarios pendientes
-        </a>
+<?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador'])): ?>
+  <a href="/sisec-ui/views/usuarios/pendientes.php"
+     id="linkPendientes"
+     class="sb-item-attn <?= ($activePage ?? '') === 'pendiente' ? 'active' : '' ?> <?= ($pendCount ?? 0) > 0 ? 'has-alert' : '' ?>">
+    <i class="fas fa-user-clock"></i>
+    <span class="sb-item-label">Usuarios pendientes</span>
+
+    <span class="sb-meta">
+      <?php if (($pendCount ?? 0) > 0): ?>
+        <span id="badgePend"
+              class="sb-badge-attn has-count"
+              aria-label="Solicitudes pendientes: <?= (int)$pendCount ?>">
+          <?= (int)$pendCount ?>
+        </span>
+        <span class="sb-ring" aria-hidden="true"></span>
+      <?php else: ?>
+        <span id="badgePend" class="sb-badge-attn is-zero" aria-label="Sin solicitudes">0</span>
       <?php endif; ?>
+    </span>
+  </a>
+<?php endif; ?>
+
 
     </div>
 
@@ -419,13 +623,16 @@
   </div>
 </nav>
 
-<!-- Botón flotante para ocultar/mostrar sidebar -->
+<!-- HOTSPOT para revelar el botón cuando el sidebar está oculto -->
+<div class="sb-reveal-zone" tabindex="0" aria-label="Mostrar pestaña del sidebar"></div>
 
+<!-- Botón flotante para ocultar/mostrar sidebar -->
 <button id="sbToggle"
         class="sb-toggle d-none d-lg-flex sb-bling"
         type="button"
         aria-label="Alternar barra lateral"
         aria-pressed="false"
+        data-label="Sidebar"
         title="Ocultar/mostrar barra lateral (Alt+S)">
   <span class="ico"><i class="fas fa-angles-left" aria-hidden="true"></i></span>
   <span class="sheen"></span>
@@ -457,26 +664,54 @@
   <span class="bubble" style="--x:88%; --d:11s; --s:0.9;"></span>
 </div>
 
-
-
 <script>
 (function(){
   const STORAGE_KEY = 'cesiss.sidebar.collapsed';
   const body = document.body;
   const btn  = document.getElementById('sbToggle');
   const bubbles = document.querySelector('.sb-bubbles');
+  const revealZone = document.querySelector('.sb-reveal-zone');
 
   if (!btn) return;
+
+  // --- Auto-ocultar cuando no hay interacción ---
+  let idleTimer = null;
+  const setIdle = () => btn.classList.add('is-idle');
+  const clearIdle = () => btn.classList.remove('is-idle');
+
+  const resetIdle = () => {
+    clearIdle();
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(setIdle, 2500);
+  };
+
+  ['mousemove','keydown','scroll','touchstart'].forEach(ev =>
+    window.addEventListener(ev, resetIdle, { passive: true })
+  );
+  resetIdle();
 
   // Estado guardado
   const saved = localStorage.getItem(STORAGE_KEY);
   const startCollapsed = saved === '1';
   setCollapsed(startCollapsed, {skipConfetti:true});
 
-  // Click
+  // Click del botón
   btn.addEventListener('click', () => {
     setCollapsed(!body.classList.contains('sb-collapsed'));
   });
+
+  // Hotspot: Enter o click para abrir cuando está colapsado
+  if (revealZone){
+    revealZone.addEventListener('click', () => {
+      if (body.classList.contains('sb-collapsed')) setCollapsed(false);
+    });
+    revealZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (body.classList.contains('sb-collapsed')) setCollapsed(false);
+      }
+    });
+  }
 
   // Alt+S
   window.addEventListener('keydown', (e) => {
@@ -494,13 +729,17 @@
       btn.querySelector('.ico').innerHTML = '<i class="fas fa-angles-right" aria-hidden="true"></i>';
       localStorage.setItem(STORAGE_KEY, '1');
       if (!skipConfetti) burst(btn, { mode: 'open' });
+      // Burbujas: ya se ocultan por CSS, pero por si hay timing:
+      if (bubbles) bubbles.style.display = 'none';
     } else {
       body.classList.remove('sb-collapsed');
       btn.setAttribute('aria-pressed', 'false');
       btn.querySelector('.ico').innerHTML = '<i class="fas fa-angles-left" aria-hidden="true"></i>';
       localStorage.setItem(STORAGE_KEY, '0');
       if (!skipConfetti) burst(btn, { mode: 'close' });
+      if (bubbles) bubbles.style.display = '';
     }
+    resetIdle();
   }
 
   // Mini confeti / chispas
@@ -537,20 +776,94 @@
       setTimeout(() => d.remove(), 650);
     }
   }
-
-  // Posiciona el contenedor de burbujas como la sidebar (izq)
-  function syncBubblesTop(){
-    const top = body.classList.contains('has-scrolled')
-      ? getComputedStyle(document.documentElement).getPropertyValue('--tb-height-scrolled') || '52px'
-      : getComputedStyle(document.documentElement).getPropertyValue('--tb-height') || '64px';
-    if (bubbles){
-      bubbles.style.top = top.trim();
-    }
-  }
-  syncBubblesTop();
-  window.addEventListener('scroll', () => {
-    // tu topbar ya cambia has-scrolled; sincronizamos el top de bubbles
-    syncBubblesTop();
-  }, { passive: true });
 })();
 </script>
+
+<script>
+(function(){
+  const rol = <?= json_encode($_SESSION['usuario_rol'] ?? '') ?>;
+  if (!['Superadmin','Administrador'].includes(rol)) return;
+
+  const badge = document.getElementById('badgePend');
+  if (!badge) return;
+
+  const URL = '/sisec-ui/controllers/badges.php';
+
+  async function refreshBadge(){
+    try{
+      const res = await fetch(URL, { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || data.ok !== true) return;
+
+      const n = Number(data.count || 0);
+      if (n > 0){
+        badge.textContent = n;
+        badge.classList.remove('d-none');
+        badge.classList.add('pulse');
+      }else{
+        badge.textContent = '0';
+        badge.classList.add('d-none');
+        badge.classList.remove('pulse');
+      }
+    }catch(e){ /* silencioso */ }
+  }
+
+  // Primer update rápido y luego polling cada 45s
+  refreshBadge();
+  setInterval(refreshBadge, 45000);
+})();
+</script>
+
+<script>
+(function(){
+  const rol = <?= json_encode($_SESSION['usuario_rol'] ?? '') ?>;
+  if (!['Superadmin','Administrador'].includes(rol)) return;
+
+  const badge = document.getElementById('badgePend');
+  const link  = document.getElementById('linkPendientes');
+  if (!badge || !link) return;
+
+  const URL = '/sisec-ui/controllers/badges.php';
+  let last = parseInt(badge.textContent || '0', 10);
+
+  async function refreshBadge(){
+    try{
+      const res = await fetch(URL, { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || data.ok !== true) return;
+
+      const n = Number(data.count || 0);
+
+      // Mostrar/ocultar pill
+      if (n > 0){
+        badge.textContent = n;
+        badge.classList.remove('is-zero');
+        badge.classList.add('has-count');
+        link.classList.add('has-alert');
+      } else {
+        badge.textContent = '0';
+        badge.classList.add('is-zero');
+        badge.classList.remove('has-count');
+        link.classList.remove('has-alert');
+      }
+
+      // Micro-animación al cambiar el número
+      if (n !== last){
+        badge.classList.remove('bump'); // reset si estaba
+        // forzar reflow para reiniciar animación
+        void badge.offsetWidth;
+        badge.classList.add('bump');
+        last = n;
+      }
+    }catch(e){ /* silencioso */ }
+  }
+
+  // Existen ya tus otros scripts; esto no interfiere
+  refreshBadge();
+  setInterval(refreshBadge, 45000);
+})();
+</script>
+
+
