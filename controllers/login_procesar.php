@@ -1,9 +1,8 @@
 <?php
 session_start();
 require_once __DIR__ . '/../includes/conexion.php';
-// Si no enviarás correos en el login, no incluyas el mailer
+require_once __DIR__ . '/../includes/notificaciones_mailer.php'; // ✅ Se agrega para enviar correo
 
-/* Zona horaria correcta para CDMX */
 date_default_timezone_set('America/Mexico_City');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -11,7 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Soportar login por correo o por nombre de usuario
+
+
 $identificador = trim($_POST['nombre'] ?? '');
 $password      = $_POST['password'] ?? '';
 $remember      = isset($_POST['remember_me']);
@@ -72,7 +72,59 @@ try {
     $_SESSION['email']       = $usuario['email'] ?? null;
     $_SESSION['foto']        = !empty($usuario['foto']) ? '/sisec-ui/uploads/usuarios/' . $usuario['foto'] : null;
 
-    // 6) Cookie "Recuérdame" con flags seguros
+    $stmt = $pdo->prepare("
+      INSERT INTO sesiones_usuarios (
+        usuario_id,
+        usuario_nombre,
+        rol,
+        evento,
+        fecha_evento,
+        ip,
+        user_agent
+      ) VALUES (
+        :usuario_id,
+        :usuario_nombre,
+        :rol,
+        'inicio',
+        NOW(),
+        :ip,
+        :user_agent
+      )
+    ");
+
+    $stmt->execute([
+      ':usuario_id' => $_SESSION['usuario_id'],
+      ':usuario_nombre' => $_SESSION['nombre'],
+      ':rol' => $_SESSION['usuario_rol'],
+      ':ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+      ':user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null
+    ]);
+
+    // ✅ === Notificación de inicio de sesión ===
+    $destinatarios = ['notificacionescesiss@gmail.com']; // puedes agregar más correos si deseas
+    $fechaHora = date('Y-m-d H:i:s');
+
+    $asunto = 'CESISS: Nuevo inicio de sesión';
+    $htmlCorreo = '
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+      <div style="background:#0ea5e9;color:#fff;padding:14px 18px">
+        <h2 style="margin:0;font-size:18px">Nuevo inicio de sesión</h2>
+      </div>
+      <div style="padding:16px">
+        <p>El usuario <b>' . htmlspecialchars($_SESSION['nombre']) . '</b> ha iniciado sesión en el sistema <b>CESISS</b>.</p>
+        <table cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;border:1px solid #e5e7eb">
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb"><b>Usuario</b></td><td>' . htmlspecialchars($_SESSION['nombre']) . '</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb"><b>Rol</b></td><td>' . htmlspecialchars($_SESSION['usuario_rol']) . '</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb"><b>Fecha/Hora</b></td><td>' . htmlspecialchars($fechaHora) . '</td></tr>
+        </table>
+        <p style="margin-top:14px;font-size:12px;color:#6b7280">Este mensaje fue generado automáticamente por CESISS.</p>
+      </div>
+    </div>';
+
+    enviarNotificacion($asunto, $htmlCorreo, $destinatarios);
+    // ✅ =======================================
+
+    // 6) Cookie "Recuérdame"
     if ($remember) {
         $oneWeek = time() + (7 * 24 * 60 * 60);
         setcookie(
@@ -93,12 +145,11 @@ try {
         case 'Superadmin':
         case 'Mantenimientos':
         case 'Distrital':
+        case 'Capturista':
         case 'Administrador':
         case 'Técnico':
             $redirect = '/sisec-ui/views/inicio/index.php';
             break;
-
-        case 'Capturista':
         case 'Prevencion':
         case 'Monitorista':
         default:
@@ -110,7 +161,6 @@ try {
     exit;
 
 } catch (Throwable $e) {
-    // error_log("LOGIN ERROR: " . $e->getMessage());
     header('Location: ../login.php?error=' . urlencode("Ocurrió un error al iniciar sesión."));
     exit;
 }

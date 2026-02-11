@@ -15,10 +15,16 @@ function enviarNotificacion(string $asunto, string $htmlCuerpo, array $destinata
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'cesiss@cesiss.com';   // TU correo
-        $mail->Password   = 'ptyzfymfyqekkkbm';        // TU App Password
+        $mail->Username   = 'cesiss@cesiss.com';
+        $mail->Password   = 'ptyzfymfyqekkkbm';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
+
+        // ✅ ====== UTF-8 CORRECTO ======
+        $mail->CharSet  = 'UTF-8';
+        $mail->Encoding = 'base64';
+        $mail->isHTML(true);
+        // ==============================
 
         // Remitente
         $mail->setFrom('notificaciones@cesiss.com', 'Sistema CESISS');
@@ -26,20 +32,20 @@ function enviarNotificacion(string $asunto, string $htmlCuerpo, array $destinata
 
         // Destinatarios
         foreach ($destinatarios as $to) {
-            if (!empty($to)) $mail->addAddress($to);
+            if (!empty($to)) {
+                $mail->addAddress($to);
+            }
         }
 
         // Contenido
-        $mail->isHTML(true);
         $mail->Subject = $asunto;
         $mail->Body    = $htmlCuerpo;
 
         $mail->send();
         return true;
+
     } catch (Exception $e) {
-        // No bloquear el flujo de la app por fallas de correo
         error_log("Correo no enviado: {$mail->ErrorInfo}");
         return false;
     }
 }
-

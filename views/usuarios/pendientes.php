@@ -2,7 +2,7 @@
 // /sisec-ui/views/usuarios/pendientes.php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Administrador','Superadmin']);
+verificarRol(['Superadmin']);
 
 require_once __DIR__ . '/../../includes/conexion.php';
 date_default_timezone_set('America/Mexico_City');
@@ -19,7 +19,6 @@ $pp      = (int)($_GET['pp'] ?? 10);
 $pp      = max(5, min(50, $pp)); // 5..50
 $p       = (int)($_GET['p']  ?? 1);
 $p       = max(1, $p);
-
 $conds = ["esta_aprobado = 0"];
 $types = '';
 $params= [];
@@ -56,26 +55,22 @@ $stmtC = $conexion->prepare($sqlCount);
 if ($types !== '') $stmtC->bind_param($types, ...$params);
 $stmtC->execute();
 $total = (int)($stmtC->get_result()->fetch_assoc()['total'] ?? 0);
-
 $pages = max(1, (int)ceil($total / $pp));
 $p = min($p, $pages); // si se borran filas y quedas en página alta
 $offset = ($p - 1) * $pp;
 
 /* ====== Datos página ====== */
-$sql = "
-  SELECT id, nombre, email, cargo, empresa, rol, foto, creado_el
+$sql = "SELECT id, nombre, email, cargo, empresa, rol, foto, creado_el
   FROM usuarios
   $where
   ORDER BY creado_el DESC
-  LIMIT ? OFFSET ?
-";
+  LIMIT ? OFFSET ?";
 $typesSel = $types . 'ii';
 $paramsSel = $params;
 $limitVal  = (int)$pp;
 $offsetVal = (int)$offset;
 $paramsSel[] = $limitVal;
 $paramsSel[] = $offsetVal;
-
 $stmt = $conexion->prepare($sql);
 if ($typesSel !== '') $stmt->bind_param($typesSel, ...$paramsSel);
 $stmt->execute();
@@ -88,32 +83,36 @@ function qs_keep(array $keep, array $override = []): string {
 }
 $qsBase = ['q'=>$q, 'from'=>$fromRaw, 'to'=>$toRaw, 'pp'=>$pp];
 ?>
+
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Solicitudes pendientes</title>
+    <title>Solicitudes pendientes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="shortcut icon" href="/sisec-ui/public/img/QRCESISS.png">
   <style>
     .avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #e5e7eb; }
     .table td, .table th { vertical-align: middle; }
+    :root{--brand:#3C92A6; --brand-2:#24A3C1; --ink:#10343b; --muted:#486973; --bg:#F7FBFD;--surface:#FFFFFF; --border:#DDEEF3; --border-strong:#BFE2EB;--chip:#EAF7FB; --ring:0 0 0 .22rem rgba(36,163,193,.25); --ring-strong:0 0 0 .28rem rgba(36,163,193,.33);--shadow-sm:0 6px 18px rgba(20,78,90,.08);--radius-xl:1rem; --radius-2xl:1.25rem;}
+    /* ---------- Título ---------- */
+    h3{font-weight:800; letter-spacing:.2px; color:var(--ink);margin-bottom:.75rem!important;}
+    h3::after{content:""; display:block; width:78px; height:4px; border-radius:99px;margin-top:.5rem; background:linear-gradient(90deg,var(--brand),var(--brand-2));}
   </style>
 </head>
 <body class="bg-light">
 <div class="container py-4">
   <div class="d-flex align-items-center justify-content-between mb-3">
-    <h3 class="m-0">Solicitudes pendientes</h3>
+    <h3>Solicitudes pendientes</h3>
     <a class="btn btn-outline-secondary btn-sm" href="<?= $base ?>/views/inicio/index.php">← Volver</a>
   </div>
-
   <?php if (isset($_GET['msg'])): ?>
     <div class="alert alert-success"><?= h($_GET['msg']) ?></div>
   <?php endif; ?>
   <?php if (isset($_GET['error'])): ?>
     <div class="alert alert-danger"><?= h($_GET['error']) ?></div>
   <?php endif; ?>
-
   <!-- Filtros -->
   <form class="card card-body mb-3 shadow-sm">
     <div class="row g-2 align-items-end">
@@ -143,7 +142,6 @@ $qsBase = ['q'=>$q, 'from'=>$fromRaw, 'to'=>$toRaw, 'pp'=>$pp];
       </div>
     </div>
   </form>
-
   <?php if (empty($pendientes)): ?>
     <div class="alert alert-info">No hay solicitudes pendientes<?= $total===0?'':' en esta búsqueda' ?>.</div>
   <?php else: ?>
@@ -178,16 +176,8 @@ $qsBase = ['q'=>$q, 'from'=>$fromRaw, 'to'=>$toRaw, 'pp'=>$pp];
             <td><?= h($u['empresa']) ?></td>
             <td><?= h(date('Y-m-d H:i', strtotime($u['creado_el'] ?? ''))) ?></td>
             <td class="text-end">
-              <button class="btn btn-primary btn-sm me-2"
-                      data-bs-toggle="modal"
-                      data-bs-target="#approveModal"
-                      data-user-id="<?= (int)$u['id'] ?>"
-                      data-user-name="<?= h($u['nombre']) ?>">
-                Aprobar
-              </button>
-
-              <form class="d-inline" method="post" action="<?= $base ?>/controllers/usuarios_aprobar.php"
-                    onsubmit="return confirm('¿Eliminar la solicitud de <?= h($u['nombre']) ?>? Esta acción no se puede deshacer.');">
+              <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#approveModal" data-user-id="<?= (int)$u['id'] ?>" data-user-name="<?= h($u['nombre']) ?>">Aprobar</button>
+              <form class="d-inline" method="post" action="<?= $base ?>/controllers/usuarios_aprobar.php" onsubmit="return confirm('¿Eliminar la solicitud de <?= h($u['nombre']) ?>? Esta acción no se puede deshacer.');">
                 <input type="hidden" name="accion" value="eliminar">
                 <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                 <button class="btn btn-outline-danger btn-sm">Rechazar</button>
@@ -198,7 +188,6 @@ $qsBase = ['q'=>$q, 'from'=>$fromRaw, 'to'=>$toRaw, 'pp'=>$pp];
         </tbody>
       </table>
     </div>
-
     <!-- Paginación -->
     <nav aria-label="Paginación">
       <ul class="pagination">
@@ -236,7 +225,6 @@ $qsBase = ['q'=>$q, 'from'=>$fromRaw, 'to'=>$toRaw, 'pp'=>$pp];
     </nav>
   <?php endif; ?>
 </div>
-
 <!-- Modal Aprobar (igual que antes) -->
 <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -266,9 +254,7 @@ $qsBase = ['q'=>$q, 'from'=>$fromRaw, 'to'=>$toRaw, 'pp'=>$pp];
               <option>Mantenimientos</option>
               <option>Monitorista</option>
             </select>
-            <div class="form-text">
-              * No se permite aprobar como <b>Superadmin</b> desde esta pantalla.
-            </div>
+            <div class="form-text">No se permite aprobar como <b>Superadmin</b> desde esta pantalla.</div>
           </div>
 
           <!-- Ámbito (se muestra según rol) -->

@@ -273,7 +273,7 @@ switch ($accion) {
 
     /* ===== Endpoints JSON ===== */
     case 'regiones':
-        $res = $conexion->query("SELECT id, nom_region AS nombre FROM regiones WHERE id IN (1,3,6)");
+        $res = $conexion->query("SELECT id, nom_region AS nombre FROM regiones WHERE id IN (1,2,3,4,6)");
         $data = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
         header('Content-Type: application/json');
         echo json_encode($data);

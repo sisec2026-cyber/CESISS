@@ -21,7 +21,6 @@
       color: var(--fg);
       font-family: system-ui,-apple-system,"Segoe UI",Roboto,Arial,"Noto Sans";
       line-height: 1.6;
-      /* añadido para burbujas */
       position: relative;
       overflow-x: hidden;
     }
@@ -29,7 +28,6 @@
       max-width: 1100px;
       margin: 90px auto;
       padding: 0 16px;
-      /* asegurar que quede encima de las burbujas */
       position: relative;
       z-index: 2;
     }
@@ -99,6 +97,35 @@
       animation: scrollBrands 30s linear infinite;
       width: max-content;
     }
+    /* Carrusel de Certificaciones */
+    .carousel-container.certificaciones {
+      overflow: hidden;
+      width: 100%;
+      margin: 20px auto;
+      position: relative;
+    }
+
+    .carousel-container.certificaciones .carousel-track img {
+      height: 200px;   /* Igual que oficinas */
+      width: auto;
+      object-fit: cover;
+      border-radius: 16px;
+      padding: 0;
+      filter: none;
+    }
+
+    .carousel-container.certificaciones .carousel-track {
+      display: flex;
+      gap: 40px;
+      animation: scrollCertificaciones 60s linear infinite; /* más lento */
+      width: max-content;
+    }
+
+    @keyframes scrollCertificaciones {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
     /* Logos de marcas */
     .carousel-track img {
       height: 120px;
@@ -119,14 +146,56 @@
 
     /* Oficinas - fotos grandes */
     .oficinas .carousel-track img {
-      height: 200px;   /* antes 300px */
+      height: 200px;
       width: auto;
       object-fit: cover;
       border-radius: 16px;
       padding: 0;
       filter: none;
     }
-
+    .oficinas-titulo {
+      display: inline-block;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 8px 20px;
+      background: linear-gradient(135deg, rgba(60,146,166,0.35), rgba(58,194,176,0.15));
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(60,146,166,0.6);
+      margin: 25px auto 15px;
+      transition: transform 0.3s ease, background 0.3s ease;
+    }
+    .oficinas-titulo:hover {
+      transform: scale(1.08);
+      background: linear-gradient(135deg, rgba(60,146,166,0.55), rgba(58,194,176,0.25));
+    }
+    .oficinas-titulo::after {
+      content: "";
+      display: block;
+      width: 50px;
+      height: 3px;
+      background: var(--brand);
+      border-radius: 2px;
+      margin-top: 6px;
+    }
+    .oficinas-titulo {
+      display: block;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #e7f6fa;
+      margin: 30px auto 15px;
+      padding: 6px 20px;
+      border-radius: 999px;
+      background: linear-gradient(145deg, rgba(56, 204, 197, 0.15), rgba(58, 194, 176, 0.05));
+      border: 1px solid var(--card-border);
+      box-shadow: inset 0 0 8px rgba(56,204,197,0.3);
+      width: fit-content;
+    }
     .carousel-track img:hover {
       transform: scale(1.15);
       filter: grayscale(0) brightness(1.1);
@@ -136,45 +205,6 @@
       from { transform: translateX(0); }
       to { transform: translateX(-50%); }
     }
-    /* Certificaciones */
-    .certificaciones {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 25px;
-      margin-top: 30px;
-    }
-
-    .certificaciones .cert-card {
-      background: linear-gradient(145deg, rgba(56, 204, 197, 0.05), rgba(58, 194, 176, 0.02));
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      padding: 20px;
-      text-align: center;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      cursor: pointer;
-    }
-
-    .certificaciones .cert-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 15px 35px rgba(0,0,0,.6);
-    }
-
-    .certificaciones img {
-      width: 100%;
-      max-width: 200px;
-      height: auto;
-      object-fit: contain;
-      border-radius: 12px;
-      background: #fff;
-      padding: 10px;
-      transition: transform 0.3s ease;
-    }
-
-    .certificaciones img:hover {
-      transform: scale(1.08);
-    }
-
     /* Overlay */
     .overlay {
       position: fixed;
@@ -217,8 +247,8 @@
       position: fixed;
       inset: 0;
       overflow: hidden;
-      pointer-events: none; /* no interfiere con clics */
-      z-index: 1;           /* debajo del contenido */
+      pointer-events: none;
+      z-index: 1;
     }
     .bubble {
       position: absolute;
@@ -237,7 +267,7 @@
       animation: rise linear infinite;
       will-change: transform, opacity;
       filter: blur(var(--blur, 0px));
-      outline: 1px solid rgba(36, 163, 193, 0.15); /* toque de marca */
+      outline: 1px solid rgba(36, 163, 193, 0.15);
     }
     @keyframes rise {
       0%   { transform: translateY(0) translateX(0) scale(var(--scale,1)); opacity: 0; }
@@ -248,14 +278,31 @@
     @media (prefers-reduced-motion: reduce) {
       .bubble { animation-duration: 0s !important; opacity: .15 !important; }
     }
+    .tag {
+      display:inline-flex; align-items:center; gap:.4rem;
+      border:1px solid var(--card-border); background:#0c1b20; color:#aee6f2;
+      font-size:.85rem; padding:.3rem .8rem; border-radius:999px; margin-right:.4rem;
+    }
+    .oficinas-titulo {
+      display: inline-block;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 6px 14px;
+      background: rgba(60, 146, 166, 0.1);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin: 20px 0 10px;
+    }
   </style>
 </head>
 <body>
-
-  <!-- capa de burbujas (añadido) -->
   <div class="bubbles" id="bubbles"></div>
-
   <div class="container">
+
     <!-- Historia -->
     <div class="card">
       <a href="/sisec-ui/index.php" class="back-home"><i class="fa-solid fa-house"></i> Volver al inicio</a>
@@ -288,7 +335,7 @@
     <!-- Instalaciones -->
     <div class="card">
       <h1><i class="fa-solid fa-building"></i> Nuestras Instalaciones</h1>
-      <p>CDMX</p>
+      <p class="oficinas-titulo">CDMX</p>
       <div class="carousel-container oficinas">
         <div class="carousel-track">
           <img src="/../sisec-ui/public/img/oficinas/CDMX1.jpeg">
@@ -304,7 +351,7 @@
           <img src="/../sisec-ui/public/img/oficinas/CDMX5.jpeg">
         </div>
       </div>
-      <p>Puebla</p>
+      <p class="oficinas-titulo">Puebla</p>
       <div class="carousel-container oficinas">
         <div class="carousel-track">
           <img src="/../sisec-ui/public/img/oficinas/PUEBLA1.jpeg">
@@ -324,35 +371,47 @@
 
     <!-- Certificaciones -->
     <div class="card">
-      <h1 style="text-align:center"><i class="fa-solid fa-briefcase"></i> Nuestras Certificaciones</h1>
-      <div class="certificaciones">
-        <div class="cert-card">
+      <h1 style="text-align:center"><i class="fa-solid fa-briefcase"></i>Certificaciones</h1>
+      <div class="carousel-container certificaciones">
+        <div class="carousel-track">
+          <img src="/../sisec-ui/public/img/certificados/CERT13.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT14.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT15.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT16.jpg">
           <img src="/../sisec-ui/public/img/certificados/CERT1.jpg">
-        </div>
-        <div class="cert-card">
           <img src="/../sisec-ui/public/img/certificados/CERT2.jpg">
-        </div>
-        <div class="cert-card">
-          <img src="/../sisec-ui/public/img/certificados/CERT3.png">
-        </div>
-        <div class="cert-card">
-          <img src="/../sisec-ui/public/img/certificados/CERT4.jpg">
-        </div>
-        <div class="cert-card">
+          <img src="/../sisec-ui/public/img/certificados/CERT3.jpg">
           <img src="/../sisec-ui/public/img/certificados/CERT5.jpg">
-        </div>
-        <div class="cert-card">
           <img src="/../sisec-ui/public/img/certificados/CERT6.jpg">
-        </div>
-        <div class="cert-card">
           <img src="/../sisec-ui/public/img/certificados/CERT7.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT8.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT9.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT10.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT11.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT12.jpg">
+          <!-- duplicación -->
+          <img src="/../sisec-ui/public/img/certificados/CERT13.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT14.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT15.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT16.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT1.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT2.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT3.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT5.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT6.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT7.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT8.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT9.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT10.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT11.jpg">
+          <img src="/../sisec-ui/public/img/certificados/CERT12.jpg">
         </div>
       </div>
     </div>
     
     <!-- Carrusel de Marcas -->
     <div class="card">
-      <h1><i class="fa-solid fa-industry"></i> Marcas y Herramientas de Trabajo</h1>
+      <h1><i class="fa-solid fa-industry"></i>Marcas y Herramientas de Trabajo</h1>
       <div class="carousel-container">
         <div class="carousel-track">
           <img src="/../sisec-ui/public/img/marcas/AVI.png">
@@ -371,6 +430,13 @@
         </div>
       </div>
     </div>
+    
+    <!--  Info sisec -->
+    <div class="card">
+      <h1><i class="fa-solid fa-info"></i>Contacto SISEC</h1>
+        <p class="tag" style="font-size:20px;"><i class="fa-solid fa-phone"></i>Teléfono: 55 5600 5175</p>
+        <p class="tag" style="font-size:20px;"><i class="fa-solid fa-envelope"></i>sisec2014@gmail.com</p>
+    </div>
   </div>
 
   <!-- Overlay para imágenes -->
@@ -381,8 +447,6 @@
   <script>
     const overlay = document.getElementById('overlay');
     const overlayImg = overlay.querySelector('img');
-
-    // Selecciona todas las imágenes clickeables
     const imgs = document.querySelectorAll('.carousel-track img, .certificaciones img');
 
     imgs.forEach(img => {
@@ -400,21 +464,20 @@
     });
   </script>
 
-  <!-- Script de burbujas (añadido, no interfiere con lo existente) -->
   <script>
     (function(){
       const wrap = document.getElementById('bubbles');
       if (!wrap) return;
 
-      const MAX_AT_ONCE = 18;      // burbujas simultáneas
-      const SPAWN_MS_MIN = 400;    // intervalo spawn mín
-      const SPAWN_MS_MAX = 1200;   // intervalo spawn máx
-      const SIZE_MIN = 14;         // px
-      const SIZE_MAX = 70;         // px
-      const DUR_MIN = 12;          // s
-      const DUR_MAX = 26;          // s
-      const DRIFT_MAX = 90;        // px
-      const BLUR_MAX = 2.5;        // px
+      const MAX_AT_ONCE = 18;
+      const SPAWN_MS_MIN = 400;
+      const SPAWN_MS_MAX = 1200;
+      const SIZE_MIN = 14;
+      const SIZE_MAX = 70;
+      const DUR_MIN = 12;
+      const DUR_MAX = 26;
+      const DRIFT_MAX = 90;
+      const BLUR_MAX = 2.5;
 
       let active = 0;
       const prfReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -426,8 +489,8 @@
         b.className = 'bubble';
 
         const size  = rand(SIZE_MIN, SIZE_MAX);
-        const left  = rand(0, 100);                    // porcentaje
-        const dur   = prfReduce ? 0 : rand(DUR_MIN, DUR_MAX); // respeta reduce
+        const left  = rand(0, 100);
+        const dur   = prfReduce ? 0 : rand(DUR_MIN, DUR_MAX);
         const delay = prfReduce ? 0 : rand(0, 6);
         const blur  = rand(0, BLUR_MAX);
         const drift = rand(-DRIFT_MAX, DRIFT_MAX);
@@ -455,7 +518,6 @@
         const t = rand(SPAWN_MS_MIN, SPAWN_MS_MAX);
         setTimeout(spawn, t);
       }
-      // Semilla inicial
       for (let i=0; i<MAX_AT_ONCE/2; i++) spawn();
     })();
   </script>

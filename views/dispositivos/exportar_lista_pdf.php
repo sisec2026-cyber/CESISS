@@ -87,9 +87,9 @@ ob_start();
   <thead>
     <tr>
       <th>Equipo</th>
-      <th>Fecha</th>
+      <th>Fecha mant.</th>
       <th>Modelo</th>
-      <th>Estado</th>
+      <th>Status</th>
       <th>Área</th>
       <th>Observaciones</th>
       <th>Serie</th>
@@ -98,7 +98,7 @@ ob_start();
       <th>Servidor</th>
       <th>Switch</th>
       <th>Puerto</th>
-      <th>Imagen</th>
+      <!--th>Imagen</th-->
     </tr>
   </thead>
   <tbody>
@@ -119,7 +119,7 @@ ob_start();
       <td><?= htmlspecialchars($d['servidor'] ?? '') ?></td>
       <td><?= htmlspecialchars($d['switch'] ?? '') ?></td>
       <td><?= htmlspecialchars($d['puerto'] ?? '') ?></td>
-      <td><!-- imágenes desactivadas para reducir memoria --></td>
+      <!--td>< imágenes desactivadas para reducir memoria ></td-->
     </tr>
   <?php endwhile; ?>
 <?php endif; ?>

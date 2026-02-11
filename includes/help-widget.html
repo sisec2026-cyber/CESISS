@@ -1,0 +1,160 @@
+<!-- help-widget-sistemas.html -->
+<div id="help-widget">
+  <button id="help-btn">❔</button>
+  <div id="help-content">
+    <select id="faq-category">
+      <option value="todos">Todas</option>
+      <option value="registro">Registro</option>
+      <option value="reportes">Reportes</option>
+      <option value="mantenimiento">Mantenimiento</option>
+    </select>
+    <input type="text" id="faq-search" placeholder="Buscar..." />
+
+    <!-- FAQ Items -->
+     
+    <div class="faq-item" data-category="registro">
+      <h4>¿Cómo agrego un nuevo sistema instalado?</h4>
+      <p>
+        En el menú selecciona el apartado 
+        <a href="/sisec-ui/views/dispositivos/registro.php" target="_blank">Registrar dispositivo</a>, 
+        rellena las opciones de acuerdo al tipo de equipo que deseas registrar y oprime el botón 
+        <b>"guardar y generar QR"</b>.
+      </p>
+    </div>
+
+    <div class="faq-item" data-category="registro">
+      <h4>¿Puedo ver todos los sistemas instalados en una sucursal?</h4>
+      <p>Sí, en el inicio se muestra un mapa geolocalizable con todas las sucursales en existencia, o en el apartado
+      <a href="/sisec-ui/views/dispositivos/listar.php" target="_blank">"Dispositivos"</a>
+      encuentras todos los sistemas por Ciudad > Municipio > Sucursal</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Cómo busco un sistema por nombre o versión?</h4>
+      <p>Usa la barra de búsqueda en el <b>listado</b>, puedes hacer búsqueda por nombre, versión, zona, etc.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Puedo ver el del estado de los sistemas?</h4>
+      <p>Sí, dentro del listado se encuentra el status atual de cada uno de los equipos, si deseas buscar por status puedes
+      insertarlo en la barra de búsqueda para filtrar de a cuerdo a lo que desees ver</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Puedo ver el listado de los equipos si lo selecciono desde el mapa?</h4>
+      <p>Sí, cuando seleccionas una determinante abajo de la información de <b>alarmas y CCTV</b>te muestra el botón
+      <b>"Ver dispositivos"</b>y te dirige al listado de la determinante que deseas ver</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Cómo actualizo la información de un sistema?</h4>
+      <p>Selecciona el sistema en el listado, haz clic en <b>"Editar"</b>, actualiza la información y guarda los cambios.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Qué hago si un sistema no aparece en el listado?</h4>
+      <p>Verifica que la sucursal y los filtros estén correctos. Si aún no aparece, asegúrate de que fue registrado correctamente.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Puedo exportar la lista de sistemas instalados?</h4>
+      <p>Sí, usa el botón de exportar a PDF dentro del listado, aplicando los filtros que necesites.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Puedo ver los mantenimientos pendientes?</h4>
+      <p>Sí, en el Inicio se encuentra el </p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Qué hago si ingreso un sistema con datos incorrectos?</h4>
+      <p>Puedes editarlo en la lista de sistemas. Si ya tiene historial, los cambios quedarán registrados para auditoría.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Cómo veo gráficas de sistemas por estado?</h4>
+      <p>En el módulo de reportes, selecciona “Estado de sistemas” para ver activos, inactivos y pendientes de actualización en gráficas circulares o barras.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Qué hago si necesito buscar un sistema antiguo por fecha de instalación?</h4>
+      <p>Usa el filtro por fecha en la lista de sistemas para mostrar los registros instalados en ese periodo.</p>
+    </div>
+
+    <div class="faq-item" data-category="reportes">
+      <h4>¿Puedo imprimir un listado de sistemas instalados?</h4>
+      <p>Usa el botón de exportar/imprimir desde la lista de sistemas, aplicando los filtros que quieras incluir.</p>
+    </div>
+
+    <div class="faq-item" data-category="mantenimiento">
+      <h4>¿Qué hago si quiero eliminar un sistema?</h4>
+      <p>Solo elimina sistemas que no tengan historial crítico. Si tiene movimientos o cambios registrados, lo recomendable es marcarlo como inactivo.</p>
+    </div>
+
+  </div>
+</div>
+
+<style>
+/* --- igual que tu CSS anterior --- */
+#help-widget { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+#help-btn { background: linear-gradient(145deg, #3C92A6, #2B6970); color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; font-size: 26px; box-shadow: 0 0 10px rgba(60,146,166,0.6),0 0 30px rgba(60,146,166,0.4) inset; transition: all 0.3s ease; animation: pulse 2s infinite; }
+#help-btn:hover { transform: scale(1.15); box-shadow: 0 0 20px rgba(60,146,166,0.9),0 0 45px rgba(60,146,166,0.5) inset; }
+@keyframes pulse {0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
+#help-content { display: none; position: absolute; bottom: 70px; right: 0; width: 320px; background: #1a1a1a; color: #f0f0f0; border-radius: 15px; padding: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); animation: fadeIn 0.4s ease forwards; max-height: 450px; overflow-y: auto; }
+#faq-search { width: 100%; padding: 8px; border-radius: 8px; border: none; margin-bottom: 10px; font-size: 14px; }
+#faq-category { width: 100%; padding: 6px; border-radius: 6px; margin-bottom: 10px; border: none; background:#2b2b2b; color:#f0f0f0; font-size:14px; }
+.faq-item h4 { margin: 0; cursor: pointer; font-size: 16px; color: #3C92A6; padding: 6px 0; transition: color 0.3s; }
+.faq-item h4:hover { color: #77d9f2; }
+.faq-item p { display: none; margin: 5px 0 10px 0; font-size: 14px; color: #ddd; transition: all 0.3s ease; max-height: 0; overflow: hidden; }
+.faq-item p.open { display: block; max-height: 500px; }
+@keyframes fadeIn {0%{opacity:0;transform:translateY(20px);}100%{opacity:1;transform:translateY(0);}}
+#help-content::-webkit-scrollbar { width: 6px; }
+#help-content::-webkit-scrollbar-thumb { background: #3C92A6; border-radius: 3px; }
+@media (max-width:600px){#help-content{width:260px;}}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const helpBtn=document.getElementById('help-btn');
+  const helpContent=document.getElementById('help-content');
+  const faqItems=document.querySelectorAll('.faq-item h4');
+  const searchInput=document.getElementById('faq-search');
+  const faqCategory=document.getElementById('faq-category');
+
+  // Toggle widget con glow
+  helpBtn.addEventListener('click',()=>{
+    if(helpContent.style.display==='block'){
+      helpContent.style.display='none';
+      helpBtn.style.boxShadow='0 0 15px rgba(60,146,166,0.6),0 0 30px rgba(60,146,166,0.4) inset';
+    }else{
+      helpContent.style.display='block';
+      helpBtn.style.boxShadow='0 0 35px rgba(60,146,166,1),0 0 50px rgba(60,146,166,0.6) inset';
+    }
+  });
+
+  // Toggle respuestas con slide
+  faqItems.forEach(item=>{
+    item.addEventListener('click',()=>{
+      const p=item.nextElementSibling;
+      p.classList.toggle('open');
+    });
+  });
+
+  // Búsqueda dinámica
+  searchInput.addEventListener('keyup',()=>{
+    const filter=searchInput.value.toLowerCase();
+    document.querySelectorAll('.faq-item').forEach(faq=>{
+      const question=faq.querySelector('h4').textContent.toLowerCase();
+      faq.style.display=question.includes(filter)?'block':'none';
+    });
+  });
+
+  // Filtrar por categoría
+  faqCategory.addEventListener('change',()=>{
+    const cat=faqCategory.value;
+    document.querySelectorAll('.faq-item').forEach(faq=>{
+      faq.style.display=(cat==='todos' || faq.dataset.category===cat)?'block':'none';
+    });
+  });
+});
+</script>

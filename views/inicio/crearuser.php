@@ -21,8 +21,8 @@ $limiteAlcanzado = $totalUsuarios >= 1000;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Registro de usuario</title>
-
+  <title>CESISS - Registro de usuario</title>
+  <link rel="shortcut icon" href="/sisec-ui/public/img/QRCESISS.png">
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
 
@@ -485,5 +485,6 @@ $limiteAlcanzado = $totalUsuarios >= 1000;
     <?php if ($limiteAlcanzado): ?> btnGuardar.setAttribute('disabled', true); <?php endif; ?>
   });
   </script>
+  <?php include __DIR__ . '/../../includes/footer.php'; ?>
 </body>
 </html>

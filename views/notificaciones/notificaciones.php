@@ -104,15 +104,19 @@ $sql = "SELECT
           n.id,
           n.usuario_id,
           u.nombre          AS usuario_nombre,
+          COALESCE(s.nom_sucursal,'SIN SUCURSAL') sucursal,
           n.mensaje,
           n.fecha,
           n.visto,
           n.dispositivo_id,
+          e.nom_equipo     AS equipo_nombre,  
           m.num_modelos     AS modelo_nombre
         FROM notificaciones n
         LEFT JOIN usuarios u  ON u.id = n.usuario_id
         LEFT JOIN dispositivos d ON d.id = n.dispositivo_id
+        LEFT JOIN equipos e      ON e.id = d.equipo
         LEFT JOIN modelos m      ON m.id = d.modelo
+        LEFT JOIN sucursales s   ON d.sucursal = s.ID
         $whereSql
         ORDER BY n.fecha DESC
         LIMIT ?, ?";
@@ -182,6 +186,9 @@ ob_start();
     No vistas
     <span class="badge bg-warning text-dark ms-2"><?= number_format((int)$totalNoVistas) ?></span>
   </a>
+  <a href="exportar_actividades_excel.php?q=<?= urlencode($q) ?>&filtro=<?= urlencode($filtro) ?>"class="btn btn-success">
+    <i class="fas fa-file-excel"></i> Exportar actividades
+  </a>
 </div>
 
 <div class="card card-notifs">
@@ -201,27 +208,29 @@ ob_start();
       <table class="table table-hover table-sticky mb-0">
         <thead>
           <tr>
-            <th style="width:50%">Mensaje</th>
-            <th style="width:20%">Usuario</th>
-            <th style="width:15%">Fecha</th>
-            <th style="width:15%" class="text-end">Acciones</th>
+            <th style="width:65%">Mensaje</th>
+            <th style="width:15%">Usuario</th>
+            <th style="width:10%">Fecha</th>
+            <th style="width:10%">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <?php while ($row = $result->fetch_assoc()):
-            $modeloNombre  = $row['modelo_nombre'] ?? null; // modelos.num_modelos
+            $equipoNombre  = $row['equipo_nombre'] ?? null; // modelos.num_modelos
             $usuarioNombre = $row['usuario_nombre'] ?? '—';
+            $modeloNombre  = $row['modelo_nombre'] ?? null; 
+            $sucursalNombre  = $row['sucursal'] ;
             $isUnseen      = ((int)$row['visto'] === 0);
             $dispId        = (int)($row['dispositivo_id'] ?? 0);
             $verHref       = $dispId ? "/sisec-ui/views/dispositivos/device.php?id={$dispId}" : "#";
             $btnTitle      = $dispId
-                              ? ('Ver dispositivo' . ($modeloNombre ? (': ' . $modeloNombre) : ''))
+                              ? ('Ver dispositivo' . ($equipoNombre ? (': ' . $equipoNombre) : ''))
                               : 'Sin dispositivo asociado';
             // Limpia “ID #xxx” del mensaje
             $mensaje = limpiarMensajeId($row['mensaje']);
             // Acompaña con modelo si no está
-            if ($modeloNombre && stripos($mensaje, $modeloNombre) === false) {
-              $mensaje .= " — Modelo: " . $modeloNombre;
+            if ($equipoNombre && stripos($mensaje, $equipoNombre) === false) {
+              $mensaje .= " " . $equipoNombre;
             }
           ?>
             <tr class="<?= $isUnseen ? 'row-unseen' : '' ?>">
@@ -229,13 +238,15 @@ ob_start();
                 <div class="fw-semibold"><?= htmlspecialchars($mensaje) ?></div>
                 <?php if ($modeloNombre): ?>
                   <div class="text-muted-xxs">
-                    Modelo: <span class="fw-semibold"><?= htmlspecialchars($modeloNombre) ?></span>
+                    Modelo: <span class="fw-semibold"><?= htmlspecialchars($modeloNombre).' |' ?></span>
+                    
+                    Sucursal: <span class="fw-semibold"><?= htmlspecialchars($sucursalNombre) ?></span>
                   </div>
                 <?php endif; ?>
               </td>
               <td><?= htmlspecialchars($usuarioNombre) ?></td>
               <td><span class="badge bg-secondary"><?= formatFecha($row['fecha']) ?></span></td>
-              <td class="text-end">
+              <td >
                 <a href="<?= htmlspecialchars($verHref) ?>"
                    class="btn btn-info btn-sm <?= $dispId ? '' : 'disabled' ?>"
                    title="<?= htmlspecialchars($btnTitle) ?>"

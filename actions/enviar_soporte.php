@@ -1,126 +1,182 @@
 <?php
-// actions/enviar_soporte.php
-require_once __DIR__ . '/../includes/auth.php';
-verificarAutenticacion();
-verificarRol(['Superadmin','Administrador','Mantenimientos','Técnico','Distrital','Prevencion','Monitorista','Invitado','Capturista']);
-
 session_start();
 
 function redirect_with($ok=null, $err=null){
-  if ($ok)  $_SESSION['flash_ok']  = $ok;
-  if ($err) $_SESSION['flash_err'] = $err;
-  header('Location: /sisec-ui/views/soporte.php');
-  exit;
+    if ($ok)  $_SESSION['flash_ok']  = $ok;
+    if ($err) $_SESSION['flash_err'] = $err;
+    header('Location: ../views/inicio/helpdesk.php');
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  redirect_with(null, 'Método no permitido.');
+    redirect_with(null, 'Método no permitido.');
 }
 
-$hp  = $_POST['hp_field'] ?? '';
-if ($hp !== '') {
-  redirect_with(null, 'Solicitud inválida.');
-}
+require __DIR__ . '/../vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-$csrf = $_POST['csrf_token'] ?? '';
-if (!$csrf || !hash_equals($_SESSION['csrf_token'] ?? '', $csrf)) {
-  redirect_with(null, 'Token inválido. Recarga la página e inténtalo de nuevo.');
-}
+// Ajustar límites de subida (por si el servidor los bloquea)
+ini_set('upload_max_filesize', '10M');
+ini_set('post_max_size', '10M');
 
-$asunto   = trim((string)($_POST['asunto'] ?? ''));
-$nombre   = trim((string)($_POST['nombre'] ?? ''));
-$correo   = trim((string)($_POST['correo'] ?? ''));
-$mensaje  = trim((string)($_POST['mensaje'] ?? ''));
-$prioridad= trim((string)($_POST['prioridad'] ?? 'Normal'));
+$asunto    = trim($_POST['asunto'] ?? '');
+$nombre    = trim($_POST['nombre'] ?? '');
+$correo    = trim($_POST['correo'] ?? '');
+$mensaje   = trim($_POST['mensaje'] ?? '');
+$prioridad = trim($_POST['prioridad'] ?? 'Normal');
 
-if ($asunto === '' || $nombre === '' || $correo === '' || $mensaje === '') {
-  redirect_with(null, 'Por favor completa los campos requeridos.');
+if (!$asunto || !$nombre || !$correo || !$mensaje) {
+    redirect_with(null, 'Por favor completa los campos requeridos.');
 }
 if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-  redirect_with(null, 'Correo inválido.');
+    redirect_with(null, 'Correo inválido.');
 }
 
-// Construcción del contenido
-$to = 'soportecesiss@gmail.com';
-$subject = "[CESISS Soporte] {$asunto}";
-$body_text = "Nueva solicitud de soporte\n\n"
-. "Nombre: {$nombre}\n"
-. "Correo: {$correo}\n"
-. "Prioridad: {$prioridad}\n"
-. "Fecha/Hora: " . date('Y-m-d H:i:s') . "\n\n"
-. "Mensaje:\n{$mensaje}\n";
-
-$body_html = nl2br(htmlentities($body_text, ENT_QUOTES, 'UTF-8'));
-
-// Intentamos PHPMailer si existe
-$sent = false;
-$err  = null;
+$mail = new PHPMailer(true);
 
 try {
-  if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require __DIR__ . '/../vendor/autoload.php';
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-
-    // Config SMTP si tienes credenciales; si no, usa mail() al final
-    // Ejemplo SMTP (comenta/ajusta según tu entorno):
     $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
-    $mail->SMTPAuth = true;
-    $mail->Username = 'soporte@cesiss.com';
-    $mail->Password = 'sistemas2025';
-    $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port = 587;
+    $mail->Host       = 'smtp.gmail.com';
+    $mail->SMTPAuth   = true;
+    $mail->Username   = 'soporte@cesiss.com';
+    $mail->Password   = 'gdvocwiuycyqrltp';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port       = 587;
 
-    // Si NO configuras SMTP, PHPMailer intentará el mail() del sistema:
-    $mail->setFrom('soporte@cesiss.com', 'CESISS Soporte');
-    $mail->addAddress($to);
-    // Responder al usuario
+    // El correo sigue autenticado con soporte@cesiss.com,
+    // pero se muestra como si viniera de la persona que llenó el formulario.
+    $mail->setFrom('soporte@cesiss.com', "{$nombre} (via CESISS Soporte)");
+    $mail->addAddress('soporte@cesiss.com');
     $mail->addReplyTo($correo, $nombre);
 
-    $mail->Subject = $subject;
+    // Opcional: también puedes usar una cabecera personalizada para mayor claridad
+    $mail->addCustomHeader('X-Original-Sender', $correo);
+    $mail->addCustomHeader('X-Original-Name', $nombre);
+
     $mail->isHTML(true);
-    $mail->Body = $body_html;
-    $mail->AltBody = $body_text;
-    // Justo antes de $mail->send() si PHPMailer existe, agrega esto para adjuntar archivo
-    if (!empty($_FILES['archivo']['name'])) {
-    // Maneja múltiples archivos aunque tu input sea uno solo
-    $files = is_array($_FILES['archivo']['name']) ? $_FILES['archivo'] : [
-        'name' => [$_FILES['archivo']['name']],
-        'type' => [$_FILES['archivo']['type']],
-        'tmp_name' => [$_FILES['archivo']['tmp_name']],
-        'error' => [$_FILES['archivo']['error']],
-        'size' => [$_FILES['archivo']['size']]
-    ];
-      foreach ($files['name'] as $i => $file_name) {
-          if ($files['error'][$i] === UPLOAD_ERR_OK && is_uploaded_file($files['tmp_name'][$i])) {
-              $mail->addAttachment($files['tmp_name'][$i], $file_name);
-          }
-      }
+    $mail->Subject = "$asunto";
+
+    $body = '
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+    <meta charset="UTF-8">
+    <style>
+    body {
+        background: #f4f7f8;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        color: #333;
+        margin: 0;
+        padding: 0;
     }
+    .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+        border-top: 6px solid #3C92A6;
+    }
+    .header {
+        background: linear-gradient(135deg, #3C92A6, #24a3c1);
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+    }
+    .header h2 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 0.5px;
+    }
+    .content {
+        padding: 24px;
+    }
+    .content h3 {
+        color: #3C92A6;
+        margin-top: 0;
+    }
+    .data-block {
+        margin: 16px 0;
+        background: #f8fafc;
+        border-left: 4px solid #3C92A6;
+        padding: 12px 16px;
+        border-radius: 6px;
+    }
+    .data-block b {
+        color: #222;
+    }
+    .message {
+        margin-top: 20px;
+        padding: 14px;
+        background: #f1f9fa;
+        border-radius: 10px;
+        line-height: 1.5;
+    }
+    .footer {
+        background: #f8f8f8;
+        padding: 14px;
+        text-align: center;
+        font-size: 13px;
+        color: #666;
+        border-top: 1px solid #e0e0e0;
+    }
+    .tag {
+        display: inline-block;
+        padding: 4px 10px;
+        background: #e0f4f9;
+        color: #03647a;
+        font-weight: 600;
+        border-radius: 999px;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <div class="header">
+        <h2>Nueva solicitud de soporte CESISS</h2>
+        </div>
+        <div class="content">
+        <div class="data-block">
+            <b>Nombre:</b> ' . htmlentities($nombre) . '<br>
+            <b>Correo:</b> ' . htmlentities($correo) . '<br>
+            <b>Prioridad:</b> <span class="tag">' . htmlentities($prioridad) . '</span><br>
+            <b>Fecha/Hora:</b> ' . date("Y-m-d H:i:s") . '
+        </div>
 
+        <h3>Detalles del mensaje:</h3>
+        <div class="message">' . nl2br(htmlentities($mensaje)) . '</div>
+        </div>
+
+        <div class="footer">
+        <p>Este mensaje fue generado automáticamente desde el formulario de soporte de CESISS.</p>
+        <p>No respondas a este correo directamente si no eres parte del equipo técnico.</p>
+        </div>
+    </div>
+    </body>
+    </html>';
+
+    $mail->Body    = $body;
+    $mail->AltBody = strip_tags($mensaje);
+
+    // === Adjuntar archivos si existen ===
+    if (isset($_FILES['archivo']) && !empty($_FILES['archivo']['name'][0])) {
+        foreach ($_FILES['archivo']['tmp_name'] as $i => $tmp_name) {
+            $error = $_FILES['archivo']['error'][$i];
+            $name  = $_FILES['archivo']['name'][$i];
+
+            if ($error === UPLOAD_ERR_OK && is_uploaded_file($tmp_name)) {
+                $safeName = preg_replace('/[^a-zA-Z0-9_\.-]/','_', $name);
+                $mail->addAttachment($tmp_name, $safeName);
+            }
+        }
+    }
     $mail->send();
-    $sent = true;
-  }
-} catch (Throwable $e) {
-  $err = $e->getMessage();
-}
+    redirect_with('¡Tu solicitud fue enviada con éxito! Te contactaremos pronto.');
 
-// Si PHPMailer no se usó o falló, probamos mail()
-if (!$sent) {
-  $headers = [];
-  $headers[] = 'MIME-Version: 1.0';
-  $headers[] = 'Content-type: text/html; charset=UTF-8';
-  $headers[] = 'From: CESISS Soporte <no-reply@cesiss.local>';
-  $headers[] = 'Reply-To: ' . $nombre . ' <' . $correo . '>';
-
-  if (@mail($to, $subject, $body_html, implode("\r\n", $headers))) {
-    $sent = true;
-  } else {
-    if (!$err) $err = 'No se pudo enviar el correo (mail()).';
-  }
+} catch (Exception $e) {
+    redirect_with(null, 'Error al enviar: ' . htmlspecialchars($mail->ErrorInfo));
 }
-
-if ($sent) {
-  redirect_with('¡Tu solicitud fue enviada con éxito! Te contactaremos pronto.');
-}
-redirect_with(null, 'No pudimos enviar tu solicitud. ' . ($err ? ('Detalle: ' . $err) : 'Intenta más tarde.'));

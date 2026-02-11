@@ -17,6 +17,8 @@
 
   ob_start();
 ?>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 
 <!-- ESTILOS COMUNES -->
 <style>
@@ -219,8 +221,23 @@
 </style>
 
 
-
+<div style="padding-left: 30px;">
 <h2 class="mb-4">Registrar dispositivo</h2>
+
+  <?php
+  $rol = $_SESSION['usuario_rol'] ?? '';
+  $puedeQR = in_array($rol, ['Técnico'], true);
+  ?>
+  <div>
+    <?php if ($puedeQR): ?>
+      <a href="/sisec-ui/views/dispositivos/qr_virgenes_generar.php" class="btn btn-outline-primary">
+        <i class="fa fa-qrcode me-1"></i> Generar QR vírgenes
+      </a>
+      <a href="/sisec-ui/views/dispositivos/qr_scan.php" class="btn btn-secondary">
+        <i class="fa fa-camera me-1"></i> Escanear QR (móvil)
+      </a>
+    <?php endif; ?>
+  </div><br>
 
 <?php if ($isTecnico): ?>
   <!-- ===================== MODO TÉCNICO ===================== -->
@@ -239,7 +256,7 @@
           name="equipo"
           id="equipo"
           class="form-control"
-          placeholder="Ej. Cámara, DVR, Switch, NVR, Alarma…"
+          placeholder="Ej. Cámara, DVR, Switch, NVR, UPS, Alarma…"
           list="equipos-sugeridos"
           required
         />
@@ -254,6 +271,7 @@
           <option value="Estación de trabajo"></option>
           <option value="Alarma"></option>
           <option value="Pir"></option>
+          <option value="UPS"></option>
         </datalist>
       </div>
 
@@ -277,21 +295,21 @@
           <option value="">-- Selecciona un municipio --</option>
         </select>
       </div>
-
-      <div class="col-md-6">
-        <label class="form-label">Sucursal</label>
-        <select name="sucursal" id="sucursal" class="form-select" required>
-          <option value="">-- Selecciona una sucursal --</option>
-        </select>
-      </div>
-
-      <div class="col-md-6">
-      <label class="form-label">Determinante</label>
-      <select id="determinante" class="form-select" disabled>
-     <option value="">-- Determinante --</option>
-    </select>
-      <input type="hidden" name="determinante" id="determinante_hidden_tecnico">
-      </div>
+      <!-- Sucursal -->
+        <div class="col-md-6">
+          <label class="form-label">Sucursal</label>
+          <select name="sucursal_id" id="sucursal" class="form-select" required>
+            <option value="">-- Selecciona una sucursal --</option>
+          </select>
+        </div>
+      <!-- Determinante -->
+        <div class="col-md-6">
+        <label class="form-label">Determinante</label>
+          <select name="determinante_id" id="determinante" class="form-select" disabled required>
+            <option value="">-- Determinante --</option>
+          </select>
+        <input type="hidden" name="determinante_id" id="determinante_hidden_tecnico">
+        </div>
 
 
       <!-- Imágenes con cámara -->
@@ -468,9 +486,18 @@ sucSel.addEventListener('change', async () => {
     alert('No se pudieron cargar las determinantes');
   }
 });
-
+})();
   </script>
-
+  <script>
+      // 🩶 Evita bloqueo tras cancelar cámara o elegir foto
+      document.addEventListener('hidden.bs.modal', function (e) {
+        document.body.classList.remove('modal-open');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(b => b.remove());
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      });
+    </script>
 <?php else: ?>
 
   <!-- ===================== MODO COMPLETO (TU FORMULARIO ORIGINAL) ===================== -->
@@ -492,7 +519,7 @@ sucSel.addEventListener('change', async () => {
             name="equipo"
             id="equipo"
             class="form-control"
-            placeholder="Ej. Cámara, DVR, NVR, Switch, Servidor, Monitor, Alarma…"
+            placeholder="Ej. Cámara, DVR, NVR, Switch, Servidor, Monitor, UPS, Alarma…"
             list="equipos-sugeridos"
             oninput="actualizarMarcaYBotones()"
           />
@@ -507,6 +534,7 @@ sucSel.addEventListener('change', async () => {
             <option value="Estación de trabajo"></option>
             <option value="Alarma"></option>
             <option value="Pir"></option>
+            <option value="UPS"></option>
           </datalist>
         </div>
 
@@ -563,8 +591,9 @@ sucSel.addEventListener('change', async () => {
         </div>
         <div class="col-md-3">
           <label class="form-label">Status</label>
-          <input type="text" name="estado" class="form-control" placeholder="Escribe el status" required>
-        </div>  
+          <input type="text" class="form-control" value="Activo" disabled>
+          <input type="hidden" name="estado" value="1">
+        </div>
 
         <div class="col-md-3 campo-user">
           <label class="form-label">IDE</label>
@@ -638,8 +667,8 @@ sucSel.addEventListener('change', async () => {
       <!-- BLOQUE 3: Red y configuración -->
       <div class="row g-4 mt-3">
         <div class="col-md-3">
-          <label class="form-label">Ubicación en tienda</label>
-          <input type="text" name="area" class="form-control" placeholder="Área de tienda" value="<?= htmlspecialchars($device['area'] ?? '') ?>">
+          <label class="form-label">Area en tienda</label>
+          <input type="text" name="area" class="form-control" placeholder="Area en tienda" value="<?= htmlspecialchars($device['area'] ?? '') ?>">
         </div>
 
         <div class="col-md-3 campo-rc d-none">
@@ -748,6 +777,7 @@ sucSel.addEventListener('change', async () => {
       </div>
     </div>
   </form>
+  </div>
 
 <?php endif; ?>
 
@@ -781,9 +811,41 @@ sucSel.addEventListener('change', async () => {
     </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = new URLSearchParams(location.search).get('saved');
+
+  function showModalWhenBootstrapReady() {
+    // Espera a que el bundle de Bootstrap JS esté disponible
+    if (!window.bootstrap || !bootstrap.Modal) {
+      setTimeout(showModalWhenBootstrapReady, 50);
+      return;
+    }
+
+    if (saved === '1') {
+      const modalEl = document.getElementById('registrarOtroModal');
+      if (!modalEl) return;
+
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+
+      // Quita ?saved=1 para que no se reabra en un refresh
+      const url = new URL(location.href);
+      url.searchParams.delete('saved');
+      history.replaceState(null, '', url);
+    }
+  }
+
+  showModalWhenBootstrapReady();
+});
+</script>
+
 
 <!-- SCRIPTS -->
-<script src="validacionesregistro.js?v=3"></script>
+<script src="validacionesregistro.js?v=4"></script>
 
 <script>
 (() => {
@@ -860,8 +922,6 @@ sucSel.addEventListener('change', async () => {
     url.searchParams.delete('saved');
     history.replaceState(null, '', url);
   }
-
-
 
   // --- 1) Antes de enviar, guarda la ubicación elegida
   if (form) {
@@ -1825,8 +1885,6 @@ if (detHidden && selDet) {
   });
 })();
 </script>
-
-
 <?php
   $content = ob_get_clean();
   $pageTitle = "Registrar dispositivo";

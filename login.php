@@ -34,6 +34,7 @@ $redirect = $_GET['redirect'] ?? null;
   <title>CESISS - Iniciar Sesión</title>
   <!-- Bootstrap solo para normalizar y helpers -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="shortcut icon" href="/sisec-ui/public/img/QRCESISS.png">
 
   <!-- Preload (opcional, mejora el primer pintado) -->
   <link rel="preload" as="image" href="/sisec-ui/public/img/bg1.jpg">
@@ -65,7 +66,7 @@ $redirect = $_GET['redirect'] ?? null;
   <!-- ====== TARJETA LOGIN ====== -->
   <main class="login-card">
     <div class="brand">
-      <img src="/sisec-ui/public/img/Qr3.png" alt="Logo CESISS" loading="eager">
+      <img src="/sisec-ui/public/img/QRCESISS.png" alt="Logo CESISS" loading="eager">
       <h2>Bienvenido a CESISS</h2>
       <p>Consulta Exprés de Sistemas Instalados y Servicios de Suburbia</p>
     </div>

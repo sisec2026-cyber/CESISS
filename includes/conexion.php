@@ -26,3 +26,27 @@ try {
 } catch (PDOException $e) {
   die("Error de conexión: " . $e->getMessage());
 }
+
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Filtro de tráfico: Solo actualiza la BD si han pasado más de 60 segundos
+if (isset($_SESSION['usuario_id'])) { // Asegúrate que 'usuario_id' sea el nombre de tu sesión
+    $ahora = time();
+    $id_user = $_SESSION['usuario_id'];
+    
+    if (!isset($_SESSION['last_db_update']) || ($ahora - $_SESSION['last_db_update']) > 60) {
+        try {
+            $stmt = $pdo->prepare("UPDATE usuarios SET last_activity = NOW() WHERE id = :id");
+            $stmt->execute(['id' => $id_user]);
+            
+            // Guardamos en sesión el tiempo del último update exitoso
+            $_SESSION['last_db_update'] = $ahora;
+        } catch (Exception $e) {
+            // Error silencioso para no interrumpir la navegación del usuario
+            error_log("Error actualizando last_activity: " . $e->getMessage());
+        }
+    }
+}

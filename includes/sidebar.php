@@ -1,14 +1,9 @@
 <?php
-// Asegura sesión viva
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-
-// Carga conexión si hace falta
 if (!isset($pdo) && !isset($conexion)) {
-  $connPath = __DIR__ . '/../../includes/conexion.php'; // desde views/includes/
+  $connPath = __DIR__ . '/../../includes/conexion.php';
   if (is_file($connPath)) require_once $connPath;
 }
-
-// Carga conteo inicial solo para Admin/Superadmin
 $pendCount = 0;
 $rolSB = $_SESSION['usuario_rol'] ?? '';
 if (in_array($rolSB, ['Superadmin','Administrador'])) {
@@ -26,8 +21,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
   }
 }
 ?>
-
-
 <!-- ===== SIDEBAR CESISS (animado: blob / waves / grid) ===== -->
 <style>
   :root{
@@ -48,7 +41,7 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     --tb-height-scrolled: 52px;
 
     /* Layout */
-    --sidebar-w: 300px;
+    --sidebar-w: 280px;
     --item-h: 44px;
     --radius: 10px;
 
@@ -60,10 +53,11 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     --sb-neon-3: #74e0ff;
     --sb-glass-bg: rgba(8, 26, 31, .55);
     --sb-border: rgba(255,255,255,.16);
+
+    /* Tamaño base de logos flotantes */
+    --bubble-base: 22px; /* ajústalo 16–28px según gusto */
   }
-
   nav.sidebar { background: transparent !important; }
-
   /* ===== SIDEBAR BASE ===== */
   .sidebar{
     position: fixed;
@@ -134,7 +128,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     0%   { background-position: 0 0, 0 0; }
     100% { background-position: 0 220px, 220px 0; }
   }
-
   .sidebar .inner{
     position: relative; z-index: 1;
     height: 100%;
@@ -142,7 +135,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     flex-direction: column;
     min-height: 0; /* permite scroll interno */
   }
-
   .sidebar .brand {
     text-align: center; padding: 18px 12px 10px;
   }
@@ -150,7 +142,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     max-height: 120px; width:auto;
     filter: drop-shadow(0 6px 14px rgba(36,163,193,.28));
   }
-
   /* El menú scrollea para que el footer sea sticky visible */
   .sidebar .menu{
     flex: 1 1 auto;
@@ -164,7 +155,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
   }
   .sidebar .menu::-webkit-scrollbar{ width: 8px; }
   .sidebar .menu::-webkit-scrollbar-thumb{ background: rgba(36,163,193,.45); border-radius: 8px; }
-
   .sidebar a{
     display: block;
     height: var(--item-h);
@@ -180,7 +170,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .sidebar a i{ width: 22px; margin-right: 8px; opacity: .9; }
-
   .sidebar a:hover{
     background: rgba(36,163,193,.12);
     border-color: rgba(36,163,193,.25);
@@ -202,23 +191,21 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     border-radius: 4px;
   }
   /* Badge de notificaciones */
-.sidebar a .sb-badge{
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  min-width: 22px; height: 22px; line-height: 22px; padding: 0 6px;
-  background: #d9534f; color: #fff; border-radius: 999px;
-  font-size: 12px; font-weight: 700; text-align: center;
-  box-shadow: 0 0 0 2px rgba(0,0,0,.12);
-}
-.sb-badge.pulse{
-  animation: sb-badge-pulse 1.8s ease-in-out infinite;
-}
-@keyframes sb-badge-pulse{
-  0%{ box-shadow: 0 0 0 0 rgba(217,83,79,.6); }
-  70%{ box-shadow: 0 0 0 10px rgba(217,83,79,0); }
-  100%{ box-shadow: 0 0 0 0 rgba(217,83,79,0); }
-}
-
-
+  .sidebar a .sb-badge{
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    min-width: 22px; height: 22px; line-height: 22px; padding: 0 6px;
+    background: #d9534f; color: #fff; border-radius: 999px;
+    font-size: 12px; font-weight: 700; text-align: center;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.12);
+  }
+  .sb-badge.pulse{
+    animation: sb-badge-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes sb-badge-pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(217,83,79,.6); }
+    70%{ box-shadow: 0 0 0 10px rgba(217,83,79,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(217,83,79,0); }
+  }
   /* Footer sticky */
   .sidebar .footer{
     position: sticky;
@@ -246,7 +233,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     border-color: rgba(36,163,193,.35);
     transform: translateY(-1px);
   }
-
   /* ===== LAYOUT CON SIDEBAR COLAPSABLE ===== */
   @media (min-width: 992px){
     .content-wrapper{
@@ -297,88 +283,6 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
       display: block;            /* solo mostrar en colapsado */
     }
   }
-
-  /* ===== BOTÓN TOGGLE DOCKEADO (edge-tab) ===== */
-  .sb-toggle{
-    position: fixed;
-    top: calc(var(--tb-height, 64px) + 14px);
-    left: var(--sidebar-w);                 /* en el borde derecho del sidebar */
-    z-index: 1040;
-    width: 40px; height: 46px;
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 12px 0 0 12px;
-    border: 1px solid var(--sb-border);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
-      linear-gradient(180deg, var(--sb-glass-bg), rgba(10,33,40,.55));
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 26px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.06) inset;
-    color: var(--side-fg);
-    cursor: pointer;
-    transform: translateX(-70%);
-    transition: left .25s ease, transform .2s ease, opacity .2s ease, box-shadow .2s ease;
-    overflow: hidden;
-  }
-  body.has-scrolled .sb-toggle{
-    top: calc(var(--tb-height-scrolled, 52px) + 12px);
-  }
-
-  /* Estado “idle”: se atenúa hasta que el usuario se mueve */
-  .sb-toggle.is-idle{
-    opacity: .35;
-    box-shadow: 0 6px 18px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.05) inset;
-  }
-  .sb-toggle:hover,
-  .sb-toggle:focus-visible{
-    opacity: 1;
-    transform: translateX(-70%); /* resetea en expandido */
-  }
-
-  /* ===== CUANDO ESTÁ COLAPSADO: botón fuera y solo aparece si pasas por la banda ===== */
-  @media (min-width: 992px){
-    body.sb-collapsed .sb-toggle{
-      left: 0;                     /* pegado al borde */
-      opacity: 0;                  /* oculto */
-      pointer-events: none;        /* no estorba */
-      transform: translateX(-90%); /* fuera de vista */
-      border-radius: 0 12px 12px 0;/* pestaña invertida */
-    }
-    /* Al pasar el mouse por la zona de revelado, muestra el botón */
-    body.sb-collapsed .sb-reveal-zone:hover + .sb-toggle,
-    body.sb-collapsed .sb-reveal-zone:focus-within + .sb-toggle{
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(8px);  /* asoma un poco */
-    }
-  }
-
-  /* Tooltip simple para indicar “Sidebar” */
-  .sb-toggle::after{
-    content: attr(data-label);
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    white-space: nowrap;
-    left: 48px;
-    padding: 4px 8px;
-    font-size: .78rem;
-    color: #e9fbff;
-    background: rgba(0,0,0,.5);
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 8px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .18s ease, transform .18s ease;
-  }
-  .sb-toggle:hover::after,
-  .sb-toggle:focus-visible::after{
-    opacity: 1;
-    transform: translateY(-50%) translateX(2px);
-  }
-  @media (min-width: 992px){
-    body.sb-collapsed .sb-toggle::after{ left: 52px; }
-  }
-
   /* Neon border animado */
   .sb-bling{ position: fixed; }
   .sb-bling::before{
@@ -401,217 +305,219 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
   }
   @keyframes conic-spin{ to { transform: rotate(360deg); } }
 
-  /* Icono rota según estado */
-  .sb-toggle .ico{
-    position: relative;
-    z-index: 2;
-    font-size: 1.05rem;
-    transition: transform .35s ease;
-  }
-  body.sb-collapsed .sb-toggle .ico{ transform: rotate(180deg); }
+  /* ===== IMÁGENES FLOTANTES (logos) ===== */
+  .sidebar .sb-bubbles{
+  position: absolute;        /* importante: relativo al nav.sidebar */
+  inset: 0;                  /* ocupa todo el area interior del sidebar */
+  z-index: 1;                /* detrás del contenido si hace falta; ajusta si es necesario */
+  pointer-events: none;
+  overflow: hidden;          /* recorta cualquier exceso */
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  transition: opacity .2s ease;
+}
+  body.has-scrolled .sidebar .sb-bubbles { top: 0; }
+  .sidebar .sb-bubbles .bubble-img{
+  position: absolute;
+  left: var(--x);                         /* porcentaje relativo al ancho del sidebar */
+  transform: translateX(-50%);            /* centra la imagen en ese punto */
+  bottom: -60px;                          /* inicio desde fuera inferior */
+  width:  calc(var(--bubble-base) * var(--s));
+  height: calc(var(--bubble-base) * var(--s));
+  width: 50px !important;
+    height: 50px !important;
+  object-fit: contain;
+  opacity: .95;
+  animation: rise-sway var(--d) linear infinite;
+  will-change: transform, opacity, bottom;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.25));
+}
 
-  /* Sheen (destello) */
-  .sb-toggle .sheen{
-    position: absolute; inset: 0;
-    background:
-      linear-gradient(120deg, transparent 15%, rgba(255,255,255,.22) 35%, transparent 55%);
-    transform: translateX(-120%);
-    animation: sheen-move 2.6s ease-in-out infinite;
-    mix-blend-mode: screen;
-    z-index: 1;
-  }
-  @keyframes sheen-move{
-    0%, 12% { transform: translateX(-120%); }
-    36%     { transform: translateX(120%); }
-    100%    { transform: translateX(120%); }
-  }
-
-  /* Halo / pulso */
-  .sb-toggle .pulse{
-    position: absolute; inset: -14px;
-    border-radius: 16px;
-    pointer-events: none;
-    box-shadow: 0 0 0 0 rgba(36,163,193,.0);
-    animation: pulse-glow 2.2s ease-in-out infinite;
-  }
-  @keyframes pulse-glow{
-    0%   { box-shadow: 0 0 0 0 rgba(36,163,193,.0); }
-    40%  { box-shadow: 0 0 0 12px rgba(36,163,193,.12), 0 0 28px 8px rgba(36,163,193,.22); }
-    100% { box-shadow: 0 0 0 0 rgba(36,163,193,.0); }
-  }
-
-  /* ===== GOOEY BUBBLES ===== */
-  .sb-bubbles{
-    position: fixed;
-    pointer-events: none;
-    z-index: 1035;
-    left: 0;
-    top: var(--tb-height, 64px);
-    width: var(--sidebar-w);
-    bottom: 0;
-    filter: url(#gooey);
-    transition: opacity .2s ease;
-  }
-  body.has-scrolled .sb-bubbles{ top: var(--tb-height-scrolled, 52px); }
-
-  /* Oculta las burbujas cuando el sidebar está colapsado */
+  /* Oculta las imágenes cuando el sidebar está colapsado */
   body.sb-collapsed .sb-bubbles{
     opacity: 0;
     display: none;
   }
-
-  .sb-bubbles .bubble{
-    position: absolute;
-    left: var(--x);
-    bottom: -40px;
-    width: calc(14px * var(--s));
-    height: calc(14px * var(--s));
-    border-radius: 999px;
-    background: radial-gradient(circle at 30% 30%, var(--sb-neon-3), var(--sb-neon-2));
-    opacity: .28;
-    animation: bubble-up var(--d) linear infinite;
+  /* Cada imagen “sube” como una burbuja con leve vaivén */
+  /* Ascenso vertical + leve vaivén horizontal en una sola animación */
+  @keyframes rise-sway{
+    0%   { transform: translate(0,   0)     scale(1);    opacity: 0;   }
+    10%  { transform: translate(1px, -9vh)  scale(1.02); opacity: .9;  }
+    25%  { transform: translate(-2px,-25vh) scale(1.03); opacity: .85; }
+    50%  { transform: translate(2px, -50vh) scale(1.06); opacity: .78; }
+    75%  { transform: translate(-3px,-75vh) scale(1.08); opacity: .72; }
+    100% { transform: translate(0,  -92vh)  scale(1.10); opacity: 0;   }
   }
-  @keyframes bubble-up{
-    0%   { transform: translateY(0) scale(1); opacity: .0; }
-    10%  { opacity: .35; }
-    80%  { opacity: .28; }
-    100% { transform: translateY(-92vh) scale(1.1); opacity: 0; }
-  }
-
-  /* ===== Respeto a reduced motion ===== */
+  /* Respeto a reduced motion */
   @media (prefers-reduced-motion: reduce){
-    .sidebar *, .sidebar::before,
-    .sb-toggle, .sb-bubbles .bubble, .sb-bling::before,
-    .sb-toggle .sheen, .sb-toggle .pulse{
+    .sb-bubbles .bubble-img{
       animation: none !important;
-      transition: none !important;
+      opacity: .5;
     }
   }
-
   /* ==== Usuarios pendientes - estilos mejorados ==== */
-.sidebar a.sb-item-attn{ position: relative; padding-right: 74px; }
-.sidebar a.sb-item-attn.has-alert{
-  background: rgba(217,83,79,.10);
-  border-color: rgba(217,83,79,.35);
-  box-shadow: inset 0 0 0 1px rgba(217,83,79,.18);
-}
-.sidebar a.sb-item-attn.has-alert:hover{
-  background: rgba(217,83,79,.14);
-  border-color: rgba(217,83,79,.5);
-}
-
-.sidebar a.sb-item-attn .sb-meta{
-  position: absolute; right: 10px; top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex; align-items: center; gap: 8px;
-}
-
-/* Pill con gradiente y brillo sutil */
-.sb-badge-attn{
-  min-width: 26px; height: 22px; padding: 0 10px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 999px;
-  font-size: 12px; font-weight: 800; letter-spacing: .2px;
-  color: #fff;
-  background: linear-gradient(180deg, #e35d59, #bf3f3b);
-  box-shadow:
-     0 2px 10px rgba(227,93,89,.35),
-     inset 0 0 0 1px rgba(255,255,255,.25);
-  transform-origin: center;
-}
-.sb-badge-attn.is-zero{
-  opacity: .0; transform: scale(.8); pointer-events: none; /* oculta cuando es 0 */
-}
-.sb-badge-attn.has-count{ animation: sb-badge-pop .42s cubic-bezier(.2,.8,.2,1) 1; }
-@keyframes sb-badge-pop{
-  0%{ transform: scale(.85); }
-  60%{ transform: scale(1.08); }
-  100%{ transform: scale(1); }
-}
-
-/* Anillo/ping a la derecha cuando hay pendientes */
-.sb-ring{
-  width: 8px; height: 8px; border-radius: 999px;
-  background: #e35d59;
-  box-shadow: 0 0 0 0 rgba(227,93,89,.72);
-}
-.sb-item-attn.has-alert .sb-ring{
-  animation: sb-ping 1.8s cubic-bezier(0,0,.2,1) infinite;
-}
-@keyframes sb-ping{
-  0%   { box-shadow: 0 0 0 0 rgba(227,93,89,.65); transform: scale(1); }
-  70%  { box-shadow: 0 0 0 12px rgba(227,93,89,0); transform: scale(1.05); }
-  100% { box-shadow: 0 0 0 0 rgba(227,93,89,0); transform: scale(1); }
-}
-
-/* Micro “bump” cuando cambia el número via JS */
-.sb-badge-attn.bump{ animation: sb-bump .5s cubic-bezier(.22,1,.36,1); }
-@keyframes sb-bump{
-  0%{ transform: translateY(0) scale(1); }
-  30%{ transform: translateY(-2px) scale(1.06); }
-  100%{ transform: translateY(0) scale(1); }
-}
-
+  .sidebar a.sb-item-attn{ position: relative; padding-right: 74px; }
+  .sidebar a.sb-item-attn.has-alert{
+    background: rgba(217,83,79,.10);
+    border-color: rgba(217,83,79,.35);
+    box-shadow: inset 0 0 0 1px rgba(217,83,79,.18);
+  }
+  .sidebar a.sb-item-attn.has-alert:hover{
+    background: rgba(217,83,79,.14);
+    border-color: rgba(217,83,79,.5);
+  }
+  .sidebar a.sb-item-attn .sb-meta{
+    position: absolute; right: 10px; top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  /* Pill con gradiente y brillo sutil */
+  .sb-badge-attn{
+    min-width: 26px; height: 22px; padding: 0 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 800; letter-spacing: .2px;
+    color: #fff;
+    background: linear-gradient(180deg, #e35d59, #bf3f3b);
+    box-shadow:0 2px 10px rgba(227,93,89,.35),inset 0 0 0 1px rgba(255,255,255,.25);transform-origin: center;}
+  .sb-badge-attn.is-zero{opacity: .0; transform: scale(.8); pointer-events: none; /* oculta cuando es 0 */}
+  .sb-badge-attn.has-count{ animation: sb-badge-pop .42s cubic-bezier(.2,.8,.2,1) 1; }
+  @keyframes sb-badge-pop{0%{ transform: scale(.85); }60%{ transform: scale(1.08); }100%{ transform: scale(1); }}
+  /* Anillo/ping a la derecha cuando hay pendientes */
+  .sb-ring{width: 8px; height: 8px; border-radius: 999px;background: #e35d59;box-shadow: 0 0 0 0 rgba(227,93,89,.72);}
+  .sb-item-attn.has-alert .sb-ring{animation: sb-ping 1.8s cubic-bezier(0,0,.2,1) infinite;}
+  @keyframes sb-ping{0%   { box-shadow: 0 0 0 0 rgba(227,93,89,.65); transform: scale(1); }70%  { box-shadow: 0 0 0 12px rgba(227,93,89,0); transform: scale(1.05); }100% { box-shadow: 0 0 0 0 rgba(227,93,89,0); transform: scale(1); }}
+  /* Micro “bump” cuando cambia el número via JS */
+  .sb-badge-attn.bump{ animation: sb-bump .5s cubic-bezier(.22,1,.36,1); }
+  @keyframes sb-bump{0%{ transform: translateY(0) scale(1); }30%{ transform: translateY(-2px) scale(1.06); }100%{ transform: translateY(0) scale(1); }}
+  /* Submenú del sidebar */
+  .sb-submenu .sb-parent {display: flex;justify-content: flex-start;align-items: center;gap: 8px;}
+  .sb-submenu .sb-parent i.fa-list {width: 20px;text-align: center;}
+  .sb-submenu .sb-arrow {margin-left: auto;transition: transform .25s ease;}
+  .sb-submenu.open .sb-arrow {transform: rotate(180deg);}
+  .sb-children {display: none;padding-left: 20px;}
+  .sb-submenu.open .sb-children {display: block;}
 </style>
-
-
 <nav class="sidebar d-none d-lg-block" data-effect="blob">
+  <div class="sb-bubbles d-none d-lg-block" aria-hidden="true">
+  <img src="/sisec-ui/public/img/marcas/AVI.png"   alt="" class="bubble-img" style="--x:8%;  --d:11s; --s:0.9;">
+  <img src="/sisec-ui/public/img/marcas/AXIS.png"  alt="" class="bubble-img" style="--x:22%; --d:13s; --s:1.2;">
+  <img src="/sisec-ui/public/img/marcas/CISCO.PNG" alt="" class="bubble-img" style="--x:38%; --d:12s; --s:1.0;">
+  <img src="/sisec-ui/public/img/marcas/DMP.PNG"   alt="" class="bubble-img" style="--x:46%; --d:14s; --s:0.85;">
+  <img src="/sisec-ui/public/img/marcas/HAN.png"   alt="" class="bubble-img" style="--x:54%; --d:15s; --s:1.1;">
+  <img src="/sisec-ui/public/img/marcas/HIK.png"   alt="" class="bubble-img" style="--x:68%; --d:10s; --s:0.8;">
+  <img src="/sisec-ui/public/img/marcas/INO.png"   alt="" class="bubble-img" style="--x:76%; --d:13s; --s:0.9;">
+  <img src="/sisec-ui/public/img/marcas/MILE.png"  alt="" class="bubble-img" style="--x:88%; --d:12s; --s:1.0;">
+  <img src="/sisec-ui/public/img/marcas/UNI.png" alt="" class="bubble-img" style="--x:100%; --d:12s; --s:1.0;">
+</div>
   <div class="inner">
     <div class="brand">
-      <img src="/sisec-ui/public/img/Qr3.png" alt="Logo CESISS">
+      <img src="/sisec-ui/public/img/QRCESISS.png" alt="Logo CESISS">
     </div>
-
     <div class="menu">
-      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Distrital'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Capturista','Distrital'])): ?>
         <a href="/sisec-ui/views/inicio/index.php" class="<?= ($activePage ?? '') === 'inicio' ? 'active' : '' ?>">
           <i class="fas fa-home"></i> Inicio
         </a>
       <?php endif; ?>
 
-      <a href="/sisec-ui/views/dispositivos/listar.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
-        <i class="fas fa-camera"></i> Dispositivos
-      </a>
+      <!-- Opción agrupada "Listados" -->
+      <?php
+      // Asumiendo que ya tenemos el rol en $_SESSION['usuario_rol']
+      $rol = $_SESSION['usuario_rol'] ?? null;
 
-      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador', 'Capturista','Técnico'])): ?>
+      // Roles que SÍ ven el submenu "Listados"
+      $rolesConListados = ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Capturista'];
+
+      // Si el rol está en la lista muestra el submenu completo
+      if (in_array($rol, $rolesConListados)): ?>
+        <div class="sb-submenu <?= ($activePage === 'dispositivos' || $activePage === 'listado_qr') ? 'open' : '' ?>">
+          <a href="javascript:void(0);" class="sb-parent">
+            <i class="fas fa-list"></i> Listados
+            <i class="fas fa-chevron-down sb-arrow"></i>
+          </a>
+          <div class="sb-children">
+            <a href="/sisec-ui/views/dispositivos/listar.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
+              <i class="fas fa-desktop me-2"></i> Dispositivos
+            </a>
+            <a href="/sisec-ui/views/dispositivos/listado_qr.php" class="nav-link ps-4 <?= ($activePage ?? '') === 'listado_qr' ? 'active-link' : '' ?>">
+              <i class="fas fa-list-alt me-2"></i>Listado QR
+            </a>
+            <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Mantenimientos','Técnico', 'Capturista'])): ?>
+              <a href="/sisec-ui/views/dispositivos/qr_virgenes_generar.php" class="nav-link ps-4 <?= ($activePage ?? '') === 'listado_qr' ? 'active-link' : '' ?>">
+                <i class="fas fa-plus-square me-2"></i>Generar QR virgen
+              </a>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php else: ?>
+        <a href="/sisec-ui/views/dispositivos/listar.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
+          <i class="fas fa-camera"></i> Dispositivos
+        </a>
+      <?php endif; ?>
+
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin'])): ?>
+      <div class="sb-submenu <?= in_array(($activePage ?? ''), ['sucursales','mantenimientos']) ? 'open' : '' ?>">
+        <a href="javascript:void(0);" class="sb-parent">
+          <i class="fas fa-cogs"></i> Administración
+          <i class="fas fa-chevron-down sb-arrow"></i>
+        </a>
+        <div class="sb-children">
+          <a href="/sisec-ui/views/ubicacion/sucursales_crear.php"
+            class="<?= ($activePage ?? '') === 'sucursales' ? 'active' : '' ?>">
+            <i class="fas fa-store"></i> Sucursales
+          </a>
+          <a href="/sisec-ui/views/mantenimientos/programar.php"
+            class="<?= ($activePage ?? '') === 'mantenimientos' ? 'active' : '' ?>">
+            <i class="fas fa-calendar-check"></i> Mantenimientos
+          </a>
+        </div>
+      </div>
+    <?php endif; ?>
+
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Capturista','Técnico'])): ?>
         <a href="/sisec-ui/views/dispositivos/registro.php" class="<?= ($activePage ?? '') === 'registro' ? 'active' : '' ?>">
           <i class="fas fa-plus-circle"></i> Registrar dispositivo
         </a>
       <?php endif; ?>
 
-      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin'])): ?>
         <a href="/sisec-ui/views/usuarios/index.php" class="<?= ($activePage ?? '') === 'usuarios' ? 'active' : '' ?>">
           <i class="fa-solid fa-users"></i> Usuarios
         </a>
         <a href="/sisec-ui/views/usuarios/registrar.php" class="<?= ($activePage ?? '') === 'registrar' ? 'active' : '' ?>">
           <i class="fa-solid fa-user-plus"></i> Registrar usuario
         </a>
-      <?php endif; ?>
 
-<?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador'])): ?>
-  <a href="/sisec-ui/views/usuarios/pendientes.php"
-     id="linkPendientes"
-     class="sb-item-attn <?= ($activePage ?? '') === 'pendiente' ? 'active' : '' ?> <?= ($pendCount ?? 0) > 0 ? 'has-alert' : '' ?>">
-    <i class="fas fa-user-clock"></i>
-    <span class="sb-item-label">Usuarios pendientes</span>
+        
+    <?php endif; ?>
+    <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin'])): ?>
+      <a href="/sisec-ui/views/usuarios/pendientes.php"
+        id="linkPendientes"
+        class="sb-item-attn <?= ($activePage ?? '') === 'pendiente' ? 'active' : '' ?> <?= ($pendCount ?? 0) > 0 ? 'has-alert' : '' ?>">
+        <i class="fas fa-user-clock"></i>
+        <span class="sb-item-label">Usuarios pendientes</span>
 
-    <span class="sb-meta">
-      <?php if (($pendCount ?? 0) > 0): ?>
-        <span id="badgePend"
-              class="sb-badge-attn has-count"
-              aria-label="Solicitudes pendientes: <?= (int)$pendCount ?>">
-          <?= (int)$pendCount ?>
+        <span class="sb-meta">
+          <?php if (($pendCount ?? 0) > 0): ?>
+            <span id="badgePend"
+                  class="sb-badge-attn has-count"
+                  aria-label="Solicitudes pendientes: <?= (int)$pendCount ?>">
+              <?= (int)$pendCount ?>
+            </span>
+            <span class="sb-ring" aria-hidden="true"></span>
+          <?php else: ?>
+            <span id="badgePend" class="sb-badge-attn is-zero" aria-label="Sin solicitudes">0</span>
+          <?php endif; ?>
         </span>
-        <span class="sb-ring" aria-hidden="true"></span>
-      <?php else: ?>
-        <span id="badgePend" class="sb-badge-attn is-zero" aria-label="Sin solicitudes">0</span>
-      <?php endif; ?>
-    </span>
-  </a>
-<?php endif; ?>
-
-
+      </a>
+    <?php endif; ?>
+    <a href="/views/inicio/helpdesk.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
+      <i class="fas fa-tools"></i>Soporte
+    </a>
     </div>
-
     <?php if (isset($_SESSION['usuario_id'])): ?>
       <div class="footer">
         <a href="/sisec-ui/logout.php" class="px-3 d-block">
@@ -625,44 +531,9 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
 
 <!-- HOTSPOT para revelar el botón cuando el sidebar está oculto -->
 <div class="sb-reveal-zone" tabindex="0" aria-label="Mostrar pestaña del sidebar"></div>
+<!-- Imágenes flotantes (reemplazo de burbujas) -->
 
-<!-- Botón flotante para ocultar/mostrar sidebar -->
-<button id="sbToggle"
-        class="sb-toggle d-none d-lg-flex sb-bling"
-        type="button"
-        aria-label="Alternar barra lateral"
-        aria-pressed="false"
-        data-label="Sidebar"
-        title="Ocultar/mostrar barra lateral (Alt+S)">
-  <span class="ico"><i class="fas fa-angles-left" aria-hidden="true"></i></span>
-  <span class="sheen"></span>
-  <span class="pulse"></span>
-</button>
 
-<!-- Definición del filtro Gooey -->
-<svg class="sb-gooey-defs" width="0" height="0" aria-hidden="true" focusable="false">
-  <defs>
-    <filter id="gooey">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"></feGaussianBlur>
-      <feColorMatrix in="blur" mode="matrix"
-        values="1 0 0 0 0
-                0 1 0 0 0
-                0 0 1 0 0
-                0 0 0 18 -7" result="goo"></feColorMatrix>
-      <feBlend in="SourceGraphic" in2="goo"></feBlend>
-    </filter>
-  </defs>
-</svg>
-
-<!-- Burbujas decorativas -->
-<div class="sb-bubbles d-none d-lg-block" aria-hidden="true">
-  <span class="bubble" style="--x:8%;  --d:10s; --s:1;"></span>
-  <span class="bubble" style="--x:22%; --d:14s; --s:1.25;"></span>
-  <span class="bubble" style="--x:38%; --d:12s; --s:0.95;"></span>
-  <span class="bubble" style="--x:56%; --d:16s; --s:1.3;"></span>
-  <span class="bubble" style="--x:74%; --d:13s; --s:1.15;"></span>
-  <span class="bubble" style="--x:88%; --d:11s; --s:0.9;"></span>
-</div>
 
 <script>
 (function(){
@@ -865,5 +736,10 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
   setInterval(refreshBadge, 45000);
 })();
 </script>
-
-
+<script>
+document.querySelectorAll('.sb-submenu .sb-parent').forEach(parent => {
+  parent.addEventListener('click', () => {
+    parent.parentElement.classList.toggle('open');
+  });
+});
+</script>

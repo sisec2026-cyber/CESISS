@@ -32,6 +32,22 @@
     overflow: visible;        /* muestra blobs fuera del header */
     transition: height .35s ease, box-shadow .35s ease, background-color .35s ease;
   }
+  @media (max-width: 991px) {
+  .topbar {
+    justify-content: flex-start; /* Asegura orden: botón → título */
+  }
+
+  .topbar > button {
+    flex: 0 0 auto; /* botón no crece */
+    margin-right: 10px; /* espacio entre botón y título */
+  }
+
+  .topbar h5 {
+    flex: 1 1 auto;  /* el título crece después del botón */
+    margin: 0;
+    text-align: left; /* opcional: alineado a la izquierda */
+  }
+}
 
   /* Base oscura (evita “blanco”) */
   .topbar::after{
@@ -167,15 +183,13 @@
 
 <header class="topbar d-flex align-items-center text-white" data-effect="grid">
   <!-- Botón hamburguesa móvil -->
-  <button class="btn btn-link text-white d-md-none me-3" type="button"
-          data-bs-toggle="offcanvas" data-bs-target="#mobileMenu"
-          aria-controls="mobileMenu" aria-label="Abrir menú">
+  <button style="margin-left:10px;" class="btn btn-link text-white d-lg-none me-3" type="button"data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-label="Abrir menú">
     <i class="fas fa-bars"></i>
   </button>
 
   <!-- Título -->
   <h5 class="m-0 flex-grow-1">
-    <?= htmlspecialchars($pageHeader ?? 'CESISS - Consulta Exprés de Sistemas Instalados y Servicios de Suburbia') ?>
+    <?= htmlspecialchars($pageHeader ?? 'CESISS') ?>
   </h5>
 
   <?php
@@ -183,7 +197,7 @@
   $notificaciones = [];
   $notificaciones_no_vistas = 0;
 
-  if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin','Administrador'])) {
+  if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin'])) {
       if (!isset($conn)) { include __DIR__ . '/db.php'; }
 
       $stmt = $conn->prepare("

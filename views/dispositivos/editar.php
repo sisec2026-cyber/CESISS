@@ -19,25 +19,43 @@ $device = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$device) die('Dispositivo no encontrado.');
 
-/* ========== Catálogos: Equipos/Modelos ========== */
+/* ========== Catálogos: Equipos ========== */
 $equipos = $conn->query("SELECT id, nom_equipo FROM equipos ORDER BY nom_equipo ASC");
 $equipoActual = (int)($device['equipo'] ?? 0);
 $modeloActual = (int)($device['modelo'] ?? 0);
+$marcaActual = (int)($device['marca_id'] ?? 0);
 
-$modelosRes = null;
+/* ========== Cargar MARCAS del equipo actual ========== */
+$marcasRes = null;
 if ($equipoActual > 0) {
-  $sqlModelos = "
-    SELECT m.id, m.num_modelos
-    FROM modelos m
-    INNER JOIN marcas ma ON ma.id_marcas = m.marca_id
-    WHERE ma.equipo_id = ?
-    ORDER BY m.num_modelos ASC
-  ";
-  $st = $conn->prepare($sqlModelos);
-  $st->bind_param("i", $equipoActual);
-  $st->execute();
-  $modelosRes = $st->get_result();
-  $st->close();
+  $sqlMarcas = "SELECT id_marcas, nom_marca FROM marcas WHERE equipo_id = ? ORDER BY nom_marca ASC";
+  $stMarcas = $conn->prepare($sqlMarcas);
+  $stMarcas->bind_param("i", $equipoActual);
+  $stMarcas->execute();
+  $marcasRes = $stMarcas->get_result();
+  $stMarcas->close();
+}
+
+/* ========== Nombre de la marca actual (por si no aparece en la lista) ========== */
+$marcaNombreActual = null;
+if ($marcaActual > 0) {
+  $qMarca = $conn->prepare("SELECT nom_marca FROM marcas WHERE id_marcas = ? LIMIT 1");
+  $qMarca->bind_param("i", $marcaActual);
+  $qMarca->execute();
+  $resMarca = $qMarca->get_result()->fetch_assoc();
+  $marcaNombreActual = $resMarca['nom_marca'] ?? null;
+  $qMarca->close();
+}
+
+/* ========== Cargar MODELOS de la marca actual ========== */
+$modelosRes = null;
+if ($marcaActual > 0) {
+  $sqlModelos = "SELECT id, num_modelos FROM modelos WHERE marca_id = ? ORDER BY num_modelos ASC";
+  $stModelos = $conn->prepare($sqlModelos);
+  $stModelos->bind_param("i", $marcaActual);
+  $stModelos->execute();
+  $modelosRes = $stModelos->get_result();
+  $stModelos->close();
 }
 
 /* ========== Catálogos: Sucursales / Tipos Alarma / Tipos CCTV ========== */
@@ -51,101 +69,137 @@ if ($modeloActual > 0) {
   $q = $conn->prepare("SELECT num_modelos FROM modelos WHERE id = ? LIMIT 1");
   $q->bind_param("i", $modeloActual);
   $q->execute();
-  $modeloNombreActual = ($q->get_result()->fetch_assoc()['num_modelos'] ?? null);
+  $resModelo = $q->get_result()->fetch_assoc();
+  $modeloNombreActual = $resModelo['num_modelos'] ?? null;
   $q->close();
 }
 
+/* ========== Analíticas existentes (para pre-check) ========== */
+$tieneAnalitica  = (int)($device['tiene_analitica'] ?? 0);
+$analiticasExist = array_filter(array_map('trim', explode(',', (string)($device['analiticas'] ?? ''))));
+
 ob_start();
 ?>
+
+<style>
+  :root{--brand:#3C92A6; --brand-2:#24A3C1; --ink:#10343b; --muted:#486973; --bg:#F7FBFD;--surface:#FFFFFF; --border:#DDEEF3; --border-strong:#BFE2EB;--chip:#EAF7FB; --ring:0 0 0 .22rem rgba(36,163,193,.25); --ring-strong:0 0 0 .28rem rgba(36,163,193,.33);--shadow-sm:0 6px 18px rgba(20,78,90,.08);--radius-xl:1rem; --radius-2xl:1.25rem;}
+  h2{ font-weight:800; letter-spacing:.2px; color:var(--ink); margin-bottom:.75rem!important; }
+  h2::after{ content:""; display:block; width:78px; height:4px; border-radius:99px; margin-top:.5rem;background:linear-gradient(90deg,var(--brand),var(--brand-2)); }
+</style>
 <?php
 $back = !empty($_GET['return_url'])
   ? $_GET['return_url']
   : '/sisec-ui/views/dispositivos/listar.php';
 ?>
-<a href="<?= htmlspecialchars($back) ?>" class="btn btn-outline-secondary mb-3">
-  <i class="fas fa-arrow-left"></i> Volver al listado
-</a>
 
-<h2>Editar dispositivo</h2>
-
-<form action="actualizar.php" method="post" enctype="multipart/form-data" class="row g-3">
-  <input type="hidden" name="id" value="<?= (int)$device['id'] ?>">
-
+<div style="padding-left: 25px;">
+  <h2>Editar dispositivo</h2>
+  <form action="actualizar.php" method="post" enctype="multipart/form-data" class="row g-3">
+    <input type="hidden" name="id" value="<?= (int)$device['id'] ?>">
+    <input type="hidden" name="modelo_reasignar" id="modelo_reasignar" value="0">
   <!-- EQUIPO -->
   <div class="col-md-6">
     <label class="form-label">Equipo</label>
     <select name="equipo" id="equipo" class="form-select" required>
-      <option value="" disabled <?= $equipoActual ? '' : 'selected' ?>>-- Selecciona equipo --</option>
-      <?php while ($eq = $equipos->fetch_assoc()): ?>
+      <option value="" disabled>-- Selecciona equipo --</option>
+      <?php 
+      $equipos->data_seek(0); // Reset pointer
+      while ($eq = $equipos->fetch_assoc()): 
+      ?>
         <option value="<?= (int)$eq['id'] ?>" <?= ((int)$eq['id'] === $equipoActual) ? 'selected' : '' ?>>
           <?= htmlspecialchars($eq['nom_equipo']) ?>
         </option>
       <?php endwhile; ?>
     </select>
-
     <div class="mt-2">
-      <button type="button" id="btnEquipoEditar" class="btn btn-sm btn-outline-secondary">
-        Editar nombre
-      </button>
+      <button type="button" id="btnEquipoEditar" class="btn btn-sm btn-outline-secondary">Editar nombre</button>
     </div>
-
     <div id="equipoEditGroup" class="mt-2" style="display:none;">
       <input type="text" name="equipo_nombre_edit" id="equipo_nombre_edit" class="form-control" placeholder="Nuevo nombre de equipo">
       <input type="hidden" name="equipo_edit_mode" id="equipo_edit_mode" value="0">
       <small class="text-muted">Cambia solo el nombre para este dispositivo (crea/reutiliza un equipo).</small>
     </div>
   </div>
-
+  <!-- MARCA -->
+  <div class="col-md-6">
+    <label class="form-label">Marca</label>
+    <select name="marca_id" id="marca" class="form-select" required data-marca-actual-id="<?= (int)$marcaActual ?>" data-marca-actual-txt="<?= htmlspecialchars($marcaNombreActual ?? '') ?>">
+      <option value="" disabled>-- Selecciona marca --</option>
+      <?php if ($marcasRes && $marcasRes->num_rows > 0): ?>
+        <?php 
+        $marcaAparece = false;
+        while ($ma = $marcasRes->fetch_assoc()): 
+          $idMarca = (int)$ma['id_marcas'];
+          if ($idMarca === $marcaActual) $marcaAparece = true;
+        ?>
+        <option value="<?= $idMarca ?>" <?= ($idMarca === $marcaActual) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($ma['nom_marca']) ?>
+        </option>
+        <?php endwhile; ?>
+        <!-- Si la marca actual no está en la lista (de otro equipo), mostrarla -->
+        <?php if ($marcaActual > 0 && !$marcaAparece && $marcaNombreActual): ?>
+          <optgroup label="Marca actual (de otro equipo)">
+            <option value="<?= (int)$marcaActual ?>" selected>
+              (Actual) <?= htmlspecialchars($marcaNombreActual) ?>
+            </option>
+          </optgroup>
+        <?php endif; ?>
+      <?php else: ?>
+        <!-- Si no hay marcas pero existe una marca actual, mostrarla -->
+        <?php if ($marcaActual > 0 && $marcaNombreActual): ?>
+          <option value="<?= (int)$marcaActual ?>" selected>
+            <?= htmlspecialchars($marcaNombreActual) ?>
+          </option>
+        <?php else: ?>
+          <option value="" disabled selected>Selecciona primero un equipo</option>
+        <?php endif; ?>
+      <?php endif; ?>
+    </select>
+    <div class="mt-2">
+      <button type="button" id="btnMarcaEditar" class="btn btn-sm btn-outline-secondary">Editar nombre</button>
+    </div>
+    <div id="marcaEditGroup" class="mt-2" style="display:none;">
+      <input type="text" name="marca_nombre_edit" id="marca_nombre_edit" class="form-control" placeholder="Nuevo nombre de marca">
+      <input type="hidden" name="marca_edit_mode" id="marca_edit_mode" value="0">
+      <small class="text-muted">Crea o reutiliza una marca dentro del equipo seleccionado.</small>
+    </div>
+  </div>
   <!-- MODELO -->
   <div class="col-md-6">
     <label class="form-label">Modelo</label>
-    <?php
-      $opciones = [];
-      $tieneLista = ($modelosRes && $modelosRes->num_rows > 0);
-      $modeloAparece = false;
-
-      if ($tieneLista) {
-        while ($mo = $modelosRes->fetch_assoc()) {
-          $idMo  = (int)$mo['id'];
-          $txtMo = (string)$mo['num_modelos'];
+    <select name="modelo" id="modelo" class="form-select" required data-modelo-actual-id="<?= (int)$modeloActual ?>" data-modelo-actual-txt="<?= htmlspecialchars($modeloNombreActual ?? '') ?>">
+      <option value="" disabled>-- Selecciona modelo --</option>
+      <?php if ($modelosRes && $modelosRes->num_rows > 0): ?>
+        <?php 
+        $modeloAparece = false;
+        while ($mo = $modelosRes->fetch_assoc()): 
+          $idMo = (int)$mo['id'];
           if ($idMo === $modeloActual) $modeloAparece = true;
-          $opciones[] = ['id' => $idMo, 'txt' => $txtMo];
-        }
-      }
-    ?>
-    <select
-      name="modelo"
-      id="modelo"
-      class="form-select"
-      required
-      data-modelo-actual-id="<?= (int)$modeloActual ?>"
-      data-modelo-actual-txt="<?= htmlspecialchars($modeloNombreActual ?? '') ?>"
-    >
-      <?php if (!$tieneLista): ?>
-        <option value="" disabled selected>No hay modelos para este equipo</option>
-      <?php endif; ?>
-
-      <?php foreach ($opciones as $op): ?>
-        <option value="<?= $op['id'] ?>" <?= ($op['id'] === $modeloActual) ? 'selected' : '' ?>>
-          <?= htmlspecialchars($op['txt']) ?>
-        </option>
-      <?php endforeach; ?>
-
-      <?php if ($modeloActual > 0 && !$modeloAparece && $modeloNombreActual): ?>
-        <optgroup label="Modelo actual (fuera del equipo)">
-          <option value="<?= (int)$modeloActual ?>" selected>
-            (Actual) <?= htmlspecialchars($modeloNombreActual) ?>
+        ?>
+          <option value="<?= $idMo ?>" <?= ($idMo === $modeloActual) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($mo['num_modelos']) ?>
           </option>
-        </optgroup>
+        <?php endwhile; ?>
+        <!-- Si el modelo actual no está en la lista (de otra marca), mostrarlo -->
+        <?php if ($modeloActual > 0 && !$modeloAparece && $modeloNombreActual): ?>
+          <optgroup label="Modelo actual (de otra marca)">
+            <option value="<?= (int)$modeloActual ?>" selected>(Actual) <?= htmlspecialchars($modeloNombreActual) ?></option>
+          </optgroup>
+        <?php endif; ?>
+      <?php else: ?>
+        <!-- Si no hay modelos pero existe un modelo actual, mostrarlo -->
+        <?php if ($modeloActual > 0 && $modeloNombreActual): ?>
+          <option value="<?= (int)$modeloActual ?>" selected>
+            <?= htmlspecialchars($modeloNombreActual) ?>
+          </option>
+        <?php else: ?>
+          <option value="" disabled selected>Selecciona primero una marca</option>
+        <?php endif; ?>
       <?php endif; ?>
     </select>
-
     <div class="mt-2">
-      <button type="button" id="btnModeloEditar" class="btn btn-sm btn-outline-secondary">
-        Editar nombre
-      </button>
+      <button type="button" id="btnModeloEditar" class="btn btn-sm btn-outline-secondary">Editar nombre</button>
     </div>
-
     <div id="modeloEditGroup" class="mt-2" style="display:none;">
       <input type="text" name="modelo_nombre_edit" id="modelo_nombre_edit" class="form-control" placeholder="Nuevo nombre de modelo">
       <input type="hidden" name="modelo_edit_mode" id="modelo_edit_mode" value="0">
@@ -164,6 +218,14 @@ $back = !empty($_GET['return_url'])
     <label class="form-label">Dirección MAC</label>
     <input type="text" name="mac" class="form-control" value="<?= htmlspecialchars($device['mac'] ?? '') ?>">
   </div>
+    <!-- IP  -->
+  <div id="group-ip" class="col-md-6 grupo-cctv grupo-switch grupo-servidor grupo-alarma-hide grupo-monitor-hide">
+    <label class="form-label">Dirección IP</label>
+    <input type="text" name="ip" class="form-control" 
+           value="<?= htmlspecialchars($device['ip'] ?? '') ?>" 
+           placeholder="Ej. 192.168.1.100">
+  </div>
+
 
   <!-- No. Servidor (CCTV) -->
   <div id="group-servidor" class="col-md-6 grupo-cctv grupo-switch-hide grupo-alarma-hide grupo-monitor-hide">
@@ -239,6 +301,54 @@ $back = !empty($_GET['return_url'])
     </select>
   </div>
 
+  <!-- ===== Analíticas (solo CCTV/cámaras) ===== -->
+  <div class="col-12 grupo-cctv">
+    <label class="form-label">Analíticas</label>
+
+    <!-- Hidden 0 + checkbox 1 para tener siempre un valor definido -->
+    <input type="hidden" name="tiene_analitica" value="0">
+    <div class="form-check mb-2">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="tiene_analitica"
+        name="tiene_analitica"
+        value="1"
+        <?= $tieneAnalitica ? 'checked' : '' ?>
+      >
+      <label class="form-check-label" for="tiene_analitica">Habilitar analítica</label>
+    </div>
+
+    <?php
+      $catalogo = ['Merodeo','Cruce de líneas','Intrusión','Conteo de personas','Detección de rostro'];
+      // Separar las analíticas que NO están en el catálogo para mostrarlas en "Otras"
+      $otrasAnaliticas = array_diff($analiticasExist, $catalogo);
+    ?>
+
+    <div id="wrapAnaliticas" class="card border-0 p-3" style="<?= $tieneAnalitica ? '' : 'opacity:.6;' ?>">
+      <div class="mb-2">
+        <?php foreach ($catalogo as $opt):
+          $chk = in_array($opt, $analiticasExist, true) ? 'checked' : '';
+          $idc = 'a_' . substr(md5($opt), 0, 8);
+        ?>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="<?= $idc ?>" name="analiticas[]" value="<?= htmlspecialchars($opt) ?>" <?= $chk ?>>
+            <label class="form-check-label" for="<?= $idc ?>"><?= htmlspecialchars($opt) ?></label>
+          </div>
+        <?php endforeach; ?>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label class="form-label">Otras (separadas por coma)</label>
+          <input type="text" name="analiticas_otras" class="form-control" 
+                 placeholder="Ej. Cruces múltiples, Aforo" 
+                 value="<?= htmlspecialchars(implode(', ', $otrasAnaliticas)) ?>">
+        </div>
+      </div>
+      <small class="text-muted">Si no marcas "Habilitar analítica", estas opciones no se guardarán.</small>
+    </div>
+  </div>
+
   <!-- ========== BLOQUE ALARMA ESPECÍFICO ========== -->
   <div id="group-alarma-tipo" class="col-md-6 grupo-alarma">
     <label class="form-label">Conexión de alarma</label>
@@ -281,9 +391,15 @@ $back = !empty($_GET['return_url'])
     </select>
   </div>
 
-  <!-- Fecha -->
+  <!-- Fechas -->
   <div class="col-md-6">
-    <label class="form-label">Fecha</label>
+    <label class="form-label">Fecha de instalación</label>
+    <input type="date" name="fecha_instalacion" class="form-control" value="<?= htmlspecialchars($device['fecha_instalacion'] ?? '') ?>">
+    <small class="text-muted">Déjala vacía si está pendiente.</small>
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Fecha de mantenimiento</label>
     <input type="date" name="fecha" class="form-control" value="<?= htmlspecialchars($device['fecha'] ?? '') ?>" required>
   </div>
 
@@ -334,12 +450,10 @@ $back = !empty($_GET['return_url'])
     <a href="device.php?id=<?= (int)$id ?>" class="btn btn-secondary">Cancelar</a>
   </div>
 </form>
+</div>
 
 <!-- ================= ESTILOS/JS ================= -->
-<style>
-  /* utilitario */
-  .d-none{ display:none !important; }
-</style>
+<style>.x-hide{display:none!important;}</style>
 
 <script>
 // util: texto del option seleccionado
@@ -370,6 +484,28 @@ btnEquipoEditar.addEventListener('click', () => {
   }
 });
 
+/* ===== MARCA: toggle edición ===== */
+const marcaSel = document.getElementById('marca');
+const btnMarcaEditar = document.getElementById('btnMarcaEditar');
+const marcaEditGroup = document.getElementById('marcaEditGroup');
+const marcaNombreEdit = document.getElementById('marca_nombre_edit');
+const marcaEditMode = document.getElementById('marca_edit_mode');
+
+btnMarcaEditar.addEventListener('click', () => {
+  const isHidden = marcaEditGroup.style.display === 'none';
+  if (isHidden) {
+    marcaEditGroup.style.display = '';
+    marcaEditMode.value = '1';
+    marcaNombreEdit.value = selectedText(marcaSel);
+    btnMarcaEditar.textContent = 'Cancelar edición';
+  } else {
+    marcaEditGroup.style.display = 'none';
+    marcaEditMode.value = '0';
+    marcaNombreEdit.value = '';
+    btnMarcaEditar.textContent = 'Editar nombre';
+  }
+});
+
 /* ===== MODELO: toggle edición ===== */
 const modeloSel = document.getElementById('modelo');
 const btnModeloEditar = document.getElementById('btnModeloEditar');
@@ -392,16 +528,89 @@ btnModeloEditar.addEventListener('click', () => {
   }
 });
 
-/* ===== Cambiar equipo preservando el modelo ===== */
+/* ===== Cambiar EQUIPO → cargar marcas preservando selección ===== */
 (function() {
-  const modeloActualId  = (modeloSel.dataset.modeloActualId || '').trim();
-  const modeloActualTxt = (modeloSel.dataset.modeloActualTxt || '').trim();
+  const marcaActualId = (marcaSel.dataset.marcaActualId || '').trim();
+  const marcaActualTxt = (marcaSel.dataset.marcaActualTxt || '').trim();
 
   equipoSel.addEventListener('change', async function() {
     const equipoId = this.value;
+    
+    // Guardar la marca seleccionada actualmente
+    const seleccionadaAntesId = marcaSel.value || marcaActualId;
+    const seleccionadaAntesTxt = (function() {
+      if (marcaSel.value) {
+        const opt = marcaSel.options[marcaSel.selectedIndex];
+        return opt ? opt.textContent.trim() : '';
+      }
+      return marcaActualTxt;
+    })();
 
-    // selección previa (si el usuario no cambió modelo)
-    const seleccionadoAntesId  = modeloSel.value || modeloActualId;
+    marcaSel.innerHTML = '<option value="" disabled selected>Cargando marcas...</option>';
+    if (!equipoId) return;
+
+    try {
+      const resp = await fetch('obtener_marcas.php?equipo_id=' + encodeURIComponent(equipoId), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+
+      marcaSel.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      const optDefault = document.createElement('option');
+      optDefault.value = '';
+      optDefault.disabled = true;
+      optDefault.textContent = '-- Selecciona marca --';
+      frag.appendChild(optDefault);
+
+      (Array.isArray(data) ? data : []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = String(m.id_marcas);
+        opt.textContent = m.nom_marca;
+        frag.appendChild(opt);
+      });
+      marcaSel.appendChild(frag);
+
+      // Verificar si la marca anterior existe en las nuevas opciones
+      const existe = seleccionadaAntesId && Array.from(marcaSel.options).some(o => String(o.value) === String(seleccionadaAntesId));
+
+      if (existe) {
+        marcaSel.value = String(seleccionadaAntesId);
+      } else if (seleccionadaAntesId) {
+        // Si no existe, agregarla como "marca actual (de otro equipo)"
+        const og = document.createElement('optgroup');
+        og.label = 'Marca actual (de otro equipo)';
+        const opt = document.createElement('option');
+        opt.value = String(seleccionadaAntesId);
+        opt.textContent = '(Actual) ' + (seleccionadaAntesTxt || ('ID ' + String(seleccionadaAntesId)));
+        og.appendChild(opt);
+        marcaSel.appendChild(og);
+        marcaSel.value = String(seleccionadaAntesId);
+      } else {
+        if (marcaSel.options.length > 1) marcaSel.selectedIndex = 0;
+      }
+
+      // Limpiar modelos al cambiar equipo
+      modeloSel.innerHTML = '<option value="" disabled selected>Selecciona primero una marca</option>';
+      updateVisibilityFromEquipo();
+    } catch (e) {
+      console.error(e);
+      marcaSel.innerHTML = '<option value="" disabled selected>Error al cargar marcas</option>';
+    }
+  });
+})();
+
+/* ===== Cambiar MARCA → cargar modelos preservando selección ===== */
+(function() {
+  const modeloActualId = (modeloSel.dataset.modeloActualId || '').trim();
+  const modeloActualTxt = (modeloSel.dataset.modeloActualTxt || '').trim();
+
+  marcaSel.addEventListener('change', async function() {
+    const marcaId = this.value;
+
+    // Guardar el modelo seleccionado actualmente
+    const seleccionadoAntesId = modeloSel.value || modeloActualId;
     const seleccionadoAntesTxt = (function() {
       if (modeloSel.value) {
         const opt = modeloSel.options[modeloSel.selectedIndex];
@@ -411,18 +620,23 @@ btnModeloEditar.addEventListener('click', () => {
     })();
 
     modeloSel.innerHTML = '<option value="" disabled selected>Cargando modelos...</option>';
-    if (!equipoId) return;
+    if (!marcaId) return;
 
     try {
-      const resp = await fetch('obtener_modelos.php?equipo_id=' + encodeURIComponent(equipoId), {
+      const resp = await fetch('obtener_modelos.php?marca_id=' + encodeURIComponent(marcaId), {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const data = await resp.json(); // [{id, num_modelos}]
+      const data = await resp.json();
 
-      // poblar
       modeloSel.innerHTML = '';
       const frag = document.createDocumentFragment();
+      const optDefault = document.createElement('option');
+      optDefault.value = '';
+      optDefault.disabled = true;
+      optDefault.textContent = '-- Selecciona modelo --';
+      frag.appendChild(optDefault);
+
       (Array.isArray(data) ? data : []).forEach(m => {
         const opt = document.createElement('option');
         opt.value = String(m.id);
@@ -431,37 +645,35 @@ btnModeloEditar.addEventListener('click', () => {
       });
       modeloSel.appendChild(frag);
 
-      // ¿sigue el anterior?
+      // Verificar si el modelo anterior existe en las nuevas opciones
       const existe = seleccionadoAntesId && Array.from(modeloSel.options).some(o => String(o.value) === String(seleccionadoAntesId));
 
-      if (existe) {
-        modeloSel.value = String(seleccionadoAntesId);
-      } else if (seleccionadoAntesId) {
-        // agregar opción temporal para no perder el modelo actual
-        const og = document.createElement('optgroup');
-        og.label = 'Modelo actual (fuera del equipo)';
-        const opt = document.createElement('option');
-        opt.value = String(seleccionadoAntesId);
-        opt.textContent = '(Actual) ' + (seleccionadoAntesTxt || ('ID ' + String(seleccionadoAntesId)));
-        og.appendChild(opt);
-        modeloSel.insertBefore(og, modeloSel.firstChild);
-        modeloSel.value = String(seleccionadoAntesId);
-      } else {
-        // sin previo: selecciona el primero si existe
-        if (modeloSel.options.length) modeloSel.selectedIndex = 0;
-      }
+if (existe) {
+  // Modelo pertenece a la marca → normal
+  modeloSel.value = String(seleccionadoAntesId);
+  document.getElementById('modelo_reasignar').value = '0';
 
-      // si estás editando nombre de modelo, sincroniza el input con lo visible
-      if (modeloEditMode.value === '1') {
-        modeloNombreEdit.value = selectedText(modeloSel);
-      }
+} else if (seleccionadoAntesId) {
+  // Modelo de otra marca → el usuario decide conservarlo
+  const og = document.createElement('optgroup');
+  og.label = 'Modelo actual (de otra marca)';
+  const opt = document.createElement('option');
+  opt.value = String(seleccionadoAntesId);
+  opt.textContent = '(Actual) ' + (seleccionadoAntesTxt || ('ID ' + String(seleccionadoAntesId)));
+  og.appendChild(opt);
+  modeloSel.appendChild(og);
+  modeloSel.value = String(seleccionadoAntesId);
 
-      // Actualiza visibilidad por si el cambio de equipo cambió la categoría
-      updateVisibilityFromEquipo();
+  // 🔴 ESTA ES LA LÍNEA CLAVE
+  document.getElementById('modelo_reasignar').value = '1';
+
+} else {
+  document.getElementById('modelo_reasignar').value = '0';
+}
 
     } catch (e) {
       console.error(e);
-      modeloSel.innerHTML = '<option value="" disabled selected>No hay modelos para este equipo</option>';
+      modeloSel.innerHTML = '<option value="" disabled selected>Error al cargar modelos</option>';
     }
   });
 })();
@@ -475,6 +687,7 @@ if (toggleUsuarioBtn && usuarioInput) {
     toggleUsuarioBtn.textContent = usuarioInput.disabled ? 'Editar' : 'Bloquear';
   });
 }
+
 const passInput = document.getElementById('contrasena');
 const togglePassBtn = document.getElementById('togglePassVis');
 if (togglePassBtn && passInput) {
@@ -483,9 +696,7 @@ if (togglePassBtn && passInput) {
   });
 }
 
-/* ============================
-   VISIBILIDAD POR CATEGORÍA
-   ============================ */
+/* ============================ VISIBILIDAD POR CATEGORÍA ============================ */
 function _normU(s){
   s = (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   s = s.toUpperCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
@@ -494,7 +705,6 @@ function _normU(s){
 
 function catDesdeEquipoText(txt){
   const v = _normU(txt);
-
   if (v.includes('CAMARA') || v.includes('CCTV')) return 'camara';
   if (v.includes('NVR')) return 'nvr';
   if (v.includes('DVR')) return 'dvr';
@@ -502,69 +712,38 @@ function catDesdeEquipoText(txt){
   if (v.includes('SWITCH')) return 'switch';
   if (v.includes('MONITOR') || v.includes('DISPLAY')) return 'monitor';
   if (v.includes('ESTACION TRABAJO') || v.includes('WORKSTATION') || v === 'PC' || v.includes('COMPUTADORA')) return 'estacion_trabajo';
-
-  const alarmaKeys = [
-    "ALARMA","TRANSMISOR","SENSOR","DETECTOR","HUMO","OVER HEAD","OVERHEAD","ZONA",
-    "BOTON","PANICO","ESTACION","PULL STATION","PULL","PANEL","CABLEADO","SIRENA",
-    "RECEPTOR","EMISOR","LLAVIN","TECLADO","ESTROBO","CRISTAL","RUPTURA","REPETIDOR",
-    "REPETIDORA","DH","PIR","CM","BTN","OH","DRC","REP"
-  ];
-  for (const k of alarmaKeys){
-    if (v.includes(_normU(k))) return 'alarma';
-  }
+  const alarmaKeys = ['sensor', 'dh', 'pir', 'cm', 'oh', 'estrobo', 'estorbo', 'estrobos', 'rep', 'drc', 'teclado', 'sirena', 'boton', 'botón', 'sensor', 'movimiento', 'magnetico', 'magnético', 'contacto', puerta', 'ventana', 'tarjeta de comunicación', 'tarjeta de comunicacion', 'keypad', 'sirena', 'panel', 'pane', 'control', 'expansora', 'modulo', 'módulo', 'panico', 'pánico', 'expansor', 'estación manual', 'estación manual', 'estación manuak', 'em', 'receptora', 'receptor', 'relevador', 'relevadora', 'weigand', 'fuente de poder', 'gp23', 'electro iman', 'electro imán', 'electroiman', 'electroimamn', 'liberador', 'bateria', 'batería', 'transformador', 'trasformador', 'tamper', 'rondin', 'rondín', 'impacto', 'ratonera', transmisor', 'trasmisor', 'pir 360', 'pir360', 'alarma', 'detector', 'humo', 'overhead', 'over head', 'zona', 'pull station', 'pull', 'cableado', 'sirena', 'receptor', 'emisor', 'llavin', 'cristal', 'ruptura', 'repetidor', 'repetidora', 'btn', 'rep', 'em'];
+  for (const k of alarmaKeys){ if (v.includes(_normU(k))) return 'alarma'; }
   return 'otro';
 }
 
-function _showAll(list){ list.forEach(el=>el.classList.remove('d-none')); }
-function _hideAll(list){ list.forEach(el=>el.classList.add('d-none')); }
-
+function _showAll(list){ list.forEach(el=>el.classList.remove('x-hide')); }
+function _hideAll(list){ list.forEach(el=>el.classList.add('x-hide')); }
 function applyVisibilityByCategory(cat){
-  const cctvEls        = document.querySelectorAll('.grupo-cctv');
-  const switchEls      = document.querySelectorAll('.grupo-switch');
-  const credEls        = document.querySelectorAll('.grupo-credenciales');
-  const alarmaEls      = document.querySelectorAll('.grupo-alarma');
-
-  const alarmaHideEls  = document.querySelectorAll('.grupo-alarma-hide');
-  const switchHideEls  = document.querySelectorAll('.grupo-switch-hide');
+  const cctvEls = document.querySelectorAll('.grupo-cctv');
+  const switchEls = document.querySelectorAll('.grupo-switch');
+  const credEls = document.querySelectorAll('.grupo-credenciales');
+  const alarmaEls = document.querySelectorAll('.grupo-alarma');
+  const alarmaHideEls = document.querySelectorAll('.grupo-alarma-hide');
+  const switchHideEls = document.querySelectorAll('.grupo-switch-hide');
   const monitorHideEls = document.querySelectorAll('.grupo-monitor-hide');
 
-  // Estado base: oculta específicos
-  _hideAll(cctvEls);
-  _hideAll(switchEls);
-  _hideAll(credEls);
-  _hideAll(alarmaEls);
+  _hideAll(cctvEls); _hideAll(switchEls); _hideAll(credEls); _hideAll(alarmaEls);
+  _hideAll(alarmaHideEls); _hideAll(switchHideEls); _hideAll(monitorHideEls);
 
-  // Limpia hides
-  _hideAll(alarmaHideEls);
-  _hideAll(switchHideEls);
-  _hideAll(monitorHideEls);
-
-  // Campo VMS requerido solo en CCTV-like
   const vms = document.getElementById('vms');
   if (vms) vms.removeAttribute('required');
 
-  // Reglas por categoría
   if (cat === 'camara' || cat === 'nvr' || cat === 'dvr' || cat === 'servidor'){
-    _showAll(cctvEls);
-    _showAll(credEls);
-    _showAll(switchHideEls);
-    _showAll(monitorHideEls);
+    _showAll(cctvEls); _showAll(credEls); _showAll(switchHideEls); _showAll(monitorHideEls);
     if (vms) vms.setAttribute('required','required');
-  }
-  else if (cat === 'alarma'){
+  } else if (cat === 'alarma'){
     _showAll(alarmaEls);
-    // lo marcado como alarma-hide permanece oculto (ya hecho)
-  }
-  else if (cat === 'switch'){
-    _showAll(switchEls);
-    _showAll(alarmaHideEls);
-    _hideAll(switchHideEls);
-  }
-  else if (cat === 'monitor'){
+  } else if (cat === 'switch'){
+    _showAll(switchEls); _showAll(alarmaHideEls); _hideAll(switchHideEls);
+  } else if (cat === 'monitor'){
     _hideAll(monitorHideEls);
-  }
-  else {
-    // Otros → deja credenciales visibles
+  } else {
     _showAll(credEls);
   }
 }
@@ -582,9 +761,29 @@ function updateVisibilityFromEquipo(){
 }
 
 document.addEventListener('DOMContentLoaded', updateVisibilityFromEquipo);
-if (equipoSel) {
-  equipoSel.addEventListener('change', updateVisibilityFromEquipo);
+if (equipoSel) equipoSel.addEventListener('change', updateVisibilityFromEquipo);
+
+/* ===== Habilitar/Deshabilitar área analíticas por switch ===== */
+const swAnal = document.getElementById('tiene_analitica');
+const wrapAnal = document.getElementById('wrapAnaliticas');
+if (swAnal && wrapAnal) {
+  function syncAnal() {
+    wrapAnal.style.opacity = swAnal.checked ? '1' : '.6';
+    const inputs = wrapAnal.querySelectorAll('input[type="checkbox"], input[type="text"]');
+    inputs.forEach(i => i.disabled = !swAnal.checked);
+  }
+  swAnal.addEventListener('change', syncAnal);
+  syncAnal();
 }
+
+// Si el usuario cambia manualmente el modelo, cancelar reasignación
+modeloSel.addEventListener('change', function () {
+  const opt = this.options[this.selectedIndex];
+  if (opt && opt.parentElement.tagName !== 'OPTGROUP') {
+    document.getElementById('modelo_reasignar').value = '0';
+  }
+});
+
 </script>
 
 <?php

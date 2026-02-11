@@ -1,7 +1,14 @@
 <IfModule mod_rewrite.c>
-RewriteEngine On
-RewriteBase /
+  RewriteEngine On
+  RewriteBase /sisec-ui/
+  Options -MultiViews
 
-# Ruta corta /d/{id} -> views/dispositivos/device.php?id={id}
-RewriteRule ^d/([0-9]+)$ views/dispositivos/device.php?id=$1 [QSA,L]
+  # 1) IDs numéricos (ej. /d/3383) -> device.php?id=3383
+  RewriteRule ^d/([0-9]+)$ views/dispositivos/device.php?id=$1 [QSA,L]
+
+  # 2) UUID/tokens (ej. /d/7344a60c-b2a7-4204-8a9e-989bc8114829) -> qr_claim.php?t=...
+  RewriteRule ^d/([A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12})$ views/dispositivos/qr_claim.php?t=$1 [QSA,L]
+
+  # 3) (Opcional) tokens alfanuméricos simples (si también los usas)
+  RewriteRule ^d/([A-Za-z0-9_-]+)$ views/dispositivos/qr_claim.php?t=$1 [QSA,L]
 </IfModule>

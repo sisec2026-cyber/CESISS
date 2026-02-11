@@ -9,7 +9,18 @@ $pageHeader = "Nuevo usuario";
 $activePage = "registrar";
 ob_start();
 ?>
-
+<style>
+  /* ---------- Título ---------- */
+  h2{
+    font-weight:800; letter-spacing:.2px; color:var(--ink);
+    margin-bottom:.75rem!important;
+  }
+  h2::after{
+    content:""; display:block; width:78px; height:4px; border-radius:99px;
+    margin-top:.5rem; background:linear-gradient(90deg,var(--brand),var(--brand-2));
+  }
+</style>
+<div style="padding-left: 15px;">
 <h2 class="mb-4">Registrar nuevo usuario</h2>
 <?php
 $stmt = $conexion->query("SELECT COUNT(*) as total FROM usuarios");
@@ -227,6 +238,7 @@ confirmarClaveInput.addEventListener('input', ()=>{
     </div>
   </form>
 </div>
+        </div>
 
 <script>
 function cargarRegiones() {

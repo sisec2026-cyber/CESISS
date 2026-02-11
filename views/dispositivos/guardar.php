@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Administrador', 'Mantenimientos', 'Superadmin', 'Capturista']);
+verificarRol(['Administrador', 'Mantenimientos', 'Superadmin', 'Capturista', 'Técnico']);
 
 include __DIR__ . '/../../includes/db.php';
 include __DIR__ . '/../../vendor/phpqrcode/qrlib.php';
@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../includes/notificaciones_mailer.php'; //
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 /* ========== Helpers ========== */
+
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } // 
 function normalize_upper($s) { return mb_strtoupper(trim((string)$s), 'UTF-8'); }
 function normalize_modelo($s) { return trim((string)$s); }
@@ -53,7 +54,8 @@ try {
 
   // Otros
   $fecha            = $_POST['fecha'] ?? null;
-  $estado_nombre    = trim($_POST['estado'] ?? '');
+  //$estado_nombre    = trim($_POST['estado'] ?? '');
+  $estado_id = (int)($_POST['estado'] ?? 1);
   // (legacy) Estos dos ahora sólo los usaremos como “display” si vienen:
   $sucursal_nombre  = trim($_POST['sucursal'] ?? '');
   $observaciones    = trim($_POST['observaciones'] ?? '');
@@ -84,7 +86,8 @@ try {
   $determinante_id_post = $_POST['determinante_id'] ?? '';       // puede ser ID o '__NEW_DETERMINANTE__'
   $determinante_nueva   = trim($_POST['determinante_nueva'] ?? '');
 // --- Normalización a MAYÚSCULAS en backend (sin tocar modelo ni pass) ---
-$estado_nombre   = normalize_upper($estado_nombre);
+//$estado_nombre   = normalize_upper($estado_nombre);
+$estado_id = 1;
 $observaciones   = normalize_upper($observaciones);
 $serie           = normalize_upper($serie);
 $vms             = normalize_upper($vms);
@@ -127,7 +130,7 @@ $autoFix = function($s) {
 
 // Aplica SÓLO a campos de texto no técnicos
 $equipo_nombre       = $autoFix($equipo_nombre);
-$estado_nombre       = $autoFix($estado_nombre);
+//$estado_nombre       = $autoFix($estado_nombre);
 $tipo_alarma_nombre  = $autoFix($tipo_alarma_nombre);
 $tipo_switch_nombre  = $autoFix($tipo_switch_nombre);
 $tipo_cctv_nombre    = $autoFix($tipo_cctv_nombre);
@@ -186,11 +189,11 @@ $determinante_nueva  = $autoFix($determinante_nueva);
     "INSERT INTO modelos (num_modelos, marca_id) VALUES (?, ?)",
     "si", "si", [$modelo_nombre, $marca_id], [$modelo_nombre, $marca_id]
   );
-  $estado_id = $getOrCreate(
-    "SELECT id FROM status WHERE status_equipo = ?",
-    "INSERT INTO status (status_equipo) VALUES (?)",
-    "s", "s", [$estado_nombre], [$estado_nombre]
-  );
+  //$estado_id = $getOrCreate(
+    //"SELECT id FROM status WHERE status_equipo = ?",
+    //"INSERT INTO status (status_equipo) VALUES (?)",
+    //"s", "s", [$estado_nombre], [$estado_nombre]
+  //);
 
   $alarma_id = null;
   if ($tipo_alarma_nombre !== '') {
@@ -396,7 +399,7 @@ $determinante_nueva  = $autoFix($determinante_nueva);
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>IP</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($ip ?? '').'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Sucursal</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($sucursal_nombre_correo).'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Determinante</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($determinante_nom_correo).'</td></tr>
-          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Estado</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($estado_nombre).'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Estado</b></td><td style="border:1px solid #e5e7eb;padding:8px">ACTIVO</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Usuario</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($_SESSION['nombre'] ?? 'desconocido').'</td></tr>
           <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Fecha/Hora</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.date('Y-m-d H:i:s').'</td></tr>
           '.($observaciones !== '' ? '<tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px;vertical-align:top"><b>Observaciones</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.nl2br(h($observaciones)).'</td></tr>' : '').'
@@ -421,7 +424,7 @@ $determinante_nueva  = $autoFix($determinante_nueva);
 
   // Redirige a la vista del dispositivo
   // header(header: "Location: device.php?id=" . $id);
-  header('Location: /sisec-ui/views/dispositivos/registro.php?saved=1&last_id='); // ajusta el nombre del archivo si cambia
+  header('Location: /sisec-ui/views/dispositivos/registro.php?saved=1&last_id=' . $id);
   exit;
 
 } catch (Throwable $e) {

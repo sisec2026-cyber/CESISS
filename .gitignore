@@ -1,0 +1,36 @@
+# --- Dependencias y Sistema ---
+vendor/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Base de Datos y Backups ---
+# Ignora el dump de SQL que aparece en tu status
+*.sql
+backups/
+
+# --- Configuración Sensible ---
+config.php
+public/conexion.php
+public/db.php
+
+# --- Gestión de Archivos y Cargas ---
+# Ignora la carpeta uploads que aparece en tu status
+uploads/
+
+# Datos Sensibles en public (con preservación de carpeta)
+public/mto_evidencias/*
+!public/mto_evidencias/.gitkeep
+
+public/qr_virgenes/*
+!public/qr_virgenes/.gitkeep
+
+public/qrcodes/*
+!public/qrcodes/.gitkeep
+
+public/qrcodes_backup/*
+!public/qrcodes_backup/.gitkeep
+
+public/uploads/*
+!public/uploads/.gitkeep

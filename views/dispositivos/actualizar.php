@@ -1,109 +1,117 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 verificarAutenticacion();
-verificarRol(['Administrador', 'Mantenimientos', 'Superadmin', 'Capturista']);
+verificarRol(['Administrador', 'Mantenimientos', 'Superadmin', 'Capturista','Técnico']);
 
 include __DIR__ . '/../../includes/db.php';
-
+require_once __DIR__ . '/../../includes/notificaciones_mailer.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die('Acceso no autorizado.');
 }
-
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
-/* =======================
-   Helpers
-======================= */
-function move_upload_unique(string $field, string $destDir, ?string $fallback = null): ?string {
-    if (!isset($_FILES[$field]) || empty($_FILES[$field]['name'])) {
-        return $fallback;
+function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } // 
+/* Helper archivos */
+function move_multiple_uploads(string $field, string $destDir): array {
+    $saved = [];
+    if (!isset($_FILES[$field])) {
+        return $saved;
     }
     if (!is_dir($destDir)) {
         @mkdir($destDir, 0775, true);
     }
-    $name     = $_FILES[$field]['name'];
-    $tmp      = $_FILES[$field]['tmp_name'];
-    $ext      = pathinfo($name, PATHINFO_EXTENSION);
-    $basename = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($name, PATHINFO_FILENAME));
-    $final    = $basename . '_' . uniqid() . ($ext ? ('.' . $ext) : '');
+    foreach ($_FILES[$field]['tmp_name'] as $key => $tmp) {
+        if (empty($_FILES[$field]['name'][$key])) continue;
+        $name = $_FILES[$field]['name'][$key];
+        $ext  = pathinfo($name, PATHINFO_EXTENSION);
+        $base = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($name, PATHINFO_FILENAME));
+        $final = $base . '_' . uniqid() . ($ext ? ".$ext" : '');
+        if (is_uploaded_file($tmp)) {
+            move_uploaded_file($tmp, rtrim($destDir, '/') . '/' . $final);
+            $saved[] = $final;
+        }
+    }
+    return $saved;
+}
+function move_upload_unique(string $field, string $destDir, ?string $fallback = null): ?string {
+    if (!isset($_FILES[$field]) || empty($_FILES[$field]['name'])) return $fallback;
+    if (!is_dir($destDir)) @mkdir($destDir, 0775, true);
+    $name = $_FILES[$field]['name'];
+    $tmp  = $_FILES[$field]['tmp_name'];
+    $ext  = pathinfo($name, PATHINFO_EXTENSION);
+    $base = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($name, PATHINFO_FILENAME));
+    $final = $base . '_' . uniqid() . ($ext ? ".$ext" : '');
     if (is_uploaded_file($tmp)) {
-        move_uploaded_file($tmp, rtrim($destDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $final);
+        move_uploaded_file($tmp, rtrim($destDir, '/') . '/' . $final);
         return $final;
     }
     return $fallback;
 }
 
-/* =======================
-   Entrada
-======================= */
-$id             = (int)($_POST['id'] ?? 0);
-$equipo         = isset($_POST['equipo']) ? (int)$_POST['equipo'] : 0;    // FK → int
-$modelo         = isset($_POST['modelo']) ? (int)$_POST['modelo'] : 0;    // FK → int
-$serie          = trim($_POST['serie'] ?? '');
-$mac            = trim($_POST['mac'] ?? '');
-$servidor       = trim($_POST['servidor'] ?? '');
-$vms            = trim($_POST['vms'] ?? '');
-$vms_otro       = trim($_POST['vms_otro'] ?? ''); // por si lo usas en el form
-$switchTxt      = trim($_POST['switch'] ?? '');
-$puerto         = trim($_POST['puerto'] ?? '');
-// $sucursal     (no se permite editar desde este flujo)
-$area           = trim($_POST['area'] ?? '');
-$estado         = isset($_POST['estado']) ? (int)$_POST['estado'] : 1;
-$fecha          = $_POST['fecha'] ?? date('Y-m-d');
-$observaciones  = trim($_POST['observaciones'] ?? '');
-$usuarioDis     = trim($_POST['usuario'] ?? '');
-$contrasenaDis  = trim($_POST['contrasena'] ?? '');
-
-/* === Nuevos campos === */
-$marca_id       = (isset($_POST['marca_id']) && $_POST['marca_id'] !== '') ? (int)$_POST['marca_id'] : null; // FK → marcas.id_marcas (nullable)
-$alarma_id      = (isset($_POST['alarma_id']) && $_POST['alarma_id'] !== '') ? (int)$_POST['alarma_id'] : null; // FK → alarma.id (nullable)
-$zona_alarma    = trim($_POST['zona_alarma'] ?? '');
-$tipo_sensor    = trim($_POST['tipo_sensor'] ?? '');
-$cctv_id        = (isset($_POST['cctv_id']) && $_POST['cctv_id'] !== '') ? (int)$_POST['cctv_id'] : null; // FK → cctv.id (nullable)
-
-if (strcasecmp($vms, 'Otro') === 0 && $vms_otro !== '') {
-    $vms = $vms_otro;
+/* Entrada */
+$id     = (int)($_POST['id'] ?? 0);
+$equipo = (int)($_POST['equipo'] ?? 0);
+$modelo = (int)($_POST['modelo'] ?? 0);
+$serie         = trim($_POST['serie'] ?? '');
+$mac           = trim($_POST['mac'] ?? '');
+$servidor      = trim($_POST['servidor'] ?? '');
+$vms           = trim($_POST['vms'] ?? '');
+$vms_otro      = trim($_POST['vms_otro'] ?? '');
+$switchTxt     = trim($_POST['switch'] ?? '');
+$puerto        = trim($_POST['puerto'] ?? '');
+$area          = trim($_POST['area'] ?? '');
+$estado        = (int)($_POST['estado'] ?? 1);
+$fecha         = $_POST['fecha'] ?? date('Y-m-d');
+$observaciones = trim($_POST['observaciones'] ?? '');
+$usuarioDis    = trim($_POST['usuario'] ?? '');
+$contrasenaDis= trim($_POST['contrasena'] ?? '');
+$fecha_instalacion = trim($_POST['fecha_instalacion'] ?? '');
+if ($fecha_instalacion === '' || $fecha_instalacion === '0000-00-00') {
+    $fecha_instalacion = null;
 }
-
-/* =======================
-   Estado actual
-======================= */
-$stmt = $conn->prepare("SELECT equipo AS equipo_actual, modelo AS modelo_actual, imagen, imagen2, imagen3, qr FROM dispositivos WHERE id = ?");
+$marca_id  = ($_POST['marca_id'] ?? '') !== '' ? (int)$_POST['marca_id'] : null;
+$alarma_id = ($_POST['alarma_id'] ?? '') !== '' ? (int)$_POST['alarma_id'] : null;
+$cctv_id   = ($_POST['cctv_id'] ?? '')   !== '' ? (int)$_POST['cctv_id']   : null;
+$zona_alarma = trim($_POST['zona_alarma'] ?? '');
+$tipo_sensor = trim($_POST['tipo_sensor'] ?? '');
+$tiene_analitica = ($_POST['tiene_analitica'] ?? '0') === '1' ? 1 : 0;
+$analiticas = '';
+if (!empty($_POST['analiticas']) && is_array($_POST['analiticas'])) {
+    $analiticas = implode(', ', array_map('trim', $_POST['analiticas']));
+}
+/* Estado actual */
+$stmt = $conn->prepare("SELECT equipo, modelo, imagen, imagen2, imagen3, qr
+    FROM dispositivos WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $actual = $stmt->get_result()->fetch_assoc();
 $stmt->close();
-
 if (!$actual) die('Dispositivo no encontrado.');
 
 /* Archivos */
-$imagen   = move_upload_unique('imagen',  __DIR__ . "/../../public/uploads/",  $actual['imagen']  ?? null);
-$imagen2  = move_upload_unique('imagen2', __DIR__ . "/../../public/uploads/",  $actual['imagen2'] ?? null);
-$imagen3  = move_upload_unique('imagen3', __DIR__ . "/../../public/uploads/",  $actual['imagen3'] ?? null);
-$qr       = move_upload_unique('qr',      __DIR__ . "/../../public/qrcodes/", $actual['qr']      ?? null);
-
-/* Flags edición individual */
-$equipo_edit_mode   = isset($_POST['equipo_edit_mode']) && $_POST['equipo_edit_mode'] === '1';
-$equipo_nombre_edit = trim($_POST['equipo_nombre_edit'] ?? '');
-
-$modelo_edit_mode   = isset($_POST['modelo_edit_mode']) && $_POST['modelo_edit_mode'] === '1';
-$modelo_nombre_edit = trim($_POST['modelo_nombre_edit'] ?? '');
-
-/* =======================
-   Transacción
-======================= */
+$imagen  = move_upload_unique('imagen',  __DIR__ . '/../../public/uploads/', $actual['imagen']);
+$imagen2 = move_upload_unique('imagen2', __DIR__ . '/../../public/uploads/', $actual['imagen2']);
+$imagen3 = move_upload_unique('imagen3', __DIR__ . '/../../public/uploads/', $actual['imagen3']);
+$qr      = move_upload_unique('qr',      __DIR__ . '/../../public/qrcodes/', $actual['qr']);
+/* Nuevas imágenes de mantenimiento */
+$nuevasImagenes = array_merge(
+    move_multiple_uploads('nuevas_imagenes_principal', __DIR__ . '/../../public/uploads/'),
+    move_multiple_uploads('nuevas_imagenes_2', __DIR__ . '/../../public/uploads/'),
+    move_multiple_uploads('nuevas_imagenes_3', __DIR__ . '/../../public/uploads/')
+);
+/* Transacción */
 $conn->begin_transaction();
 try {
-    /* 1) Equipo: si se edita nombre, crear/reutilizar sin tocar modelo */
+    /* ========= 1) EQUIPO ========= */
+    $equipo_edit_mode = ($_POST['equipo_edit_mode'] ?? '0') === '1';
+    $equipo_nombre_edit = trim($_POST['equipo_nombre_edit'] ?? '');
     if ($equipo_edit_mode && $equipo_nombre_edit !== '') {
-        $q = $conn->prepare("SELECT id FROM equipos WHERE UPPER(nom_equipo) = UPPER(?) LIMIT 1");
+        $q = $conn->prepare("SELECT id FROM equipos WHERE UPPER(nom_equipo)=UPPER(?)");
         $q->bind_param("s", $equipo_nombre_edit);
         $q->execute();
-        $ex = $q->get_result()->fetch_assoc();
+        $r = $q->get_result()->fetch_assoc();
         $q->close();
-
-        if ($ex) {
-            $equipo = (int)$ex['id'];
+        if ($r) {
+            $equipo = (int)$r['id'];
         } else {
             $ins = $conn->prepare("INSERT INTO equipos (nom_equipo) VALUES (?)");
             $ins->bind_param("s", $equipo_nombre_edit);
@@ -112,157 +120,142 @@ try {
             $ins->close();
         }
     }
-
-    /* 2) Modelo: si se edita nombre, crear/reutilizar sin tocar equipo */
-    if ($modelo_edit_mode && $modelo_nombre_edit !== '') {
-        $modeloBaseId = $modelo > 0 ? $modelo : (int)($actual['modelo_actual'] ?? 0);
-        $marcaIdInferida = null;
-
-        if ($modeloBaseId > 0) {
-            $q = $conn->prepare("SELECT marca_id FROM modelos WHERE id = ? LIMIT 1");
-            $q->bind_param("i", $modeloBaseId);
-            $q->execute();
-            $row = $q->get_result()->fetch_assoc();
-            $marcaIdInferida = $row['marca_id'] ?? null;
-            $q->close();
-        }
-
-        if ($marcaIdInferida) {
-            $q = $conn->prepare("SELECT id FROM modelos WHERE marca_id = ? AND UPPER(num_modelos) = UPPER(?) LIMIT 1");
-            $q->bind_param("is", $marcaIdInferida, $modelo_nombre_edit);
-            $q->execute();
-            $ex = $q->get_result()->fetch_assoc();
-            $q->close();
-
-            if ($ex) {
-                $modelo = (int)$ex['id'];
-            } else {
-                $ins = $conn->prepare("INSERT INTO modelos (num_modelos, marca_id) VALUES (?, ?)");
-                $ins->bind_param("si", $modelo_nombre_edit, $marcaIdInferida);
-                $ins->execute();
-                $modelo = $ins->insert_id;
-                $ins->close();
-            }
+    /* ========= 2) MARCA (ANTES DEL MODELO) ========= */
+    $marca_edit_mode   = ($_POST['marca_edit_mode'] ?? '0') === '1';
+    $marca_nombre_edit = trim($_POST['marca_nombre_edit'] ?? '');
+    if ($marca_edit_mode && $marca_nombre_edit !== '') {
+        $q = $conn->prepare("SELECT id_marcas FROM marcas
+            WHERE UPPER(nom_marca)=UPPER(?) AND equipo_id=?");
+        $q->bind_param("si", $marca_nombre_edit, $equipo);
+        $q->execute();
+        $r = $q->get_result()->fetch_assoc();
+        $q->close();
+        if ($r) {
+            $marca_id = (int)$r['id_marcas'];
         } else {
-            // No se pudo inferir marca → mantener modelo previo
-            $modelo = (int)($actual['modelo_actual'] ?? 0);
+            $ins = $conn->prepare("INSERT INTO marcas (nom_marca, equipo_id)
+                VALUES (?, ?)");
+            $ins->bind_param("si", $marca_nombre_edit, $equipo);
+            $ins->execute();
+            $marca_id = $ins->insert_id;
+            $ins->close();
         }
     }
-
-    /* 3) Si no eligió modelo, mantener el actual */
-    if ($modelo <= 0) {
-        $modelo = (int)($actual['modelo_actual'] ?? 0);
+    if (!$marca_id) {
+        throw new Exception('Marca inválida.');
     }
-
-    /* 4) Validaciones (sucursal ya no se valida aquí) */
-    if ($id <= 0)       throw new Exception('ID inválido.');
-    if ($equipo <= 0)   throw new Exception('Selecciona un equipo válido.');
-    if ($modelo <= 0)   throw new Exception('Selecciona o crea un modelo válido.');
-    if (!$fecha)        throw new Exception('La fecha es requerida.');
-
-    /* 5) UPDATE (sin sucursal) + marca y alarma/cctv */
-    $sql = "
-        UPDATE dispositivos SET 
-            equipo = ?, 
-            modelo = ?, 
-            serie = ?, 
-            mac = ?, 
-            servidor = ?, 
-            vms = ?, 
-            `switch` = ?, 
-            puerto = ?, 
-            area = ?, 
-            estado = ?, 
-            fecha = ?, 
-            observaciones = ?, 
-            imagen = ?, 
-            imagen2 = ?, 
-            imagen3 = ?, 
-            qr = ?, 
-            `user` = ?, 
-            `pass` = ?,
-            marca_id = ?, 
-            alarma_id = ?, 
-            zona_alarma = ?, 
-            tipo_sensor = ?, 
-            cctv_id = ?
-        WHERE id = ?
-    ";
+    /* ========= 3) MODELO (DEPENDIENTE DE MARCA) ========= */
+    $modelo_edit_mode   = ($_POST['modelo_edit_mode'] ?? '0') === '1';
+    $modelo_nombre_edit = trim($_POST['modelo_nombre_edit'] ?? '');
+    if ($modelo_edit_mode && $modelo_nombre_edit !== '') {
+        $q = $conn->prepare("SELECT id FROM modelos
+            WHERE UPPER(num_modelos)=UPPER(?) AND marca_id=?");
+        $q->bind_param("si", $modelo_nombre_edit, $marca_id);
+        $q->execute();
+        $r = $q->get_result()->fetch_assoc();
+        $q->close();
+        if ($r) {
+            $modelo = (int)$r['id'];
+        } else {
+            $ins = $conn->prepare("INSERT INTO modelos (num_modelos, marca_id)
+                VALUES (?, ?)");
+            $ins->bind_param("si", $modelo_nombre_edit, $marca_id);
+            $ins->execute();
+            $modelo = $ins->insert_id;
+            $ins->close();
+        }
+    }
+    if ($modelo <= 0) {
+        throw new Exception('Modelo inválido.');
+    }
+    /* ========= 4) UPDATE ========= */
+    $sql = "UPDATE dispositivos SET
+            equipo=?, modelo=?, serie=?, mac=?, servidor=?, vms=?,
+            `switch`=?, puerto=?, area=?, estado=?,
+            fecha_instalacion=?, fecha=?, observaciones=?,
+            imagen=?, imagen2=?, imagen3=?, qr=?,
+            `user`=?, `pass`=?,
+            marca_id=?, alarma_id=?, zona_alarma=?,
+            tipo_sensor=?, cctv_id=?,
+            tiene_analitica=?, analiticas=?
+        WHERE id=?";
+    $types = "iisssssssisssssssssiissiisi"; // Original
+    // $types = "iissssssssisssssssssissssisii"; // Error: demasiados s
+    // $types = "iisssssssisssssssssiissiis"; // Corregido: eliminado un 'i'
     $up = $conn->prepare($sql);
-    /* Tipos (24 parámetros):
-       1:i equipo
-       2:i modelo
-       3:s serie
-       4:s mac
-       5:s servidor
-       6:s vms
-       7:s switch
-       8:s puerto
-       9:s area
-      10:i estado
-      11:s fecha
-      12:s observaciones
-      13:s imagen
-      14:s imagen2
-      15:s imagen3
-      16:s qr
-      17:s user
-      18:s pass
-      19:i marca_id
-      20:i alarma_id
-      21:s zona_alarma
-      22:s tipo_sensor
-      23:i cctv_id
-      24:i id
-    */
     $up->bind_param(
-        "iisssssssissssssssiissii",
-        $equipo,        // 1
-        $modelo,        // 2
-        $serie,         // 3
-        $mac,           // 4
-        $servidor,      // 5
-        $vms,           // 6
-        $switchTxt,     // 7
-        $puerto,        // 8
-        $area,          // 9
-        $estado,        // 10
-        $fecha,         // 11
-        $observaciones, // 12
-        $imagen,        // 13
-        $imagen2,       // 14
-        $imagen3,       // 15
-        $qr,            // 16
-        $usuarioDis,    // 17
-        $contrasenaDis, // 18
-        $marca_id,      // 19
-        $alarma_id,     // 20
-        $zona_alarma,   // 21
-        $tipo_sensor,   // 22
-        $cctv_id,       // 23
-        $id             // 24
-    );
+        $types,
+        $equipo, $modelo, $serie, $mac, $servidor, $vms,
+        $switchTxt, $puerto, $area, $estado,
+        $fecha_instalacion, $fecha, $observaciones,
+        $imagen, $imagen2, $imagen3, $qr,
+        $usuarioDis, $contrasenaDis,
+        $marca_id, $alarma_id, $zona_alarma,
+        $tipo_sensor, $cctv_id,
+        $tiene_analitica, $analiticas,
+        $id);
     $up->execute();
     $up->close();
-
-    /* 6) Notificación */
-    if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
-        $mensaje    = "El Mantenimientos " . ($_SESSION['nombre'] ?? 'N/D') . " modificó el dispositivo con ID #$id.";
-        $usuario_id = (int)($_SESSION['usuario_id'] ?? 0);
-
-        $stmtNotif = $conn->prepare("
-            INSERT INTO notificaciones (usuario_id, mensaje, fecha, visto, dispositivo_id) 
-            VALUES (?, ?, NOW(), 0, ?)
-        ");
-        $stmtNotif->bind_param("isi", $usuario_id, $mensaje, $id);
-        $stmtNotif->execute();
-        $stmtNotif->close();
-    }
-
-    $conn->commit();
+/* Guardar nuevas imágenes en historial */
+if (!empty($nuevasImagenes)) {
+    $anioActual = date('Y');
+    $stmtImg = $conn->prepare("INSERT INTO dispositivos_imagenes 
+        (dispositivo_id, anio, imagen)
+        VALUES (?, ?, ?)");
+        foreach ($nuevasImagenes as $img) {
+            $stmtImg->bind_param("iis", $id, $anioActual, $img);
+            $stmtImg->execute();
+        }
+    $stmtImg->close();
+}
+$conn->commit();
+/* ENVIAR CORREO NOTIFICACION */
+ $destinatarios = ['notificacionescesiss@gmail.com'];
+// URL para ver el dispositivo (usa BASE_URL si existe; si no, link relativo)
+$urlDispositivo = (defined('BASE_URL') ? rtrim(BASE_URL, '/') : '') . '/views/dispositivos/device.php?id=' . $id;
+if (!$urlDispositivo) $urlDispositivo = 'device.php?id=' . $id;
+// Asignamos nombres a mostrar en correo respetando tu HTML original
+// (si por alguna razón siguen vacíos, caen al legacy leído al inicio
+// Estilo 
+  $asunto = 'CESISS: Nuevo dispositivo editado (EQUIPO ' . $equipo. ')';
+  $htmlCorreo = '
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+    <div style="background:#0ea5e9;color:#fff;padding:14px 18px">
+      <h2 style="margin:0;font-size:18px">Nuevo dispositivo actualizado</h2>
+    </div>
+    <div style="padding:16px">
+      <p style="margin:0 0 10px 0">' .h($_SESSION['nombre'] ?? 'desconocido').' ha actualizado un nuevo dispositivo en <b>CESISS</b>.</p>
+      <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-top:10px">
+        <tbody>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Equipo</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($equipo).'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Marca</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($marca)?? 'Sin marca'.'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Modelo</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($modelo) ?? 'Sin modelo'.'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Serie</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($serie).'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>MAC</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($mac).'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Estado</b></td><td style="border:1px solid #e5e7eb;padding:8px">ACTIVO</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Usuario</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.h($_SESSION['nombre'] ?? 'desconocido').'</td></tr>
+          <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px"><b>Fecha/Hora</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.date('Y-m-d H:i:s').'</td></tr>
+          '.($observaciones !== '' ? '<tr><td style="background:#f9fafb;border:1px solid #e5e7eb;padding:8px;vertical-align:top"><b>Observaciones</b></td><td style="border:1px solid #e5e7eb;padding:8px">'.nl2br(h($observaciones)).'</td></tr>' : '').'
+        </tbody>
+      </table>
+      <div style="margin-top:16px">
+        <a href="'.h($urlDispositivo).'" 
+           style="display:inline-block;padding:10px 16px;background:#0ea5e9;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">
+           Ver dispositivo
+        </a>
+      </div>
+      <p style="margin-top:14px;font-size:12px;color:#6b7280">Este mensaje fue generado automáticamente por CESISS.</p>
+    </div>
+  </div>';
+  // Enviar (no bloquea si falla)
+  try {
+    enviarNotificacion($asunto, $htmlCorreo, $destinatarios);
     header("Location: device.php?id=$id");
     exit;
-
+  } catch (Exception $e_i) {
+    echo "No se envio el la notficacion al correo".$e_i->getMessage(). "/n" ;
+    throw new Exception("Error escalado desde el interno", 0, $e_i);
+  }
 } catch (Throwable $e) {
     $conn->rollback();
     die('Error al actualizar: ' . htmlspecialchars($e->getMessage()));
