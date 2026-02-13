@@ -3,7 +3,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 if (!isset($pdo) && !isset($conexion)) {
   $connPath = __DIR__ . '/../../includes/conexion.php';
   if (is_file($connPath)) require_once $connPath;
-}
+} 
 $pendCount = 0;
 $rolSB = $_SESSION['usuario_rol'] ?? '';
 if (in_array($rolSB, ['Superadmin','Administrador'])) {
@@ -68,10 +68,10 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     z-index: 1030;
     color: var(--side-fg);
     box-shadow: var(--side-shadow);
-    overflow: hidden; /* fallback */
-    overflow: clip;   /* preferido */
+    overflow-x: hidden;
+    white-space: nowrap;
     display: block;
-    transition: top .35s ease, transform .34s cubic-bezier(.22,1,.36,1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: top;
     transform: translateX(0);
   }
@@ -79,6 +79,7 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     top: var(--tb-height-scrolled, 52px);
   }
 
+ 
   .sidebar::after{
     content:"";
     position:absolute; inset:0; z-index:0; pointer-events:none;
@@ -106,11 +107,15 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     0%,100% { transform: translate3d(0,0,0) scale(1); }
     50%     { transform: translate3d(0,-10px,0) scale(1.02); }
   }
+  body.sb-collapsed .sidebar::before {
+  background-size: 400% 400%; /* Evita que el gradiente se vea 'aplastado' */
+}
   .sidebar[data-effect="waves"]::before{
     background:
       radial-gradient(800px 600px at 50% 120%, rgba(36,163,193,.25), rgba(36,163,193,0) 70%),
       radial-gradient(900px 680px at 50% -40%, rgba(60,146,166,.28), rgba(60,146,166,0) 75%);
     animation: sb-waves 22s ease-in-out infinite;
+
   }
   @keyframes sb-waves{
     0%   { transform: translate3d(0,0,0) scale(1); }
@@ -248,12 +253,13 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     main.main > .container-fluid,
     main.main .container-fluid{
       padding-left: 0 !important;
-      padding-right: 1rem;
+    
     }
 
     /* Colapsada: sidebar fuera, contenido ancho completo */
     body.sb-collapsed .sidebar{
-      transform: translateX(-100%);
+    
+      width: 70px;
     }
     body.sb-collapsed .content-wrapper{ margin-left: 0 !important; }
     body.sb-collapsed main.main{ margin-left: 0 !important; }
@@ -278,11 +284,36 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
   .sb-reveal-zone:hover{ opacity: .35; cursor: ew-resize; }
   .sb-reveal-zone:focus{ outline: none; }
 
-  @media (min-width: 992px){
-    body.sb-collapsed .sb-reveal-zone{
-      display: block;            /* solo mostrar en colapsado */
-    }
+@media (min-width: 992px) {
+  /* Sidebar Colapsado: Reducimos ancho, NO lo movemos fuera */
+  body.sb-collapsed .sidebar {
+    width: 70px;
+    transform: translateX(0); /* Evita que se esconda al -100% */
   }
+
+  /* Ajuste automático del contenido al colapsar */
+  body.sb-collapsed .content-wrapper,
+  body.sb-collapsed main.main {
+    margin-left: 40px !important;
+    transition: margin-left 0.3s ease;
+  }
+
+  /* Ocultar textos e imágenes grandes al colapsar */
+  body.sb-collapsed .sidebar .brand img,
+  body.sb-collapsed .sidebar .menu a span,
+  body.sb-collapsed .sidebar .footer a span,
+  body.sb-collapsed .sb-bubbles {
+   
+  }
+
+  /* Centrar iconos en modo colapsado */
+  body.sb-collapsed .sidebar a i {
+    margin-right: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 1.2rem;
+  }
+}
   /* Neon border animado */
   .sb-bling{ position: fixed; }
   .sb-bling::before{
@@ -357,16 +388,24 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
       opacity: .5;
     }
   }
+.sb-collapsed .sb-submenu.open .sb-children{
+  padding-left: 0 !important;
+  background: #24a3c1 !important;
+}
+
+
   /* ==== Usuarios pendientes - estilos mejorados ==== */
   .sidebar a.sb-item-attn{ position: relative; padding-right: 74px; }
   .sidebar a.sb-item-attn.has-alert{
     background: rgba(217,83,79,.10);
     border-color: rgba(217,83,79,.35);
     box-shadow: inset 0 0 0 1px rgba(217,83,79,.18);
+    
   }
   .sidebar a.sb-item-attn.has-alert:hover{
     background: rgba(217,83,79,.14);
     border-color: rgba(217,83,79,.5);
+    transform: translateX(1px);
   }
   .sidebar a.sb-item-attn .sb-meta{
     position: absolute; right: 10px; top: 50%;
@@ -381,24 +420,109 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     font-size: 12px; font-weight: 800; letter-spacing: .2px;
     color: #fff;
     background: linear-gradient(180deg, #e35d59, #bf3f3b);
-    box-shadow:0 2px 10px rgba(227,93,89,.35),inset 0 0 0 1px rgba(255,255,255,.25);transform-origin: center;}
-  .sb-badge-attn.is-zero{opacity: .0; transform: scale(.8); pointer-events: none; /* oculta cuando es 0 */}
+    box-shadow:
+      0 2px 10px rgba(227,93,89,.35),
+      inset 0 0 0 1px rgba(255,255,255,.25);
+    transform-origin: center;
+  }
+  .sb-badge-attn.is-zero{
+    opacity: .0; transform: scale(.8); pointer-events: none; /* oculta cuando es 0 */
+  }
   .sb-badge-attn.has-count{ animation: sb-badge-pop .42s cubic-bezier(.2,.8,.2,1) 1; }
-  @keyframes sb-badge-pop{0%{ transform: scale(.85); }60%{ transform: scale(1.08); }100%{ transform: scale(1); }}
+  @keyframes sb-badge-pop{
+    0%{ transform: scale(.85); }
+    60%{ transform: scale(1.08); }
+    100%{ transform: scale(1); }
+  }
   /* Anillo/ping a la derecha cuando hay pendientes */
-  .sb-ring{width: 8px; height: 8px; border-radius: 999px;background: #e35d59;box-shadow: 0 0 0 0 rgba(227,93,89,.72);}
-  .sb-item-attn.has-alert .sb-ring{animation: sb-ping 1.8s cubic-bezier(0,0,.2,1) infinite;}
-  @keyframes sb-ping{0%   { box-shadow: 0 0 0 0 rgba(227,93,89,.65); transform: scale(1); }70%  { box-shadow: 0 0 0 12px rgba(227,93,89,0); transform: scale(1.05); }100% { box-shadow: 0 0 0 0 rgba(227,93,89,0); transform: scale(1); }}
+  .sb-ring{
+    width: 8px; height: 8px; border-radius: 999px;
+    background: #e35d59;
+    box-shadow: 0 0 0 0 rgba(227,93,89,.72);
+  }
+  .sb-item-attn.has-alert .sb-ring{
+    animation: sb-ping 1.8s cubic-bezier(0,0,.2,1) infinite;
+  }
+  @keyframes sb-ping{
+    0%   { box-shadow: 0 0 0 0 rgba(227,93,89,.65); transform: scale(1); }
+    70%  { box-shadow: 0 0 0 12px rgba(227,93,89,0); transform: scale(1.05); }
+    100% { box-shadow: 0 0 0 0 rgba(227,93,89,0); transform: scale(1); }
+  }
   /* Micro “bump” cuando cambia el número via JS */
   .sb-badge-attn.bump{ animation: sb-bump .5s cubic-bezier(.22,1,.36,1); }
-  @keyframes sb-bump{0%{ transform: translateY(0) scale(1); }30%{ transform: translateY(-2px) scale(1.06); }100%{ transform: translateY(0) scale(1); }}
+  @keyframes sb-bump{
+    0%{ transform: translateY(0) scale(1); }
+    30%{ transform: translateY(-2px) scale(1.06); }
+    100%{ transform: translateY(0) scale(1); }
+  }
+
+
+/* 1. Quitamos el padding excesivo para que el icono central quede libre */
+.sb-collapsed .sidebar a.sb-item-attn {
+ overflow: visible !important; 
+  padding-right: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* 2. Reposicionamos el badge para que flote sobre el icono (estilo notificación) */
+.sb-collapsed .sidebar a.sb-item-attn .sb-meta {
+  display: flex !important;    /* Evita que un display: none lo oculte */
+  opacity: 1 !important;       /* Evita que un opacity: 0 lo oculte */
+  visibility: visible !important;
+  
+  position: absolute !important;
+  top: 8px !important;         /* Ajusta hacia arriba */
+  right: 0px !important;       /* Ajusta hacia la derecha */
+  transform: scale(0.95) !important; /* Un poco más pequeño para no tapar todo el icono */
+  pointer-events: none;        /* Para que no interfiera con el click del link */
+  z-index: 99;
+}
+
+/* 3. Reducimos el tamaño del badge para que no tape todo el icono */
+.sb-collapsed .sb-badge-attn {
+  min-width: 16px;
+  height: 16px;
+  font-size: 9px;
+  padding: 0 4px;
+  border: 1px solid #fff;
+}
+
+/* 4. (Opcional) Si tienes texto dentro del sb-item que no sea el badge, ocúltalo */
+.sb-collapsed .sidebar a.sb-item-attn > span:not(.sb-meta) {
+    display: none !important;
+}
+
   /* Submenú del sidebar */
-  .sb-submenu .sb-parent {display: flex;justify-content: flex-start;align-items: center;gap: 8px;}
-  .sb-submenu .sb-parent i.fa-list {width: 20px;text-align: center;}
-  .sb-submenu .sb-arrow {margin-left: auto;transition: transform .25s ease;}
-  .sb-submenu.open .sb-arrow {transform: rotate(180deg);}
-  .sb-children {display: none;padding-left: 20px;}
-  .sb-submenu.open .sb-children {display: block;}
+  .sb-submenu .sb-parent {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+  }
+  .sb-submenu .sb-parent i.fa-list {
+    width: 20px;
+    text-align: center;
+  }
+  .sb-submenu .sb-arrow {
+    margin-left: auto;
+    transition: transform .25s ease;
+  }
+  .sb-submenu.open .sb-arrow {
+    transform: rotate(180deg);
+  }
+  .sb-children {
+    display: none;
+    padding-left: 20px;
+  }
+  .sb-submenu.open .sb-children {
+    display: block;
+  }
+
+  a#Out{
+    color: #FF2056;
+  }
 </style>
 <nav class="sidebar d-none d-lg-block" data-effect="blob">
   <div class="sb-bubbles d-none d-lg-block" aria-hidden="true">
@@ -417,7 +541,7 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
       <img src="/sisec-ui/public/img/QRCESISS.png" alt="Logo CESISS">
     </div>
     <div class="menu">
-      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Administrador', 'Mantenimientos', 'Técnico', 'Capturista','Distrital'])): ?>
+      <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Administrador', 'Mantenimientos', 'Capturista'])): ?>
         <a href="/sisec-ui/views/inicio/index.php" class="<?= ($activePage ?? '') === 'inicio' ? 'active' : '' ?>">
           <i class="fas fa-home"></i> Inicio
         </a>
@@ -442,22 +566,23 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
             <a href="/sisec-ui/views/dispositivos/listar.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
               <i class="fas fa-desktop me-2"></i> Dispositivos
             </a>
-            <a href="/sisec-ui/views/dispositivos/listado_qr.php" class="nav-link ps-4 <?= ($activePage ?? '') === 'listado_qr' ? 'active-link' : '' ?>">
+            <a href="/sisec-ui/views/dispositivos/listado_qr.php"  <?= ($activePage ?? '') === 'listado_qr' ? 'active-link' : '' ?>">
               <i class="fas fa-list-alt me-2"></i>Listado QR
             </a>
             <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Mantenimientos','Técnico', 'Capturista'])): ?>
-              <a href="/sisec-ui/views/dispositivos/qr_virgenes_generar.php" class="nav-link ps-4 <?= ($activePage ?? '') === 'listado_qr' ? 'active-link' : '' ?>">
+              <a href="/sisec-ui/views/dispositivos/qr_virgenes_generar.php" <?= ($activePage ?? '') === 'listado_qr' ? 'active-link' : '' ?>">
                 <i class="fas fa-plus-square me-2"></i>Generar QR virgen
               </a>
             <?php endif; ?>
           </div>
         </div>
       <?php else: ?>
+
         <a href="/sisec-ui/views/dispositivos/listar.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
           <i class="fas fa-camera"></i> Dispositivos
         </a>
       <?php endif; ?>
-
+<!-- 
       <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin'])): ?>
       <div class="sb-submenu <?= in_array(($activePage ?? ''), ['sucursales','mantenimientos']) ? 'open' : '' ?>">
         <a href="javascript:void(0);" class="sb-parent">
@@ -475,7 +600,7 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
           </a>
         </div>
       </div>
-    <?php endif; ?>
+    <?php endif; ?> -->
 
       <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin', 'Capturista','Técnico'])): ?>
         <a href="/sisec-ui/views/dispositivos/registro.php" class="<?= ($activePage ?? '') === 'registro' ? 'active' : '' ?>">
@@ -491,7 +616,9 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
           <i class="fa-solid fa-user-plus"></i> Registrar usuario
         </a>
 
-        
+        <!--a href="/views/inicio/helpdesk.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
+      <i class="fas fa-tools"></i>Soporte
+    </a-->    
     <?php endif; ?>
     <?php if (in_array($_SESSION['usuario_rol'] ?? '', ['Superadmin'])): ?>
       <a href="/sisec-ui/views/usuarios/pendientes.php"
@@ -514,19 +641,29 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
         </span>
       </a>
     <?php endif; ?>
-    <a href="/views/inicio/helpdesk.php" class="<?= ($activePage ?? '') === 'dispositivos' ? 'active' : '' ?>">
-      <i class="fas fa-tools"></i>Soporte
-    </a>
     </div>
     <?php if (isset($_SESSION['usuario_id'])): ?>
       <div class="footer">
-        <a href="/sisec-ui/logout.php" class="px-3 d-block">
+        <a class="px-3 d-block " id="toggle-btn">
+          <i class="fa-duotone fa-solid fa-angle-left"></i>
+          <span>Ocultar menu</span>
+        </a>
+
+        <a href="/sisec-ui/logout.php" class=" px-3 d-block" id="Out">
           <i class="fas fa-sign-out-alt"></i>
           <span>Cerrar sesión</span>
         </a>
       </div>
     <?php endif; ?>
   </div>
+  <script>
+  const btn = document.getElementById('toggle-btn');
+  const sidebar = document.querySelector('.sidebar');
+
+  btn.addEventListener('click', () => {
+  sidebar.classList.toggle('collapsed');
+  });
+  </script>
 </nav>
 
 <!-- HOTSPOT para revelar el botón cuando el sidebar está oculto -->
@@ -535,77 +672,35 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
 
 
 
+
 <script>
-(function(){
+(function() {
   const STORAGE_KEY = 'cesiss.sidebar.collapsed';
   const body = document.body;
-  const btn  = document.getElementById('sbToggle');
+  const btn = document.getElementById('toggle-btn');
   const bubbles = document.querySelector('.sb-bubbles');
   const revealZone = document.querySelector('.sb-reveal-zone');
 
   if (!btn) return;
 
-  // --- Auto-ocultar cuando no hay interacción ---
-  let idleTimer = null;
-  const setIdle = () => btn.classList.add('is-idle');
-  const clearIdle = () => btn.classList.remove('is-idle');
+  // --- 1. Definición de funciones internas ---
 
-  const resetIdle = () => {
-    clearIdle();
-    if (idleTimer) clearTimeout(idleTimer);
-    idleTimer = setTimeout(setIdle, 2500);
-  };
-
-  ['mousemove','keydown','scroll','touchstart'].forEach(ev =>
-    window.addEventListener(ev, resetIdle, { passive: true })
-  );
-  resetIdle();
-
-  // Estado guardado
-  const saved = localStorage.getItem(STORAGE_KEY);
-  const startCollapsed = saved === '1';
-  setCollapsed(startCollapsed, {skipConfetti:true});
-
-  // Click del botón
-  btn.addEventListener('click', () => {
-    setCollapsed(!body.classList.contains('sb-collapsed'));
-  });
-
-  // Hotspot: Enter o click para abrir cuando está colapsado
-  if (revealZone){
-    revealZone.addEventListener('click', () => {
-      if (body.classList.contains('sb-collapsed')) setCollapsed(false);
-    });
-    revealZone.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        if (body.classList.contains('sb-collapsed')) setCollapsed(false);
-      }
-    });
-  }
-
-  // Alt+S
-  window.addEventListener('keydown', (e) => {
-    if (e.altKey && (e.key.toLowerCase() === 's')) {
-      e.preventDefault();
-      setCollapsed(!body.classList.contains('sb-collapsed'));
-    }
-  }, { passive: false });
-
-  function setCollapsed(collapsed, opts = {}){
+  function setCollapsed(collapsed, opts = {}) {
     const { skipConfetti = false } = opts;
+    const btnText = btn.querySelector('span'); // Selecciona el texto "Ocultar menu"
+    const icon = btn.querySelector('i');       // Selecciona el icono
+
     if (collapsed) {
       body.classList.add('sb-collapsed');
-      btn.setAttribute('aria-pressed', 'true');
-      btn.querySelector('.ico').innerHTML = '<i class="fas fa-angles-right" aria-hidden="true"></i>';
+      if (btnText) btnText.style.display = 'none'; 
+      if (icon) icon.className = 'fa-duotone fa-solid fa-angle-right';
       localStorage.setItem(STORAGE_KEY, '1');
       if (!skipConfetti) burst(btn, { mode: 'open' });
-      // Burbujas: ya se ocultan por CSS, pero por si hay timing:
       if (bubbles) bubbles.style.display = 'none';
     } else {
       body.classList.remove('sb-collapsed');
-      btn.setAttribute('aria-pressed', 'false');
-      btn.querySelector('.ico').innerHTML = '<i class="fas fa-angles-left" aria-hidden="true"></i>';
+      if (btnText) btnText.style.display = 'inline';
+      if (icon) icon.className = 'fa-duotone fa-solid fa-angle-left';
       localStorage.setItem(STORAGE_KEY, '0');
       if (!skipConfetti) burst(btn, { mode: 'close' });
       if (bubbles) bubbles.style.display = '';
@@ -613,25 +708,24 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
     resetIdle();
   }
 
-  // Mini confeti / chispas
-  function burst(anchor, { mode }){
+  function burst(anchor, { mode }) {
     const rect = anchor.getBoundingClientRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top  + rect.height/2;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
     const pieces = 16;
-    const colors = ['#24a3c1','#3C92A6','#74e0ff','#9af0ff'];
+    const colors = ['#24a3c1', '#3C92A6', '#74e0ff', '#9af0ff'];
 
-    for (let i=0; i<pieces; i++){
+    for (let i = 0; i < pieces; i++) {
       const d = document.createElement('span');
       d.className = 'spark';
-      const angle = (Math.PI*2) * (i/pieces);
-      const dist = 24 + Math.random()*14;
-      const tx = Math.cos(angle)*dist;
-      const ty = Math.sin(angle)*dist;
+      const angle = (Math.PI * 2) * (i / pieces);
+      const dist = 24 + Math.random() * 14;
+      const tx = Math.cos(angle) * dist;
+      const ty = Math.sin(angle) * dist;
       d.style.position = 'fixed';
       d.style.left = (cx - 3) + 'px';
-      d.style.top  = (cy - 3) + 'px';
-      d.style.width = d.style.height = (3 + Math.random()*3) + 'px';
+      d.style.top = (cy - 3) + 'px';
+      d.style.width = d.style.height = (3 + Math.random() * 3) + 'px';
       d.style.borderRadius = '2px';
       d.style.background = colors[i % colors.length];
       d.style.boxShadow = '0 0 14px rgba(36,163,193,.6)';
@@ -647,8 +741,59 @@ if (in_array($rolSB, ['Superadmin','Administrador'])) {
       setTimeout(() => d.remove(), 650);
     }
   }
-})();
+
+  // --- 2. Lógica de Interacción y Timers ---
+
+  let idleTimer = null;
+  const setIdle = () => btn.classList.add('is-idle');
+  const clearIdle = () => btn.classList.remove('is-idle');
+
+  const resetIdle = () => {
+    clearIdle();
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(setIdle, 2500);
+  };
+
+  ['mousemove', 'keydown', 'scroll', 'touchstart'].forEach(ev =>
+    window.addEventListener(ev, resetIdle, { passive: true })
+  );
+  resetIdle();
+
+  // --- 3. Inicialización y Eventos ---
+
+  // Estado guardado inicial
+  const saved = localStorage.getItem(STORAGE_KEY);
+  setCollapsed(saved === '1', { skipConfetti: true });
+
+  // Click del botón
+  btn.addEventListener('click', () => {
+    setCollapsed(!body.classList.contains('sb-collapsed'));
+  });
+
+  // Hotspot / Reveal Zone
+  if (revealZone) {
+    revealZone.addEventListener('click', () => {
+      if (body.classList.contains('sb-collapsed')) setCollapsed(false);
+    });
+    revealZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (body.classList.contains('sb-collapsed')) setCollapsed(false);
+      }
+    });
+  }
+
+  // Atajo Alt+S
+  window.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key.toLowerCase() === 's')) {
+      e.preventDefault();
+      setCollapsed(!body.classList.contains('sb-collapsed'));
+    }
+  }, { passive: false });
+
+})(); // <-- Cierre correcto de la IIFE envolviendo todo
 </script>
+
 
 <script>
 (function(){
